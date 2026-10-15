@@ -5,6 +5,9 @@
  * servidor (útil para testar o login localmente). Em produção, a ausência
  * da chave é um erro: nunca imprimimos códigos de acesso no log de produção.
  *
+ * ENVIO_SIMULADO=1 faz o mesmo (só log) em um servidor de produção — use
+ * APENAS no ambiente de teste do Railway, nunca no ambiente de produção.
+ *
  * SMS: nenhum provedor foi escolhido ainda. Enquanto isso o agente de campo
  * recebe o código no e-mail cadastrado; sem e-mail, o envio falha em
  * produção com mensagem clara.
@@ -13,6 +16,11 @@ const RESEND_URL = "https://api.resend.com/emails";
 
 function emProducao(): boolean {
   return process.env.NODE_ENV === "production";
+}
+
+/** Só log, sem envio real: desenvolvimento ou ambiente de teste explicitamente marcado. */
+function envioSimulado(): boolean {
+  return !emProducao() || process.env.ENVIO_SIMULADO === "1";
 }
 
 export interface Email {
@@ -24,9 +32,9 @@ export interface Email {
 
 export async function enviarEmail(email: Email): Promise<void> {
   const chave = process.env.RESEND_API_KEY;
-  if (!chave) {
-    if (emProducao()) throw new Error("Envio de e-mail não configurado (RESEND_API_KEY).");
-    console.info(`[email:dev] para=${email.para} | ${email.assunto}\n${email.texto}`);
+  if (!chave || process.env.ENVIO_SIMULADO === "1") {
+    if (!envioSimulado()) throw new Error("Envio de e-mail não configurado (RESEND_API_KEY).");
+    console.info(`[email:simulado] para=${email.para} | ${email.assunto}\n${email.texto}`);
     return;
   }
 
@@ -48,6 +56,6 @@ export async function enviarEmail(email: Email): Promise<void> {
 }
 
 export async function enviarSms(telefone: string, texto: string): Promise<void> {
-  if (emProducao()) throw new Error("Envio de SMS ainda não configurado.");
-  console.info(`[sms:dev] para=${telefone} | ${texto}`);
+  if (!envioSimulado()) throw new Error("Envio de SMS ainda não configurado.");
+  console.info(`[sms:simulado] para=${telefone} | ${texto}`);
 }
