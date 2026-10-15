@@ -37,7 +37,7 @@ de UI e acesso a dados.
 ## Estrutura
 
 ```
-db/migrations/          0001–0005 Pesquisa · 0006 usuários, perfis e acesso · 0007 Cliente Oculto
+db/migrations/          0001–0005 Pesquisa · 0006 usuários, perfis e acesso · 0007–0008 Cliente Oculto
 src/lib/auth/            perfis e permissões, código/sessão/convite (acesso.ts)
 src/lib/notificacoes/   envio de e-mail (Resend) e SMS, modelos dos e-mails
 src/lib/domain/          telefone, competência, cálculos do dashboard
@@ -98,6 +98,22 @@ alguns agentes de exemplo em ambiente local. Empreendimentos e concorrentes
 adicionais podem ser cadastrados pelas telas **Empreendimentos** e
 **Concorrentes** (o concorrente também pode ser criado inline pelo Agente
 durante a coleta — seção 13 da especificação).
+
+## Cliente Oculto
+
+As telas do app antigo (`Sousa-Araujo/hidden`) rodam sem mudança visual em
+`/cliente-oculto/*.html` (`public/cliente-oculto`), usando o login e os
+perfis do sistema unificado e a API `/api/co` (`src/app/api/co`,
+`src/lib/cliente-oculto/repo.ts`). Papel no módulo: Administrador → tela
+de administração; Coordenador de Market Share → calibragem e relatório;
+Avaliador → formulário da visita (só as próprias avaliações, sem ver nota
+calibrada nem gaps).
+
+Importar os dados do app antigo (sem `--aplicar` é só simulação):
+
+```bash
+ORIGEM_DATABASE_URL="postgres://...app-antigo" DATABASE_URL="postgres://...novo" npm run importar:cliente-oculto -- --aplicar
+```
 
 ## Executar
 

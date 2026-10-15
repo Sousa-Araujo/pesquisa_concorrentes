@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coordenador de Market Share — Cliente Oculto</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%232a78d6%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-size=%2713%27 font-family=%27system-ui%27 font-weight=%27700%27 fill=%27white%27 text-anchor=%27middle%27%3ECO%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/inicio">
+    <div class="brand-mark">CO</div>
+    <div class="brand-text">
+      <h1>Cliente Oculto — Sousa Araujo</h1>
+      <p>Coordenador de Market Share</p>
+    </div>
+  </a>
+  <div class="top-actions">
+    <button class="btn btn-ghost no-print" id="backToListBtn" style="display:none;">← Avaliações</button>
+    <span class="profile-chip no-print" id="userChipName" style="display:none;"></span>
+    <button class="btn btn-ghost btn-sm no-print" id="logoutBtn" type="button" style="display:none;">Sair</button>
+    <button class="icon-btn" id="themeToggle" title="Alternar tema">◐</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== VIEW: LISTA ===== -->
+  <div class="app" id="view-list">
+    <div class="panel">
+      <div class="panel-head"><h2>Avaliações de Cliente Oculto</h2></div>
+      <p class="panel-hint">Localize, filtre e abra uma avaliação para calibrar.</p>
+      <div class="filters-bar">
+        <div class="field">
+          <label>Buscar</label>
+          <input type="text" id="filterQ" placeholder="ID, empreendimento, corretor…">
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="filterStatus">
+            <option value="">Todos</option>
+            <option value="Aguardando Calibragem">Aguardando Calibragem</option>
+            <option value="Concluída">Concluída</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Regional</label>
+          <select id="filterRegional">
+            <option value="">Todas</option>
+            <option value="RVP">RVP</option>
+            <option value="RAT">RAT</option>
+            <option value="RGC">RGC</option>
+            <option value="RGSP">RGSP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Empreendimento</label>
+          <select id="filterEmpreendimento">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Período (mês)</label>
+          <input type="month" id="filterMes">
+        </div>
+        <div class="field">
+          <label>Tipo</label>
+          <select id="filterTipo">
+            <option value="">Todos</option>
+            <option value="sousa">Sousa Araujo</option>
+            <option value="concorrente">Concorrente</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="applyFiltersBtn">🔍 Filtrar</button>
+        <button class="btn btn-ghost" id="refreshBtn">⟳ Limpar filtros</button>
+      </div>
+      <p class="field-help" style="margin-top:2px; margin-bottom:12px;">
+        Ajuste os campos e clique em <b>Filtrar</b> para aplicar — a lista só muda quando você confirma
+        (exceto o Empreendimento, que acompanha a Regional automaticamente). Avaliações "Em Preenchimento"
+        não aparecem nesta lista.
+      </p>
+      <div class="table-wrap">
+        <table class="av-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Empreendimento</th><th>Regional</th><th>Data</th><th>Período</th>
+              <th>Cliente Oculto</th><th>Corretor</th><th>Status</th><th>Nota geral</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="avTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="listEmpty" style="display:none; margin-top:14px;">Nenhuma avaliação encontrada para os filtros selecionados.</div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: CALIBRAGEM ===== -->
+  <div class="app" id="view-calibragem" style="display:none;">
+    <div class="panel" id="calibHeaderPanel"></div>
+    <div id="calibPillarCards"></div>
+    <div class="panel" id="panel-jornada-coord">
+      <div class="panel-head"><h2><span class="panel-num">7</span>Jornada Comercial</h2></div>
+      <p class="panel-hint">Status informado pelo Cliente Oculto (somente leitura) e, se necessário, o override calibrado pelo Coordenador para cada etapa.</p>
+      <div class="journey-form" id="journeyCoordFields"></div>
+    </div>
+    <div class="panel" id="panel-gaps-coord">
+      <div class="panel-head"><h2><span class="panel-num">8</span>Mapa de Gaps</h2></div>
+      <p class="panel-hint">Cadastre falhas ou inconsistências objetivas identificadas a partir dos dados da visita. Não descreva soluções — apenas o gap, o pilar relacionado, a evidência e a gravidade.</p>
+      <div id="gapsList"></div>
+      <div id="gapsEmpty" class="empty-state">Nenhum gap cadastrado ainda.</div>
+      <button class="add-btn" id="addGapBtn">+ Adicionar gap</button>
+    </div>
+    <div class="form-actions">
+      <span class="field-help" id="calibSaveIndicator">&nbsp;</span>
+      <div class="form-actions-right">
+        <button class="btn btn-primary" id="concludeBtn">Concluir diagnóstico →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: RELATÓRIO FINAL ===== -->
+  <div class="app" id="view-report" style="display:none;">
+    <div class="report-toolbar no-print">
+      <div></div>
+      <div class="btn-group">
+        <button class="btn btn-ghost" id="copyRowBtn">⧉ Copiar linha p/ Excel</button>
+        <button class="btn btn-ghost" id="downloadCsvBtn">⇩ Baixar .csv</button>
+        <button class="btn btn-ghost" id="downloadHtmlBtn">⇩ Baixar .html</button>
+        <button class="btn btn-primary" id="printBtn">🖶 Imprimir / PDF</button>
+      </div>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/coordenador.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cliente Oculto — Registrar visita</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%232a78d6%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-size=%2713%27 font-family=%27system-ui%27 font-weight=%27700%27 fill=%27white%27 text-anchor=%27middle%27%3ECO%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/inicio">
+    <div class="brand-mark">CO</div>
+    <div class="brand-text">
+      <h1>Cliente Oculto — Sousa Araujo</h1>
+      <p id="topSub">Registro da visita</p>
+    </div>
+  </a>
+  <div class="top-actions">
+    <span class="profile-chip" id="idChip" style="display:none;"></span>
+    <span class="profile-chip" id="userChipName" style="display:none;"></span>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" type="button" style="display:none;">Sair</button>
+    <button class="icon-btn" id="themeToggle" title="Alternar tema">◐</button>
+  </div>
+</header>
+
+<main>
+  <div class="app" id="loadingState">
+    <div class="report-empty">Carregando avaliação…</div>
+  </div>
+
+  <div class="app" id="lockedState" style="display:none;">
+    <div class="confirm-wrap">
+      <div class="big-check">✔</div>
+      <h1>Avaliação enviada</h1>
+      <p>Sua avaliação foi registrada e está com o Coordenador de Market Share para calibragem. Os dados que você preencheu ficam preservados como o registro original da visita.</p>
+      <div class="confirm-id" id="lockedIdText">—</div>
+      <p><span class="status-badge tone-abaixo" id="lockedStatusBadge">Aguardando Calibragem</span></p>
+      <p style="margin-top:26px;"><a class="btn btn-ghost" href="cliente-oculto.html">+ Iniciar nova avaliação</a></p>
+    </div>
+  </div>
+
+  <div class="app" id="formState" style="display:none;">
+
+    <div class="panel" id="panel-identificacao">
+      <div class="panel-head"><h2><span class="panel-num">i</span>Identificação da Visita</h2></div>
+      <p class="panel-hint">Dados cadastrais da visita. Não interferem nas notas.</p>
+      <div class="grid" id="idFields"></div>
+    </div>
+
+    <div id="pillarPanels"></div>
+
+    <div class="panel" id="panel-jornada">
+      <div class="panel-head"><h2><span class="panel-num">7</span>Jornada Comercial</h2></div>
+      <p class="panel-hint">Indique o status de cada etapa observada durante a visita.</p>
+      <div class="journey-form" id="journeyFields"></div>
+    </div>
+
+    <div class="form-actions">
+      <span class="field-help" id="saveIndicator">&nbsp;</span>
+      <div class="form-actions-right">
+        <button class="btn btn-primary" id="finalizeBtn">Finalizar e enviar avaliação →</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/cliente-oculto.js"></script>
+</body>
+</html>

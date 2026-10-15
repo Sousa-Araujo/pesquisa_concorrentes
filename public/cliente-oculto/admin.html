@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administrador — Cliente Oculto</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%232a78d6%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-size=%2713%27 font-family=%27system-ui%27 font-weight=%27700%27 fill=%27white%27 text-anchor=%27middle%27%3ECO%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/inicio" id="brandLink">
+    <div class="brand-mark">CO</div>
+    <div class="brand-text">
+      <h1>Cliente Oculto — Sousa Araujo</h1>
+      <p>Administrador</p>
+    </div>
+  </a>
+  <div class="top-actions">
+    <a class="btn btn-ghost no-print" href="/gestor/usuarios">👤 Usuários</a>
+    <button class="btn btn-ghost no-print" id="backToListBtn" style="display:none;">← Avaliações</button>
+    <span class="profile-chip no-print" id="userChipName" style="display:none;"></span>
+    <button class="btn btn-ghost btn-sm no-print" id="logoutBtn" type="button" style="display:none;">Sair</button>
+    <button class="icon-btn" id="themeToggle" title="Alternar tema">◐</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== VIEW: LISTA ===== -->
+  <div class="app" id="view-list">
+    <div class="panel danger-zone">
+      <div class="panel-head"><h2>Administração de Avaliações</h2></div>
+      <p class="panel-hint">Acesso irrestrito — edite qualquer campo, visualize o relatório final de avaliações concluídas ou exclua um registro inconsistente. Use com cautela.</p>
+      <div class="filters-bar">
+        <div class="field"><label>Buscar</label><input type="text" id="adminFilterQ" placeholder="ID, empreendimento, corretor…"></div>
+        <div class="field">
+          <label>Status</label>
+          <select id="adminFilterStatus">
+            <option value="">Todos</option>
+            <option value="Em Preenchimento">Em Preenchimento</option>
+            <option value="Aguardando Calibragem">Aguardando Calibragem</option>
+            <option value="Concluída">Concluída</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Regional</label>
+          <select id="adminFilterRegional">
+            <option value="">Todas</option>
+            <option value="RVP">RVP — Regional do Vale do Paraíba</option>
+            <option value="RAT">RAT — Regional do Alto Tietê</option>
+            <option value="RGC">RGC — Regional da Grande Campinas</option>
+            <option value="RGSP">RGSP — Regional da Grande São Paulo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tipo</label>
+          <select id="adminFilterTipo">
+            <option value="">Todos</option>
+            <option value="sousa">Sousa Araujo</option>
+            <option value="concorrente">Concorrente</option>
+          </select>
+        </div>
+        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary); padding-bottom:10px;">
+          <input type="checkbox" id="adminShowDeleted"> Mostrar excluídas
+        </label>
+        <button class="btn btn-ghost" id="adminRefreshBtn">⟳ Atualizar</button>
+      </div>
+      <div class="table-wrap">
+        <table class="av-table">
+          <thead><tr><th>ID</th><th>Empreendimento</th><th>Regional</th><th>Data</th><th>Mês</th><th>Status</th><th>Nota geral</th><th>Ações</th></tr></thead>
+          <tbody id="adminTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="adminListEmpty" style="display:none; margin-top:14px;">Nenhuma avaliação encontrada.</div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: EDIÇÃO TOTAL ===== -->
+  <div class="app" id="view-edit" style="display:none;">
+    <div class="panel danger-zone" id="adminHeaderPanel"></div>
+    <div class="panel" id="admin-panel-identificacao">
+      <div class="panel-head"><h2><span class="panel-num">i</span>Identificação da Visita</h2></div>
+      <p class="panel-hint">Editável independente do status — use apenas para correção de inconsistências.</p>
+      <div class="grid" id="adminIdFields"></div>
+    </div>
+    <div id="adminPillarCards"></div>
+    <div class="panel">
+      <div class="panel-head"><h2><span class="panel-num">7</span>Jornada Comercial</h2></div>
+      <div class="journey-form" id="adminJourneyFields"></div>
+    </div>
+    <div class="panel" id="admin-panel-gaps">
+      <div class="panel-head"><h2><span class="panel-num">8</span>Mapa de Gaps</h2></div>
+      <div id="adminGapsList"></div>
+      <div id="adminGapsEmpty" class="empty-state">Nenhum gap cadastrado.</div>
+      <button class="add-btn" id="adminAddGapBtn">+ Adicionar gap</button>
+    </div>
+    <div class="form-actions admin-save-bar" style="justify-content:space-between;">
+      <span class="field-help dirty-hint" id="adminUnsavedHint">&nbsp;</span>
+      <div class="form-actions-right">
+        <button class="btn btn-primary" id="adminSaveBtnBottom">💾 Salvar alterações</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

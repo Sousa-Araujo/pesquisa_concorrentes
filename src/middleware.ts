@@ -13,5 +13,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/inicio", "/gestor", "/gestor/((?!login).*)"],
+  matcher: ["/inicio", "/gestor", "/gestor/((?!login).*)", "/cliente-oculto/:path*"],
 };

@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:agentes": "tsx scripts/seed-agentes.ts"
+    "seed:agentes": "tsx scripts/seed-agentes.ts",
+    "importar:cliente-oculto": "node scripts/importar-cliente-oculto.mjs"
   },
   "dependencies": {
     "next": "^15.5.28",

@@ -29,11 +29,21 @@ export default async function InicioPage() {
       href: "/gestor",
     });
   }
-  if (tem("coordenador_market_share", "avaliador", "diretoria")) {
+  // Cliente Oculto: cada papel cai direto na sua tela.
+  const telaCO = p.includes("admin")
+    ? "admin.html"
+    : p.includes("coordenador_market_share")
+      ? "coordenador.html"
+      : p.includes("avaliador")
+        ? "cliente-oculto.html"
+        : null;
+  if (telaCO) {
     modulos.push({
       titulo: "Cliente Oculto",
-      descricao: "Avaliações das visitas, calibragem e relatórios.",
-      emBreve: true,
+      descricao: p.includes("avaliador") && !tem("coordenador_market_share")
+        ? "Preencher a avaliação da sua visita."
+        : "Avaliações das visitas, calibragem e relatórios.",
+      href: `/cliente-oculto/${telaCO}`,
     });
   }
   if (tem("supervisor_parcerias", "coordenador_market_share")) {
