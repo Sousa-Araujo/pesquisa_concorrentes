@@ -5,10 +5,11 @@ import GestaoConcorrentes from "./GestaoConcorrentes";
 export const dynamic = "force-dynamic";
 
 export default async function ConcorrentesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { regional?: string; cidade?: string; emp?: string };
+  searchParams: Promise<{ regional?: string; cidade?: string; emp?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const regional = searchParams.regional ?? "";
   const idCidade = searchParams.cidade ?? "";
   const idEmp = searchParams.emp ?? "";

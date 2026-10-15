@@ -10,10 +10,11 @@ import FiltrosDashboard from "./FiltrosDashboard";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { mes?: string; regional?: string; cidade?: string; emp?: string };
+  searchParams: Promise<{ mes?: string; regional?: string; cidade?: string; emp?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const mesAno = searchParams.mes ?? competenciaVigente();
   const regional = searchParams.regional ?? "";
   const idCidade = searchParams.cidade ? Number(searchParams.cidade) : undefined;

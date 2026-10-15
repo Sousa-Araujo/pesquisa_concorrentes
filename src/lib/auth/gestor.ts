@@ -15,7 +15,7 @@ export interface GestorAtual {
 
 /** Retorna o gestor autenticado e ativo, ou null. */
 export async function gestorAtual(): Promise<GestorAtual | null> {
-  const token = cookies().get(COOKIE_SESSAO)?.value;
+  const token = (await cookies()).get(COOKIE_SESSAO)?.value;
   if (!token) return null;
 
   const idGestor = await verificarSessao(token);

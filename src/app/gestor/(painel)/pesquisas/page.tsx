@@ -14,13 +14,14 @@ type Ordenavel = "data" | "concorrente" | "estoque" | "vendas";
 const CHAVES_ORDENAVEIS: Ordenavel[] = ["data", "concorrente", "estoque", "vendas"];
 
 export default async function PesquisasPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     p?: string; mes?: string; regional?: string; cidade?: string;
     emp?: string; conc?: string; agente?: string; sort?: string; dir?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const pagina = Math.max(1, Number(searchParams.p ?? "1"));
   const offset = (pagina - 1) * PAGINA;
 

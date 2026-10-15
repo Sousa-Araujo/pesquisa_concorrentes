@@ -42,7 +42,7 @@ export async function loginGestor(email: string, senha: string): Promise<R> {
   if (!senhaOk) return { ok: false, erro: "E-mail ou senha inválidos." };
 
   const token = await criarSessao(gestor.id_gestor);
-  cookies().set(COOKIE_SESSAO, token, {
+  (await cookies()).set(COOKIE_SESSAO, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -53,7 +53,7 @@ export async function loginGestor(email: string, senha: string): Promise<R> {
 }
 
 export async function logoutGestor() {
-  cookies().set(COOKIE_SESSAO, "", { httpOnly: true, path: "/", maxAge: 0 });
+  (await cookies()).set(COOKIE_SESSAO, "", { httpOnly: true, path: "/", maxAge: 0 });
   redirect("/gestor/login");
 }
 
