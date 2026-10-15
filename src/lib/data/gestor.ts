@@ -86,6 +86,7 @@ export interface LinhaAgente {
   id_agente: string;
   nome: string;
   telefone: string;
+  email: string | null;
   ativo: boolean;
   created_at: string;
   ultima_coleta: string | null;
@@ -93,7 +94,7 @@ export interface LinhaAgente {
 
 export async function listarAgentes(): Promise<LinhaAgente[]> {
   const { rows } = await db().query<LinhaAgente>(
-    `select a.id_agente, a.nome, a.telefone, a.ativo, a.created_at,
+    `select a.id_agente, a.nome, a.telefone, a.email, a.ativo, a.created_at,
             max(cm.coletado_em) as ultima_coleta
        from agentes_campo a
        left join coletas_mensais cm on cm.id_agente = a.id_agente
@@ -133,22 +134,32 @@ export async function listarAgentesOpcoes(): Promise<{ id_agente: string; nome: 
   return rows;
 }
 
-export interface LinhaGestor {
-  id_gestor: string;
+export interface LinhaUsuario {
+  id_usuario: string;
   nome: string;
   email: string;
+  perfis: string[];
   ativo: boolean;
-  created_at: string;
+  /** Último dia de acesso (YYYY-MM-DD, horário de Brasília), ou null. */
+  acesso_ate: string | null;
+  acesso_expirado: boolean;
+  ultimo_acesso_em: string | null;
+  convite_enviado_em: string | null;
   criado_por: string | null;
 }
 
-/** Lista gestores para a página de administração (cadastro entre gestores). */
-export async function listarGestores(): Promise<LinhaGestor[]> {
-  const { rows } = await db().query<LinhaGestor>(
-    `select g.id_gestor, g.nome, g.email, g.ativo, g.created_at, cb.nome as criado_por
-       from gestores g
-       left join gestores cb on cb.id_gestor = g.created_by
-      order by g.nome`,
+/** Usuários para a tela de administração. `soAvaliadores` = visão do Coordenador de Market Share. */
+export async function listarUsuarios(soAvaliadores = false): Promise<LinhaUsuario[]> {
+  const { rows } = await db().query<LinhaUsuario>(
+    `select u.id_usuario, u.nome, u.email, u.perfis, u.ativo,
+            to_char((u.acesso_expira_em at time zone 'America/Sao_Paulo') - interval '1 day', 'YYYY-MM-DD') as acesso_ate,
+            coalesce(u.acesso_expira_em <= now(), false) as acesso_expirado,
+            u.ultimo_acesso_em, u.convite_enviado_em, cb.nome as criado_por
+       from usuarios u
+       left join usuarios cb on cb.id_usuario = u.created_by
+      where not $1 or u.perfis = '{avaliador}'
+      order by u.ativo desc, u.nome`,
+    [soAvaliadores],
   );
   return rows;
 }

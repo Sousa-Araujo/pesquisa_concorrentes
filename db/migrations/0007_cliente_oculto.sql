@@ -1,0 +1,124 @@
+-- =====================================================================
+-- 0007_cliente_oculto.sql
+-- Módulo Cliente Oculto dentro do sistema unificado. Mesmo modelo do
+-- app original (avaliação → pilares/jornada informados pelo avaliador →
+-- calibragem e mapa de gaps pelo Coordenador de Market Share), com:
+--   - prefixo `co_` para separar do módulo de Pesquisa;
+--   - empreendimento/concorrente ligados aos cadastros oficiais
+--     (id_empreendimento / id_concorrente). Os campos de texto antigos
+--     ficam para os registros importados que ainda não foram ligados;
+--   - autor da avaliação ligado a `usuarios` (dono do registro);
+--   - data da visita como `date` (antes era texto).
+-- Nota informada e nota calibrada continuam em colunas separadas: o dado
+-- original do avaliador nunca é sobrescrito.
+-- =====================================================================
+
+create table if not exists co_avaliacoes (
+  id                       text primary key,               -- CO-2026-0001
+  status                   text not null default 'Em Preenchimento'
+                             check (status in ('Em Preenchimento', 'Aguardando Calibragem', 'Concluída')),
+  criada_em                timestamptz not null default now(),
+  atualizada_em            timestamptz not null default now(),
+  finalizada_em            timestamptz,
+  concluida_em             timestamptz,
+
+  -- Trava do avaliador: a partir da abertura da calibragem ele não edita mais.
+  calibragem_aberta        boolean not null default false,
+
+  -- Exclusão lógica (somente Administrador).
+  excluida                 boolean not null default false,
+  excluida_em              timestamptz,
+
+  avaliador_id             uuid references usuarios (id_usuario),
+
+  -- Sousa Araujo x concorrente, ligado aos cadastros oficiais.
+  tipo_empreendimento      text not null default 'sousa' check (tipo_empreendimento in ('sousa', 'concorrente')),
+  id_empreendimento        integer references empreendimentos (id_empreendimento),
+  id_concorrente           integer references concorrentes (id_concorrente),
+  -- Avaliação de concorrente comparada a uma avaliação Sousa do mesmo período.
+  vinculo_sousa_id         text references co_avaliacoes (id),
+
+  -- Texto livre herdado do app antigo (só para registros importados ainda
+  -- não ligados aos cadastros).
+  empreendimento_texto     text,
+  construtora_texto        text,
+  regional                 text,
+
+  -- Identificação da visita
+  data_visita              date,
+  horario                  text,
+  cliente_oculto_nome      text,
+  recepcionista            text,
+  corretor                 text,
+  area_unidade_m2          double precision,
+  valor_unidade_centavos   bigint,
+  valor_ato_centavos       bigint,
+  qtd_pre_chaves           text,
+  qtd_pos_chaves           text,
+  desconto_tipo            text check (desconto_tipo in ('valor', 'percentual') or desconto_tipo is null),
+  desconto_valor_centavos  bigint,
+  desconto_percentual      double precision,
+  previsao_entrega         text,
+  campanha_vigente         text,
+
+  constraint chk_co_concorrente_ligado check (
+    tipo_empreendimento = 'sousa' or id_concorrente is not null or construtora_texto is not null
+  )
+);
+create index if not exists idx_co_avaliacoes_emp     on co_avaliacoes (id_empreendimento);
+create index if not exists idx_co_avaliacoes_conc    on co_avaliacoes (id_concorrente);
+create index if not exists idx_co_avaliacoes_data    on co_avaliacoes (data_visita);
+create index if not exists idx_co_avaliacoes_status  on co_avaliacoes (status) where not excluida;
+create index if not exists idx_co_avaliacoes_vinculo on co_avaliacoes (vinculo_sousa_id);
+create index if not exists idx_co_avaliacoes_avaliador on co_avaliacoes (avaliador_id);
+
+-- Uma linha por pilar por avaliação.
+create table if not exists co_pilares (
+  avaliacao_id              text not null references co_avaliacoes (id) on delete cascade,
+  pilar_key                 text not null,
+  avaliado                  boolean not null default true,
+  nota_informada            double precision check (nota_informada between 0 and 10),
+  evidencia                 text,
+  nota_calibrada            double precision check (nota_calibrada between 0 and 10),
+  justificativa_calibragem  text,
+  primary key (avaliacao_id, pilar_key)
+);
+
+-- Jornada comercial: status informado (avaliador) e override do Coordenador.
+create table if not exists co_jornada (
+  avaliacao_id      text not null references co_avaliacoes (id) on delete cascade,
+  etapa_key         text not null,
+  status            text not null default 'realizada'
+                      check (status in ('realizada', 'parcial', 'nao_realizada', 'na')),
+  status_calibrado  text check (status_calibrado in ('realizada', 'parcial', 'nao_realizada', 'na')),
+  primary key (avaliacao_id, etapa_key)
+);
+
+-- Mapa de gaps — cadastrado pelo Coordenador de Market Share.
+create table if not exists co_gaps (
+  id                 integer generated by default as identity primary key,
+  avaliacao_id       text not null references co_avaliacoes (id) on delete cascade,
+  gap                text not null,
+  pilar_relacionado  text,
+  evidencia          text not null,
+  gravidade          text not null check (gravidade in ('baixa', 'moderada', 'alta', 'critica')),
+  criado_em          timestamptz not null default now(),
+  criado_por         uuid references usuarios (id_usuario)
+);
+create index if not exists idx_co_gaps_avaliacao on co_gaps (avaliacao_id);
+
+-- Contador para os IDs CO-{ano}-{sequencial}.
+create table if not exists co_id_contadores (
+  ano      integer primary key,
+  proximo  integer not null default 1
+);
+
+drop trigger if exists trg_co_avaliacoes_updated on co_avaliacoes;
+create or replace function set_atualizada_em() returns trigger as $$
+begin
+  new.atualizada_em := now();
+  return new;
+end;
+$$ language plpgsql;
+create trigger trg_co_avaliacoes_updated before update on co_avaliacoes
+  for each row execute function set_atualizada_em();

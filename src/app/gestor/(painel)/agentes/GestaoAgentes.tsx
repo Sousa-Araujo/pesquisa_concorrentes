@@ -93,13 +93,14 @@ function FormAgente({
 }) {
   const [nome, setNome] = useState(agente?.nome ?? "");
   const [telefone, setTelefone] = useState(agente?.telefone ?? "");
+  const [email, setEmail] = useState(agente?.email ?? "");
   const [ativo, setAtivo] = useState(agente?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   async function salvar() {
     setErro(null); setSalvando(true);
-    const payload = { nome, telefone, ativo };
+    const payload = { nome, telefone, email, ativo };
     const r = agente
       ? await editarAgente(agente.id_agente, payload)
       : await criarAgente(payload);
@@ -122,6 +123,12 @@ function FormAgente({
             <input id="ag-tel" className="campo !text-base !py-2" inputMode="tel" value={telefone}
               onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
             <p className="mt-1 text-xs text-ink/40">Será normalizado (somente dígitos) e deve ser único.</p>
+          </div>
+          <div>
+            <label className="rotulo" htmlFor="ag-email">E-mail (opcional)</label>
+            <input id="ag-email" type="email" className="campo !text-base !py-2" value={email}
+              onChange={(e) => setEmail(e.target.value)} />
+            <p className="mt-1 text-xs text-ink/40">O código de acesso vai para este e-mail enquanto o envio por SMS não estiver ativo.</p>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />

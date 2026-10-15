@@ -1,3 +1,4 @@
+import { exigirPagina } from "@/lib/auth/acesso";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import {
   listarRegionais, listarCidades, listarEmpreendimentos,
@@ -12,6 +13,7 @@ export default async function DadosPropriosPage({
 }: {
   searchParams: Promise<{ mes?: string; regional?: string; cidade?: string; emp?: string }>;
 }) {
+  await exigirPagina("auditoriaPesquisa");
   const searchParams = await searchParamsPromise;
   const mesAno = searchParams.mes ?? competenciaVigente();
   const regional = searchParams.regional ?? "";

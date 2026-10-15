@@ -1,3 +1,4 @@
+import { exigirPagina } from "@/lib/auth/acesso";
 import Link from "next/link";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import { formatarPercentual } from "@/lib/domain/dashboard";
@@ -14,6 +15,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ mes?: string; regional?: string; cidade?: string; emp?: string }>;
 }) {
+  await exigirPagina("painelPesquisa");
   const searchParams = await searchParamsPromise;
   const mesAno = searchParams.mes ?? competenciaVigente();
   const regional = searchParams.regional ?? "";

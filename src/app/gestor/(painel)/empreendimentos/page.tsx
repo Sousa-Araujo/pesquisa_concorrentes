@@ -1,3 +1,4 @@
+import { exigirPagina } from "@/lib/auth/acesso";
 import { listarEmpreendimentosAdmin } from "@/lib/data/gestor";
 import { listarRegionais, listarCidades } from "@/lib/data/hierarquia";
 import GestaoEmpreendimentos from "./GestaoEmpreendimentos";
@@ -9,6 +10,7 @@ export default async function EmpreendimentosPage({
 }: {
   searchParams: Promise<{ regional?: string; cidade?: string }>;
 }) {
+  await exigirPagina("cadastros");
   const searchParams = await searchParamsPromise;
   const regional = searchParams.regional ?? "";
   const idCidade = searchParams.cidade ?? "";

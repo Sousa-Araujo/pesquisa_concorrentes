@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import { formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import {
-  identificarAgente,
+  solicitarCodigoAgente,
+  entrarAgente,
+  sairAgente,
   actRegionais,
   actCidades,
   actEmpreendimentos,
@@ -17,8 +19,14 @@ import {
 
 type Opcao = { valor: string; texto: string };
 
-export default function AgenteFluxo({ competenciaInicial }: { competenciaInicial: string }) {
-  const [agente, setAgente] = useState<AgenteSessao | null>(null);
+export default function AgenteFluxo({
+  competenciaInicial,
+  agenteInicial,
+}: {
+  competenciaInicial: string;
+  agenteInicial: AgenteSessao | null;
+}) {
+  const [agente, setAgente] = useState<AgenteSessao | null>(agenteInicial);
 
   if (!agente) {
     return <Login onOk={setAgente} />;
@@ -27,7 +35,7 @@ export default function AgenteFluxo({ competenciaInicial }: { competenciaInicial
     <Formulario
       agente={agente}
       competenciaInicial={competenciaInicial}
-      onTrocarAgente={() => setAgente(null)}
+      onTrocarAgente={async () => { await sairAgente(); setAgente(null); }}
     />
   );
 }
@@ -35,13 +43,28 @@ export default function AgenteFluxo({ competenciaInicial }: { competenciaInicial
 /* ------------------------------- Login ------------------------------- */
 function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
   const [telefone, setTelefone] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [etapa, setEtapa] = useState<"telefone" | "codigo">("telefone");
+  const [aviso, setAviso] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
-  async function continuar() {
+  async function pedirCodigo() {
+    setErro(null); setAviso(null);
+    setCarregando(true);
+    const r = await solicitarCodigoAgente(telefone);
+    setCarregando(false);
+    if (!r.ok) { setErro(r.erro); return; }
+    setEtapa("codigo");
+    setAviso(r.data.canal === "email"
+      ? "Enviamos um código de 6 números para o seu e-mail cadastrado."
+      : "Enviamos um código de 6 números por SMS.");
+  }
+
+  async function entrar() {
     setErro(null);
     setCarregando(true);
-    const r = await identificarAgente(telefone);
+    const r = await entrarAgente(telefone, codigo);
     setCarregando(false);
     if (r.ok) onOk(r.data);
     else setErro(r.erro);
@@ -53,27 +76,60 @@ function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
         <p className="text-sm font-semibold uppercase tracking-widest text-brand">
           Identificação do agente
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-ink">Informe seu telefone</h1>
+        <h1 className="mt-2 text-2xl font-bold text-ink">
+          {etapa === "telefone" ? "Informe seu telefone" : "Digite o código"}
+        </h1>
       </div>
-      <div>
-        <label className="rotulo" htmlFor="tel">Telefone</label>
-        <input
-          id="tel"
-          className="campo"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="(00) 00000-0000"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && continuar()}
-        />
-      </div>
+      {etapa === "telefone" ? (
+        <div>
+          <label className="rotulo" htmlFor="tel">Telefone</label>
+          <input
+            id="tel"
+            className="campo"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="(00) 00000-0000"
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && telefone && pedirCodigo()}
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="rotulo" htmlFor="codigo">Código</label>
+          <input
+            id="codigo"
+            className="campo text-center text-2xl tracking-[0.5em]"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => e.key === "Enter" && codigo.length === 6 && entrar()}
+          />
+        </div>
+      )}
+      {aviso && <p className="rounded-lg bg-brand/5 px-4 py-3 text-sm text-ink/80">{aviso}</p>}
       {erro && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
-      <button className="btn-primary" onClick={continuar} disabled={carregando || !telefone}>
-        {carregando ? "Verificando…" : "Continuar"}
-      </button>
+      {etapa === "telefone" ? (
+        <button className="btn-primary" onClick={pedirCodigo} disabled={carregando || !telefone}>
+          {carregando ? "Enviando…" : "Receber código"}
+        </button>
+      ) : (
+        <>
+          <button className="btn-primary" onClick={entrar} disabled={carregando || codigo.length !== 6}>
+            {carregando ? "Verificando…" : "Entrar"}
+          </button>
+          <button className="btn-ghost" onClick={pedirCodigo} disabled={carregando}>
+            Reenviar código
+          </button>
+          <button className="btn-ghost" onClick={() => { setEtapa("telefone"); setCodigo(""); setAviso(null); setErro(null); }}>
+            Trocar telefone
+          </button>
+        </>
+      )}
       <p className="text-center text-xs text-ink/40">
-        O acesso é liberado apenas para telefones cadastrados pelo gestor.
+        O acesso é liberado apenas para telefones cadastrados pela coordenação.
       </p>
     </main>
   );
@@ -159,7 +215,6 @@ function Formulario({
     }
     setSalvando(true);
     const r = await salvarColeta({
-      id_agente: agente.id_agente,
       id_concorrente: Number(idConc),
       estoque: Number(estoque),
       vendas: Number(vendas),
@@ -210,7 +265,7 @@ function Formulario({
           <p className="text-xs uppercase tracking-widest text-brand">Agente</p>
           <p className="text-lg font-semibold text-ink">{agente.nome}</p>
         </div>
-        <button className="btn-ghost" onClick={onTrocarAgente}>Trocar agente</button>
+        <button className="btn-ghost" onClick={onTrocarAgente}>Sair</button>
       </div>
 
       <div className="mb-4 rounded-xl bg-brand/5 px-4 py-3">

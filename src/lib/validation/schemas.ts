@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import { normalizarTelefone, telefoneValido } from "@/lib/domain/telefone";
+import { PERFIS } from "@/lib/auth/perfis";
 
 /** Telefone: aceita qualquer formatação; normaliza e valida comprimento. */
 export const telefoneSchema = z
@@ -13,7 +14,7 @@ export const telefoneSchema = z
   .refine((v) => telefoneValido(v), "Telefone inválido")
   .transform((v) => normalizarTelefone(v));
 
-/** Login do agente (seção 4): somente telefone. */
+/** Login do agente (seção 4): telefone; o código chega por e-mail ou SMS. */
 export const loginAgenteSchema = z.object({
   telefone: telefoneSchema,
 });
@@ -22,6 +23,14 @@ export const loginAgenteSchema = z.object({
 export const agenteSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
   telefone: telefoneSchema,
+  /** Opcional: para onde vai o código de acesso enquanto não há SMS. */
+  email: z
+    .string()
+    .trim()
+    .email("E-mail inválido")
+    .or(z.literal(""))
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : null)),
   ativo: z.boolean().default(true),
 });
 
@@ -62,25 +71,24 @@ export const empreendimentoEdicaoSchema = z.object({
 });
 
 /**
- * Cadastro de gestor por outro gestor — extensão pedida pelo usuário,
- * além do escopo original da especificação (que só previa Auth externo).
- * Senha em texto puro só passa por aqui; nunca é persistida (vira hash
- * em src/lib/auth/senha.ts antes de chegar ao banco).
+ * Cadastro/edição de usuário (todos os perfis, exceto agente de campo).
+ * Não há senha: a pessoa recebe um convite por e-mail e entra com código.
+ * `acesso_expira_em` (YYYY-MM-DD, opcional) = último dia de acesso — usado
+ * para avaliadores contratados para uma visita.
  */
-const senhaSchema = z.string().min(8, "A senha deve ter pelo menos 8 caracteres");
-
-export const gestorSchema = z.object({
+export const usuarioSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
-  email: z.string().trim().email("E-mail inválido"),
-  senha: senhaSchema,
-  ativo: z.boolean().default(true),
-});
-
-/** Edição de gestor: senha em branco = não altera a senha atual. */
-export const gestorEdicaoSchema = z.object({
-  nome: z.string().trim().min(1, "Nome é obrigatório"),
-  email: z.string().trim().email("E-mail inválido"),
-  senha: z.union([senhaSchema, z.literal("")]).optional(),
+  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  perfis: z
+    .array(z.enum(PERFIS))
+    .min(1, "Escolha pelo menos um perfil")
+    .transform((v) => Array.from(new Set(v))),
+  acesso_expira_em: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
+    .or(z.literal(""))
+    .optional()
+    .transform((v) => v || null),
   ativo: z.boolean().default(true),
 });
 
@@ -96,7 +104,6 @@ const inteiroNaoNegativo = z
  * opcional — quando ausente, o servidor usa a competência vigente.
  */
 export const coletaSchema = z.object({
-  id_agente: z.string().uuid(),
   id_concorrente: z.number().int().positive(),
   estoque: inteiroNaoNegativo,
   vendas: inteiroNaoNegativo,
@@ -133,8 +140,7 @@ export type NovoConcorrenteInput = z.infer<typeof novoConcorrenteSchema>;
 export type ConcorrenteEdicaoInput = z.infer<typeof concorrenteEdicaoSchema>;
 export type EmpreendimentoInput = z.infer<typeof empreendimentoSchema>;
 export type EmpreendimentoEdicaoInput = z.infer<typeof empreendimentoEdicaoSchema>;
-export type GestorInput = z.infer<typeof gestorSchema>;
-export type GestorEdicaoInput = z.infer<typeof gestorEdicaoSchema>;
+export type UsuarioInput = z.infer<typeof usuarioSchema>;
 export type ColetaInput = z.infer<typeof coletaSchema>;
 export type ColetaEdicaoInput = z.infer<typeof coletaEdicaoSchema>;
 export type DadosPropriosInput = z.infer<typeof dadosPropriosSchema>;
