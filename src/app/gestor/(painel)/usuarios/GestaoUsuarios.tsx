@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
 import type { LinhaUsuario } from "@/lib/data/gestor";
-import { PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
+import { DOMINIO_EMAIL_EMPRESA, PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
 import { criarUsuario, definirStatusUsuario, editarUsuario, reenviarConvite } from "./actions";
 
 function dataCurta(iso: string | null): string {
@@ -192,7 +192,10 @@ function FormUsuario({
           <label className="rotulo" htmlFor="u-email">E-mail</label>
           <input id="u-email" className="campo !text-base !py-2" type="email" autoComplete="off" value={email}
             onChange={(e) => setEmail(e.target.value)} />
-          {!usuario && <p className="mt-1 text-xs text-ink/40">O convite de acesso será enviado para este e-mail.</p>}
+          <p className="mt-1 text-xs text-ink/40">
+            Use o e-mail @{DOMINIO_EMAIL_EMPRESA}. Só avaliadores externos podem ter outro e-mail.
+            {!usuario && " O convite de acesso será enviado para este endereço."}
+          </p>
         </div>
 
         {ehAdmin && (

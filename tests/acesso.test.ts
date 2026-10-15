@@ -106,6 +106,15 @@ describe("Cadastro de usuário", () => {
     expect(usuarioSchema.safeParse({ ...valido, perfis: ["gestor"] }).success).toBe(false);
   });
 
+  it("exige e-mail da empresa, exceto para avaliador externo", () => {
+    const interno = { ...valido, perfis: ["coordenador_produto"] };
+    expect(usuarioSchema.safeParse({ ...interno, email: "fulano@gmail.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...interno, email: "Fulano@SousaAraujo.com.br" }).success).toBe(true);
+    expect(usuarioSchema.safeParse({ ...interno, email: "fulano@sousaaraujo.com.br.fake.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...valido, email: "avaliador@gmail.com" }).success).toBe(true);
+    expect(usuarioSchema.safeParse({ ...valido, perfis: ["avaliador", "diretoria"], email: "x@gmail.com" }).success).toBe(false);
+  });
+
   it("remove perfis repetidos e valida a data do acesso temporário", () => {
     expect(usuarioSchema.parse({ ...valido, perfis: ["avaliador", "avaliador"] }).perfis).toEqual(["avaliador"]);
     expect(usuarioSchema.parse({ ...valido, acesso_expira_em: "2026-11-30" }).acesso_expira_em).toBe("2026-11-30");

@@ -47,6 +47,20 @@ export function temPermissao(perfis: readonly string[], permissao: Permissao): b
   return PERMISSOES[permissao].some((p) => perfis.includes(p));
 }
 
+/** Domínio de e-mail obrigatório para quem é da empresa. */
+export const DOMINIO_EMAIL_EMPRESA = "sousaaraujo.com.br";
+
+/**
+ * Usuários internos precisam de e-mail @sousaaraujo.com.br. A exceção é
+ * quem é só Avaliador (Cliente Oculto): são pessoas contratadas de fora,
+ * normalmente para uma visita, sem e-mail da empresa.
+ */
+export function emailPermitidoPara(email: string, perfis: readonly string[]): boolean {
+  const soAvaliador = perfis.length > 0 && perfis.every((p) => p === "avaliador");
+  if (soAvaliador) return true;
+  return email.trim().toLowerCase().endsWith(`@${DOMINIO_EMAIL_EMPRESA}`);
+}
+
 /**
  * O Coordenador de Market Share (sem admin) só pode criar ou alterar
  * usuários cujo único perfil é `avaliador`. O admin gere qualquer um.

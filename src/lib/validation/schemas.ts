@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { normalizarTelefone, telefoneValido } from "@/lib/domain/telefone";
-import { PERFIS } from "@/lib/auth/perfis";
+import { DOMINIO_EMAIL_EMPRESA, PERFIS, emailPermitidoPara } from "@/lib/auth/perfis";
 
 /** Telefone: aceita qualquer formatação; normaliza e valida comprimento. */
 export const telefoneSchema = z
@@ -74,7 +74,8 @@ export const empreendimentoEdicaoSchema = z.object({
  * Cadastro/edição de usuário (todos os perfis, exceto agente de campo).
  * Não há senha: a pessoa recebe um convite por e-mail e entra com código.
  * `acesso_expira_em` (YYYY-MM-DD, opcional) = último dia de acesso — usado
- * para avaliadores contratados para uma visita.
+ * para avaliadores contratados para uma visita. E-mail precisa ser da
+ * empresa, exceto para quem é só avaliador (ver emailPermitidoPara).
  */
 export const usuarioSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
@@ -90,6 +91,14 @@ export const usuarioSchema = z.object({
     .optional()
     .transform((v) => v || null),
   ativo: z.boolean().default(true),
+}).superRefine((u, ctx) => {
+  if (!emailPermitidoPara(u.email, u.perfis)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["email"],
+      message: `Use um e-mail @${DOMINIO_EMAIL_EMPRESA}. Só avaliadores externos podem ter outro e-mail.`,
+    });
+  }
 });
 
 /** Estoque e vendas: inteiros >= 0 (seções 20 e 21). */
