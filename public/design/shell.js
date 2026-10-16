@@ -85,6 +85,9 @@
       if (m.id === aberto) a.setAttribute('aria-current', 'page');
       a.addEventListener('click', function (e) {
         e.preventDefault();
+        // Clicar no módulo que já está aberto recolhe (ou reabre) o painel.
+        var fechado = dual.classList.contains('is-collapsed');
+        if (m.id === aberto && !fechado) { alternar(); return; }
         aberto = m.id;
         links.forEach(function (x) { x.removeAttribute('aria-current'); });
         a.setAttribute('aria-current', 'page');

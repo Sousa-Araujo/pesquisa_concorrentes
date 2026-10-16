@@ -84,7 +84,13 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
                 href="#"
                 title={m.nome}
                 aria-current={m.id === aberto ? "page" : undefined}
-                onClick={(e) => { e.preventDefault(); setAberto(m.id); if (recolhido) alternar(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Clicar no módulo que já está aberto recolhe (ou reabre) o painel.
+                  if (m.id === aberto && !recolhido) { alternar(); return; }
+                  setAberto(m.id);
+                  if (recolhido) alternar();
+                }}
               >
                 <Ic size={18} aria-hidden="true" />
                 {temPendencia(m) && <span className="ms-dot" />}

@@ -69,3 +69,10 @@
 .ms-legado .danger-zone { border-color: var(--line); }
 .ms-legado .danger-zone .panel-head h2 { color: var(--ink); }
 .ms-legado table.av-table td:first-child, .ms-legado table.av-table td:first-child * { white-space: nowrap; }
+
+/* Botões de ação sempre um ao lado do outro (sem quebrar linha). */
+.row-actions, .form-actions-right, .top-actions { flex-wrap: nowrap !important; }
+.row-actions .btn, td .btn { white-space: nowrap; }
+/* Na tabela, botões compactos para caberem lado a lado sem rolar para o lado. */
+.row-actions { gap: 4px !important; }
+.row-actions .btn { text-transform: none; letter-spacing: 0; padding: 4px 8px; font-size: 12px; }
