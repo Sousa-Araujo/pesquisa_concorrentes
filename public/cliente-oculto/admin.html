@@ -6,7 +6,14 @@
 <title>Administrador — Cliente Oculto</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%232a78d6%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-size=%2713%27 font-family=%27system-ui%27 font-weight=%27700%27 fill=%27white%27 text-anchor=%27middle%27%3ECO%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="/design/vendor/flatpickr.min.css">
+<link rel="stylesheet" href="/design/vendor/flatpickr-monthselect.css">
+<script src="/design/vendor/lucide.min.js"></script>
+<script src="/design/vendor/flatpickr.min.js"></script>
+<script src="/design/vendor/flatpickr-pt.js"></script>
+<script src="/design/vendor/flatpickr-monthselect.js"></script>
 <script src="/design/shell.js"></script>
+<script src="/design/datas.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -18,8 +25,7 @@
     </div>
   </a>
   <div class="top-actions">
-    <a class="btn btn-ghost no-print" href="/gestor/usuarios">👤 Usuários</a>
-    <button class="btn btn-ghost no-print" id="backToListBtn" style="display:none;">← Avaliações</button>
+      <button class="btn btn-ghost no-print" id="backToListBtn" style="display:none;">← Avaliações</button>
     <span class="profile-chip no-print" id="userChipName" style="display:none;"></span>
     <button class="btn btn-ghost btn-sm no-print" id="logoutBtn" type="button" style="display:none;">Sair</button>
     <button class="icon-btn" id="themeToggle" title="Alternar tema">◐</button>
@@ -29,7 +35,7 @@
 <main>
   <!-- ===== VIEW: LISTA ===== -->
   <div class="app" id="view-list">
-    <div class="panel danger-zone">
+    <div class="panel">
       <div class="panel-head"><h2>Administração de Avaliações</h2></div>
       <p class="panel-hint">Acesso irrestrito — edite qualquer campo, visualize o relatório final de avaliações concluídas ou exclua um registro inconsistente. Use com cautela.</p>
       <div class="filters-bar">
@@ -64,7 +70,7 @@
         <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary); padding-bottom:10px;">
           <input type="checkbox" id="adminShowDeleted"> Mostrar excluídas
         </label>
-        <button class="btn btn-ghost" id="adminRefreshBtn">⟳ Atualizar</button>
+        <button class="btn btn-ghost" id="adminRefreshBtn">Atualizar</button>
       </div>
       <div class="table-wrap">
         <table class="av-table">

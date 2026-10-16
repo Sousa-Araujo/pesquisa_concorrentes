@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DialogoConfirmacao from "@/components/DialogoConfirmacao";
 import { formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import { salvarDadosProprios, excluirDadosProprios } from "../../actions";
+import CampoData from "@/components/CampoData";
 
 type Item = { id: number; nome: string };
 
@@ -86,8 +87,8 @@ export default function FormDadosProprios({
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="sm:col-span-1">
           <label className="rotulo">Competência</label>
-          <input type="month" className="campo !px-2 !py-2 !text-sm" value={mesAno.slice(0, 7)}
-            onChange={(e) => navegar({ mes: `${e.target.value}-01` })} />
+          <CampoData tipo="mes" value={mesAno.slice(0, 7)}
+            onChange={(v) => v && navegar({ mes: `${v}-01` })} />
         </div>
         <div>
           <label className="rotulo">Regional</label>

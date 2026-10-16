@@ -6,6 +6,7 @@ import Modal from "@/components/Modal";
 import type { LinhaUsuario } from "@/lib/data/gestor";
 import { DOMINIO_EMAIL_EMPRESA, PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
 import { criarUsuario, definirStatusUsuario, editarUsuario, reenviarConvite } from "./actions";
+import CampoData from "@/components/CampoData";
 
 function dataCurta(iso: string | null): string {
   if (!iso) return "—";
@@ -220,7 +221,7 @@ function FormUsuario({
           {temporario && (
             <div>
               <label className="rotulo" htmlFor="u-ate">Acesso vale até (inclusive)</label>
-              <input id="u-ate" type="date" className="campo !text-base !py-2" value={ate} onChange={(e) => setAte(e.target.value)} />
+              <CampoData id="u-ate" tipo="data" value={ate} onChange={setAte} />
               <p className="mt-1 text-xs text-ink/40">Depois desse dia o acesso expira sozinho. Para recontratar, basta mudar a data.</p>
             </div>
           )}

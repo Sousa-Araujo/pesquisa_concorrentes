@@ -18,6 +18,8 @@
     "importar:cliente-oculto": "node scripts/importar-cliente-oculto.mjs"
   },
   "dependencies": {
+    "flatpickr": "^4.6.13",
+    "lucide-react": "^0.469.0",
     "next": "^15.5.28",
     "pg": "^8.13.1",
     "react": "^19.1.1",

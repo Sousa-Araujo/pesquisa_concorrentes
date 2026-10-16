@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import CampoData from "@/components/CampoData";
 
 type Item = { id: number; nome: string };
 
@@ -55,8 +56,8 @@ export default function FiltrosPesquisas({
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <div>
           <label className="rotulo">Competência</label>
-          <input type="month" className="campo !px-2 !py-2 !text-sm" value={mes ? mes.slice(0, 7) : ""}
-            onChange={(e) => navegar({ mes: e.target.value ? `${e.target.value}-01` : "" })} />
+          <CampoData tipo="mes" value={mes ? mes.slice(0, 7) : ""}
+            onChange={(v) => navegar({ mes: v ? `${v}-01` : "" })} />
         </div>
         <div>
           <label className="rotulo">Regional</label>

@@ -6,7 +6,14 @@
 <title>Coordenador de Market Share — Cliente Oculto</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%232a78d6%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-size=%2713%27 font-family=%27system-ui%27 font-weight=%27700%27 fill=%27white%27 text-anchor=%27middle%27%3ECO%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="/design/vendor/flatpickr.min.css">
+<link rel="stylesheet" href="/design/vendor/flatpickr-monthselect.css">
+<script src="/design/vendor/lucide.min.js"></script>
+<script src="/design/vendor/flatpickr.min.js"></script>
+<script src="/design/vendor/flatpickr-pt.js"></script>
+<script src="/design/vendor/flatpickr-monthselect.js"></script>
 <script src="/design/shell.js"></script>
+<script src="/design/datas.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -72,8 +79,8 @@
             <option value="concorrente">Concorrente</option>
           </select>
         </div>
-        <button class="btn btn-primary" id="applyFiltersBtn">🔍 Filtrar</button>
-        <button class="btn btn-ghost" id="refreshBtn">⟳ Limpar filtros</button>
+        <button class="btn btn-primary" id="applyFiltersBtn">Filtrar</button>
+        <button class="btn btn-ghost" id="refreshBtn">Limpar filtros</button>
       </div>
       <p class="field-help" style="margin-top:2px; margin-bottom:12px;">
         Ajuste os campos e clique em <b>Filtrar</b> para aplicar — a lista só muda quando você confirma

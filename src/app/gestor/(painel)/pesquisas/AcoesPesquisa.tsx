@@ -6,6 +6,7 @@ import Modal from "@/components/Modal";
 import DialogoConfirmacao from "@/components/DialogoConfirmacao";
 import { formatarCompetenciaCurta } from "@/lib/domain/competencia";
 import { editarColeta, excluirColeta } from "../../actions";
+import CampoData from "@/components/CampoData";
 
 type Coleta = {
   id_coleta: string;
@@ -111,8 +112,7 @@ function FormEdicao({
       <div className="mt-4 grid gap-4">
         <div>
           <label className="rotulo" htmlFor="ed-mes">Competência</label>
-          <input id="ed-mes" type="month" className="campo !px-2 !py-2 !text-sm"
-            value={mes} onChange={(e) => setMes(e.target.value)} />
+          <CampoData id="ed-mes" tipo="mes" value={mes} onChange={setMes} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

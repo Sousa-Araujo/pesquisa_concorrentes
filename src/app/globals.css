@@ -16,16 +16,16 @@ body {
   background: var(--bg, #f5f4f1);
   color: var(--text, #1f1e1c);
   font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 14px;
+  line-height: 20px;
   -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
   .campo {
-    @apply w-full px-4 py-3 text-base outline-none transition
+    @apply w-full px-3 py-2 text-sm outline-none transition
            disabled:cursor-not-allowed disabled:opacity-60;
-    min-height: 44px;
+    min-height: 36px;
     background: var(--surface);
     color: var(--text);
     border: 1px solid var(--line-strong);
@@ -34,14 +34,14 @@ body {
   .campo:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-tint); }
   .campo::placeholder { color: var(--text-3); }
   .rotulo {
-    @apply mb-1.5 block text-[13px] font-bold;
+    @apply mb-1 block text-[12px] font-bold;
     color: var(--text-2);
   }
   .btn-primary {
-    @apply inline-flex w-full items-center justify-center gap-2 px-5 py-3 font-bold uppercase transition
+    @apply inline-flex w-full items-center justify-center gap-2 px-4 py-2 font-bold uppercase transition
            active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50;
-    min-height: 44px;
-    font-size: 13px;
+    min-height: 36px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     background: var(--brand);
     color: var(--on-brand);
@@ -50,13 +50,13 @@ body {
   }
   .btn-primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-2 text-[13px] font-bold transition;
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 text-[12.5px] font-bold transition;
     color: var(--brand-text);
     border-radius: var(--radius-control);
   }
   .btn-ghost:hover { background: var(--brand-tint); }
   .card {
-    @apply p-5;
+    @apply p-4;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-card);

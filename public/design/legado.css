@@ -32,10 +32,11 @@
 .ms-legado #userChipName,
 .ms-legado #logoutBtn,
 .ms-legado #themeToggle { display: none !important; }
-.ms-legado .app { max-width: 1180px; padding: 0 var(--space-6) 64px; margin: 0; }
+.ms-legado .app { max-width: none; width: 100%; box-sizing: border-box; padding: 0 var(--space-6) 48px; margin: 0; }
 
 /* Botões e cartões no formato do design system. */
-.ms-legado .btn { border-radius: var(--radius-control); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12.5px; }
+.ms-legado .btn { border-radius: var(--radius-control); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 8px 14px; min-height: 36px; }
+.ms-legado .btn-sm { min-height: 30px; padding: 6px 10px; font-size: 11px; }
 .ms-legado .btn-primary { background: var(--brand); color: var(--on-brand); }
 .ms-legado .btn-primary:hover { background: var(--brand-hover); }
 .ms-legado .btn-ghost { background: var(--surface); color: var(--brand-text); border-color: var(--line-strong); }
@@ -46,3 +47,25 @@
   .ms-legado .ms-dual { display: none !important; }
   .ms-legado .app { padding: 0; }
 }
+
+/* Campos mais compactos, iguais aos do design system. */
+.ms-legado .field label { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.ms-legado .field input, .ms-legado .field select, .ms-legado .field textarea { min-height: 36px; padding: 7px 10px; font-size: 13.5px; border-radius: var(--radius-control); border-color: var(--line-strong); }
+.ms-legado .field textarea { min-height: 64px; }
+
+/* Listas: filtros num cartão, dados em outro. */
+.ms-legado #view-list > .panel { background: transparent; border: 0; box-shadow: none; padding: 0; margin: 0; }
+.ms-legado #view-list > .panel > .panel-head h2 { font-size: 20px; line-height: 26px; font-weight: 700; color: var(--ink); }
+.ms-legado #view-list > .panel > .panel-hint { margin: 2px 0 var(--space-4); }
+.ms-legado .filters-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin: 0 0 var(--space-4); padding: var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.ms-legado .filters-bar .field { flex: 1 1 150px; min-width: 140px; margin: 0; }
+.ms-legado .filters-bar > .btn, .ms-legado .filters-bar > label { flex: none; }
+.ms-legado .filters-bar > label { padding-bottom: 9px !important; }
+.ms-legado .table-wrap { max-width: 100%; }
+.ms-legado table.av-table td { padding: 10px 12px; }
+.ms-legado table.av-table th { padding: 10px 12px; }
+
+/* Sem moldura vermelha nas telas do administrador. */
+.ms-legado .danger-zone { border-color: var(--line); }
+.ms-legado .danger-zone .panel-head h2 { color: var(--ink); }
+.ms-legado table.av-table td:first-child, .ms-legado table.av-table td:first-child * { white-space: nowrap; }

@@ -15,17 +15,10 @@
   // O design system do sistema usa o tema claro.
   document.documentElement.setAttribute('data-theme', 'light');
 
-  var ICONES = {
-    home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
-    chart: '<path d="M4 20h16"/><rect x="6" y="11" width="3" height="6" rx="1"/><rect x="11" y="7" width="3" height="10" rx="1"/><rect x="16" y="13" width="3" height="4" rx="1"/>',
-    eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
-    doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/>',
-    users: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 15c3 0 5 2 5 4"/>',
-    collapse: '<path d="M15 6l-6 6 6 6"/>',
-    logout: '<path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4M18 12H9"/>'
-  };
+  // Ícones do Lucide (public/design/vendor/lucide.min.js), os mesmos das telas em React.
+  var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', menu: 'menu', logout: 'log-out' };
   function icone(nome) {
-    return '<svg class="ms-icon" viewBox="0 0 24 24" aria-hidden="true">' + (ICONES[nome] || '') + '</svg>';
+    return '<i data-lucide="' + (ICONES[nome] || nome) + '" aria-hidden="true"></i>';
   }
   function el(tag, attrs, html) {
     var e = document.createElement(tag);
@@ -52,10 +45,12 @@
     var recolhido = false;
     try { recolhido = localStorage.getItem(CHAVE) === '1'; } catch (e) { /* sem armazenamento */ }
 
-    var dual = el('div', { 'class': 'ms-dual' + (recolhido ? ' is-collapsed' : '') });
+    var dual = el('div', { 'class': 'ms-dual' + (recolhido ? ' is-collapsed' : ''), 'data-pronto': '' });
     var rail = el('div', { 'class': 'ms-rail' });
     var painel = el('nav', { 'class': 'ms-panel', id: 'ms-painel' });
 
+    var btRecolher = el('button', { type: 'button', 'class': 'ms-rail-menu', 'aria-controls': 'ms-painel' }, icone('menu'));
+    rail.appendChild(btRecolher);
     var marca = el('a', { href: '/inicio', 'class': 'ms-brand-mark', title: 'Sousa Araujo · Market Share', style: 'text-decoration:none' }, 'SA');
     rail.appendChild(marca);
 
@@ -101,7 +96,6 @@
     });
 
     var pe = el('div', { 'class': 'ms-rail-foot' });
-    var btRecolher = el('button', { type: 'button', 'aria-controls': 'ms-painel' }, icone('collapse'));
     function alternar() {
       var fechado = dual.classList.toggle('is-collapsed');
       btRecolher.setAttribute('aria-expanded', String(!fechado));
@@ -118,7 +112,7 @@
     var avatar = el('span', { 'class': 'ms-avatar' });
     avatar.textContent = menu.usuario.iniciais;
     avatar.title = menu.usuario.nome + ' · ' + menu.usuario.perfil;
-    pe.appendChild(btRecolher); pe.appendChild(btSair); pe.appendChild(avatar);
+    pe.appendChild(btSair); pe.appendChild(avatar);
     rail.appendChild(pe);
 
     dual.appendChild(rail);
@@ -131,6 +125,7 @@
     shell.appendChild(dual);
     shell.appendChild(main);
     document.body.appendChild(shell);
+    if (window.lucide) window.lucide.createIcons({ attrs: { width: 18, height: 18, 'stroke-width': 1.75 } });
   }
 
   function iniciar() {

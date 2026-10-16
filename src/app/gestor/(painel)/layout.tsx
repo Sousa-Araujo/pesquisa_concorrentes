@@ -9,7 +9,7 @@ export default async function PainelLayout({ children }: { children: React.React
   const menu = await montarMenu(u);
   return (
     <AppShell menu={menu}>
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">{children}</div>
+      <div className="w-full px-6 py-6">{children}</div>
     </AppShell>
   );
 }

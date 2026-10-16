@@ -16,6 +16,7 @@ import {
   type AgenteSessao,
   type ResumoColeta,
 } from "./actions";
+import CampoData from "@/components/CampoData";
 
 type Opcao = { valor: string; texto: string };
 
@@ -270,13 +271,7 @@ function Formulario({
 
       <div className="mb-4 rounded-xl bg-brand/5 px-4 py-3">
         <label className="rotulo" htmlFor="competencia">Competência</label>
-        <input
-          id="competencia"
-          type="month"
-          className="campo !px-2 !py-2 !text-sm"
-          value={competencia}
-          onChange={(e) => setCompetencia(e.target.value)}
-        />
+        <CampoData id="competencia" tipo="mes" value={competencia} onChange={setCompetencia} />
         <p className="mt-1 text-xs text-brand">{competenciaLabel}</p>
       </div>
 
