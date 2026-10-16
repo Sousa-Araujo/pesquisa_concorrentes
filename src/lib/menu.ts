@@ -81,7 +81,11 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
       itens.push({ nome: "Avaliações e calibragem", href: "/cliente-oculto/coordenador.html", contador: n || undefined });
       if (ehAdmin) itens.push({ nome: "Correções (administrador)", href: "/cliente-oculto/admin.html" });
     }
-    modulos.push({ id: "co", nome: "Cliente Oculto", icone: "eye", resumo, grupos: [{ nome: "Avaliações", itens }] });
+    const grupos: GrupoMenu[] = [];
+    // O administrador vê todas as funcionalidades, inclusive registrar uma visita.
+    if (ehAdmin) grupos.push({ nome: "Visitas", itens: [{ nome: "Nova avaliação", href: "/cliente-oculto/cliente-oculto.html" }] });
+    grupos.push({ nome: "Avaliações", itens });
+    modulos.push({ id: "co", nome: "Cliente Oculto", icone: "eye", resumo, grupos });
   }
 
   if (tem("supervisor_parcerias", "coordenador_market_share")) {
