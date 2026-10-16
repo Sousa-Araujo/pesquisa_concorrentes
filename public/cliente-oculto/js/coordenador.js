@@ -248,12 +248,9 @@
     const idCell = hasChildren ? `<div class="group-id-cell">${toggle}${r.id}</div>` : r.id;
     return `<tr class="row-clickable ${rowClass} ${groupClass}" data-id="${escapeAttr(r.id)}">
       <td class="id-mono">${idCell}</td>
-      <td>${escapeHtml(r.empreendimento) || '—'}${tipoTagHtml(r.tipoEmpreendimento)}${vinculoAvulso}${childChip}</td>
+      <td class="cel-emp">${escapeHtml(r.empreendimento) || '—'}${tipoTagHtml(r.tipoEmpreendimento)}${vinculoAvulso}${childChip}</td>
       <td>${escapeHtml(r.regional) || '—'}</td>
-      <td>${escapeHtml(r.dataVisita) || '—'}</td>
-      <td>${r.dataVisita ? `<span class="period-chip">🗓 ${mesReferencia(r.dataVisita)}</span>` : '—'}</td>
-      <td>${escapeHtml(r.clienteOculto) || '—'}</td>
-      <td>${escapeHtml(r.corretor) || '—'}</td>
+      <td class="cel-data">${escapeHtml(r.dataVisita) || '—'}</td>
       <td><span class="status-badge ${st.tone || 'tone-muted'}">${st.icon || ''} ${r.status}</span></td>
       <td>${nota !== null && nota !== undefined ? Number(nota).toFixed(1) : '—'}</td>
       <td><div class="row-actions">${acaoHtml}</div></td>

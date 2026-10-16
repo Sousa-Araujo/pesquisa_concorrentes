@@ -114,7 +114,7 @@
 .ms-rail button:focus-visible { outline: 2px solid var(--on-brand); outline-offset: 2px; }
 /* Menu padrão: trilho + painel ocupando a altura da tela */
 .ms-shell > .ms-dual { min-height: 100%; border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; }
-.ms-dual .ms-panel { width: 216px; flex: none; box-sizing: border-box; overflow: hidden; white-space: nowrap; transition: width 0.22s ease, padding 0.22s ease, opacity 0.18s ease; }
+.ms-dual .ms-panel { width: 236px; flex: none; box-sizing: border-box; overflow: hidden; white-space: nowrap; transition: width 0.22s ease, padding 0.22s ease, opacity 0.18s ease; }
 .ms-panel-group { margin: var(--space-3) var(--space-3) var(--space-1); font: 700 11px/14px var(--font-sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
 /* Recolhido: some o painel, fica o trilho (64px) */
 .ms-dual.is-collapsed .ms-panel { width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
@@ -181,7 +181,7 @@
 .ms-panel a { color: rgba(255, 255, 255, 0.78); }
 .ms-panel a:hover { background: rgba(255, 255, 255, 0.08); color: var(--on-brand, #fff); }
 .ms-panel a[aria-current="page"] { background: var(--brand); color: var(--on-brand, #fff); }
-.ms-panel a .ms-count { background: var(--on-brand, #fff); color: var(--brand-deep); }
+.ms-panel a .ms-count { flex: none; min-width: 20px; height: 20px; padding: 0 6px; font-size: 11px; background: var(--on-brand, #fff); color: var(--brand-deep); }
 .ms-panel .ms-panel-off { color: rgba(255, 255, 255, 0.4); }
 .ms-shell > .ms-dual { border-right-color: transparent; }
 
