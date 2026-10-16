@@ -1,0 +1,48 @@
+/* Market Share Sousa Araujo — tokens (gerado do design system, tokens.json). Tema claro. */
+:root {
+  --brand: #ae2628;
+  --brand-hover: #922022;
+  --brand-deep: #420000;
+  --brand-text: #ae2628;
+  --brand-tint: #f8e9e9;
+  --on-brand: #ffffff;
+  --ink: #111111;
+  --text: #1f1e1c;
+  --text-2: #65645e;
+  --text-3: #8f8d85;
+  --bg: #f5f4f1;
+  --surface: #ffffff;
+  --surface-2: #eeede9;
+  --line: #e9e8e4;
+  --line-strong: #c2c0b5;
+  --focus: var(--brand-text);
+  --excep: #1e66c4;
+  --excep-tint: #e3edfb;
+  --excep-ink: #123f7a;
+  --good: #0ca30c;
+  --good-tint: #e6f6e2;
+  --good-ink: #006300;
+  --warning: #fab219;
+  --warning-tint: #fff3dc;
+  --warning-ink: #7a4f12;
+  --serious: #ec835a;
+  --serious-tint: #fde7de;
+  --serious-ink: #7a3417;
+  --critical: #d03b3b;
+  --critical-tint: #fbe4e4;
+  --critical-ink: #9b2424;
+  --shadow-card: 0 1px 2px rgba(17,17,17,0.05), 0 4px 12px rgba(17,17,17,0.04);
+  --shadow-overlay: 0 8px 24px rgba(17,17,17,0.12);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 48px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-frame: 20px;
+  --radius-pill: 999px;
+  --font-sans: Satoshi, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}

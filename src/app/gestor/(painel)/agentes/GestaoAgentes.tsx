@@ -46,7 +46,7 @@ export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
                 <td className="px-4 py-3 tabular-nums">{a.telefone}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    a.ativo ? "bg-brand/15 text-brand" : "bg-black/10 text-ink/50"
+                    a.ativo ? "bg-[var(--good-tint)] text-[var(--good-ink)]" : "bg-black/10 text-ink/50"
                   }`}>
                     {a.ativo ? "Ativo" : "Inativo"}
                   </span>

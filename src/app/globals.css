@@ -2,42 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --brand: #0e5a4a;
-  --surface: #f6f7f4;
-}
+/*
+ * As cores, medidas e a fonte vêm do design system Market Share Sousa Araujo
+ * (public/design/tokens.css e ms.css, carregados no layout raiz). Aqui ficam
+ * só os estilos base das telas em React, sempre usando esses tokens.
+ */
 
 html {
   color-scheme: light;
 }
 
 body {
-  background: var(--surface, #f6f7f4);
-  color: #12212e;
+  background: var(--bg, #f5f4f1);
+  color: var(--text, #1f1e1c);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 15px;
+  line-height: 22px;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Campos grandes e teclado numérico confortável na área do agente. */
 @layer components {
   .campo {
-    @apply w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-lg
-           outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20
-           disabled:cursor-not-allowed disabled:bg-black/5 disabled:text-black/40;
+    @apply w-full px-4 py-3 text-base outline-none transition
+           disabled:cursor-not-allowed disabled:opacity-60;
+    min-height: 44px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
   }
+  .campo:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-tint); }
+  .campo::placeholder { color: var(--text-3); }
   .rotulo {
-    @apply mb-1.5 block text-sm font-medium text-ink/70;
+    @apply mb-1.5 block text-[13px] font-bold;
+    color: var(--text-2);
   }
   .btn-primary {
-    @apply w-full rounded-xl bg-brand px-5 py-3.5 text-lg font-semibold text-white
-           transition hover:bg-brandhi active:scale-[.99]
-           disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex w-full items-center justify-center gap-2 px-5 py-3 font-bold uppercase transition
+           active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50;
+    min-height: 44px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    background: var(--brand);
+    color: var(--on-brand);
+    border: 1px solid var(--brand);
+    border-radius: var(--radius-control);
   }
+  .btn-primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); }
   .btn-ghost {
-    @apply rounded-lg px-3 py-2 text-sm font-medium text-brand hover:bg-brand/10;
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 text-[13px] font-bold transition;
+    color: var(--brand-text);
+    border-radius: var(--radius-control);
   }
+  .btn-ghost:hover { background: var(--brand-tint); }
   .card {
-    @apply rounded-2xl border border-black/[.06] bg-white p-5 shadow-sm;
+    @apply p-5;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
   }
 }
 
@@ -60,7 +83,6 @@ button:focus-visible,
 select:focus-visible,
 input:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--brand, #0e5a4a);
+  outline: 2px solid var(--focus, #ae2628);
   outline-offset: 2px;
-  border-radius: 0.5rem;
 }

@@ -92,7 +92,7 @@ export default function GestaoEmpreendimentos({
                 <td className="px-4 py-3">{e.regional}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    e.ativo ? "bg-brand/15 text-brand" : "bg-black/10 text-ink/50"
+                    e.ativo ? "bg-[var(--good-tint)] text-[var(--good-ink)]" : "bg-black/10 text-ink/50"
                   }`}>
                     {e.ativo ? "Ativo" : "Inativo"}
                   </span>

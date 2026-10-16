@@ -1,0 +1,48 @@
+/*
+ * Telas do Cliente Oculto (app antigo) no design system Market Share Sousa
+ * Araujo: troca as cores e a fonte antigas pelas do design system, mantém a
+ * régua de notas, e encaixa a página no menu lateral (trilho + painel).
+ * Carregado por public/design/shell.js.
+ */
+:root[data-theme="light"] {
+  --surface-1: var(--surface);
+  --surface-2: var(--bg);
+  --surface-3: var(--surface);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-2);
+  --border: var(--line);
+  --border-strong: var(--line);
+  --accent: var(--brand);
+  --accent-ink: var(--brand-hover);
+  --muted-tint: var(--surface-2);
+  --neutral-tint: var(--surface-2);
+  --shadow: var(--shadow-card);
+}
+
+.ms-legado body, body { font-family: var(--font-sans); }
+.ms-legado .ms-main { min-width: 0; }
+.ms-legado .app, .ms-legado .panel, .ms-legado main { min-width: 0; max-width: 100%; }
+.ms-legado .ms-dual { position: sticky; top: 0; height: 100dvh; }
+.ms-legado .ms-panel { overflow-y: auto; }
+
+/* Cabeçalho antigo: a marca, o nome da pessoa, o sair e o tema ficam no menu lateral. */
+.ms-legado .topbar { position: static; background: transparent; border-bottom: 0; backdrop-filter: none; padding: var(--space-4) var(--space-6) 0; min-height: 0; }
+.ms-legado .topbar .brand,
+.ms-legado #userChipName,
+.ms-legado #logoutBtn,
+.ms-legado #themeToggle { display: none !important; }
+.ms-legado .app { max-width: 1180px; padding: 0 var(--space-6) 64px; margin: 0; }
+
+/* Botões e cartões no formato do design system. */
+.ms-legado .btn { border-radius: var(--radius-control); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12.5px; }
+.ms-legado .btn-primary { background: var(--brand); color: var(--on-brand); }
+.ms-legado .btn-primary:hover { background: var(--brand-hover); }
+.ms-legado .btn-ghost { background: var(--surface); color: var(--brand-text); border-color: var(--line-strong); }
+.ms-legado .table-wrap, .ms-legado .report-sheet { border-radius: var(--radius-card); }
+.ms-legado .brand-mark { background: var(--brand); }
+
+@media print {
+  .ms-legado .ms-dual { display: none !important; }
+  .ms-legado .app { padding: 0; }
+}

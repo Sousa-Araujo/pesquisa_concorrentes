@@ -141,7 +141,7 @@ function StatusUsuario({ u }: { u: LinhaUsuario }) {
   if (u.acesso_expirado) return <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Acesso expirado</span>;
   return (
     <div>
-      <span className="rounded bg-brand/15 px-2 py-0.5 text-xs text-brand">Ativo</span>
+      <span className="ms-tag ms-tag--good">Ativo</span>
       {u.acesso_ate && <p className="mt-1 text-xs text-ink/50">até {diaBr(u.acesso_ate)}</p>}
     </div>
   );

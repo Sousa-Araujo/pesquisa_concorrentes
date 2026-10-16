@@ -106,7 +106,7 @@ export default function GestaoConcorrentes({
                 <td className="px-4 py-3">{c.regional}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    c.ativo ? "bg-brand/15 text-brand" : "bg-black/10 text-ink/50"
+                    c.ativo ? "bg-[var(--good-tint)] text-[var(--good-ink)]" : "bg-black/10 text-ink/50"
                   }`}>
                     {c.ativo ? "Ativo" : "Inativo"}
                   </span>
