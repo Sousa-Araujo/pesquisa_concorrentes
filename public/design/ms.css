@@ -170,13 +170,4 @@
 .ms-steps-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); }
 .ms-steps-pos { flex: 1; text-align: center; font-size: 12.5px; color: var(--text-2); }
 .ms-step-hidden { display: none !important; }
-.ms-step-done { padding-top: var(--space-3) !important; padding-bottom: var(--space-3) !important; cursor: pointer; }
-.ms-step-done > :not(.panel-head) { display: none !important; }
-.ms-step-done .panel-head { margin: 0; align-items: center; }
-.ms-step-done .panel-head h2 { font-size: 14px; color: var(--text-2); }
-.ms-step-done .panel-head h2::before { content: "✓"; display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: var(--radius-pill); background: var(--good-tint); color: var(--good-ink); font-size: 11px; }
-.ms-step-done .panel-head > :not(h2):not(.ms-step-edit) { display: none !important; }
-.ms-step-current .panel-num, .ms-step-done .panel-num { display: none; }
-.ms-step-edit { display: none !important; margin-left: auto; }
-.ms-step-done .ms-step-edit { display: inline-flex !important; }
-.ms-step-done:hover { border-color: var(--line-strong); }
+.ms-step-current .panel-num { display: none; }

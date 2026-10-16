@@ -1,7 +1,7 @@
 // Fluxo em etapas do design system (componente "Etapas") nas telas de
 // preenchimento do Cliente Oculto: registro da visita, calibragem e edição do
-// administrador. Uma etapa por vez, com Voltar / Próximo; as etapas já vistas
-// ficam recolhidas acima (dá para reabrir) e uma barra mostra o progresso.
+// administrador. Uma etapa por vez, com Voltar / Próximo; a barra no topo mostra
+// o progresso e permite voltar às etapas já vistas.
 // Não muda nada do que as telas salvam: só mostra e esconde as seções.
 (function () {
   'use strict';
@@ -80,20 +80,11 @@
       b.addEventListener('click', function () { self.ir(Number(b.getAttribute('data-etapa'))); });
     });
 
-    // Etapas anteriores recolhidas (resumo clicável), atual aberta, próximas escondidas.
+    // Só a etapa atual fica na tela; para mudar algo, volta-se pelo Voltar ou
+    // pelos círculos da barra.
     etapas.forEach(function (p, i) {
-      p.classList.toggle('ms-step-done', i < self.atual);
       p.classList.toggle('ms-step-current', i === self.atual);
-      p.classList.toggle('ms-step-hidden', i > self.atual);
-      var head = p.querySelector('.panel-head');
-      if (head && !head.querySelector('.ms-step-edit')) {
-        var bt = document.createElement('button');
-        bt.type = 'button';
-        bt.className = 'ms-step-edit ms-btn ms-btn--text ms-btn--sm';
-        bt.textContent = 'Editar';
-        head.appendChild(bt);
-      }
-      if (head) head.onclick = i < self.atual ? function () { self.ir(etapas.indexOf(p)); } : null;
+      p.classList.toggle('ms-step-hidden', i !== self.atual);
     });
 
     // Barra antes da primeira etapa; Voltar/Próximo logo depois da etapa atual.
@@ -125,7 +116,7 @@
       var etapas = f.etapas();
       var precisa = !etapas.length ? false :
         f.assinatura !== etapas.length + ':' + f.atual ||
-        etapas.some(function (p, i) { return !p.classList.contains(i < f.atual ? 'ms-step-done' : i === f.atual ? 'ms-step-current' : 'ms-step-hidden'); }) ||
+        etapas.some(function (p, i) { return !p.classList.contains(i === f.atual ? 'ms-step-current' : 'ms-step-hidden'); }) ||
         !f.barra.isConnected || !f.nav.isConnected;
       if (precisa) f.aplicar(false);
     });
