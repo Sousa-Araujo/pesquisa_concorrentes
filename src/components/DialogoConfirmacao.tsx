@@ -24,7 +24,7 @@ export default function DialogoConfirmacao({
   onCancelar: () => void;
 }) {
   return (
-    <Modal titulo={titulo} onFechar={onCancelar}>
+    <Modal titulo={titulo} onFechar={onCancelar} largura="estreita">
       <h2 className="text-lg font-semibold text-ink">{titulo}</h2>
       <div className="mt-2 text-sm text-ink/70">{mensagem}</div>
       {erro && (

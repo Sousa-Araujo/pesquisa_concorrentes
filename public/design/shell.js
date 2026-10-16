@@ -12,8 +12,12 @@
   css('/design/tokens.css');
   css('/design/ms.css');
   css('/design/legado.css');
-  // O design system do sistema usa o tema claro.
-  document.documentElement.setAttribute('data-theme', 'light');
+  // Tema escolhido no menu do usuário (o mesmo das telas em React: src/lib/cliente/perfil.ts).
+  var CHAVE_TEMA = 'ms-tema';
+  function lerTema() {
+    try { return localStorage.getItem(CHAVE_TEMA) === 'dark' ? 'dark' : 'light'; } catch (e) { return 'light'; }
+  }
+  document.documentElement.setAttribute('data-theme', lerTema());
 
   // Ícones do Lucide (public/design/vendor/lucide.min.js), os mesmos das telas em React.
   var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', menu: 'menu', logout: 'log-out' };
@@ -39,6 +43,99 @@
     return melhor;
   }
 
+  // Reduz a foto para 160×160 (recorte central) em JPEG, como em src/lib/cliente/perfil.ts.
+  function reduzirFoto(arquivo, pronto, falhou) {
+    var url = URL.createObjectURL(arquivo);
+    var img = new Image();
+    img.onload = function () {
+      var lado = 160, c = document.createElement('canvas');
+      c.width = lado; c.height = lado;
+      var m = Math.min(img.width, img.height);
+      c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, lado, lado);
+      URL.revokeObjectURL(url);
+      pronto(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); falhou('Não foi possível ler a imagem.'); };
+    img.src = url;
+  }
+
+  // Navbar: logo da Sousa Araujo e o menu da pessoa (o mesmo de src/components/Navbar.tsx).
+  function navbar(u) {
+    var topo = el('header', { 'class': 'ms-topbar' });
+    topo.appendChild(el('a', { href: '/inicio', 'class': 'ms-topbar-logo', 'aria-label': 'Início' },
+      '<img class="ms-logo-claro" src="/design/logo-sousa-araujo.svg" alt="Construtora Sousa Araujo">' +
+      '<img class="ms-logo-escuro" src="/design/logo-sousa-araujo-branco.svg" alt="Construtora Sousa Araujo">'));
+
+    var acoes = el('div', { 'class': 'ms-topbar-acoes' });
+    var bt = el('button', { type: 'button', 'class': 'ms-icon-btn', title: 'Minha conta', 'aria-haspopup': 'menu', 'aria-expanded': 'false' },
+      '<i data-lucide="settings" aria-hidden="true"></i>');
+    var caixa = el('div', { 'class': 'ms-user-menu', role: 'menu', hidden: '' });
+
+    var cab = el('div', { 'class': 'ms-user-head' });
+    var avatar = el('span', { 'class': 'ms-avatar' });
+    function desenharAvatar(foto) {
+      avatar.innerHTML = '';
+      if (foto) { var i = el('img', { alt: '' }); i.src = foto; avatar.appendChild(i); }
+      else avatar.textContent = u.iniciais;
+    }
+    desenharAvatar(u.foto);
+    var dados = el('div');
+    dados.appendChild(el('b')).textContent = u.nome;
+    var email = dados.appendChild(el('small')); email.textContent = u.email; email.title = u.email;
+    dados.appendChild(el('small')).textContent = u.perfil;
+    cab.appendChild(avatar); cab.appendChild(dados);
+    caixa.appendChild(cab);
+    caixa.appendChild(el('div', { 'class': 'ms-user-sep' }));
+
+    var arquivo = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', hidden: '' });
+    arquivo.addEventListener('change', function () {
+      var f = arquivo.files && arquivo.files[0];
+      arquivo.value = '';
+      if (!f) return;
+      reduzirFoto(f, function (foto) {
+        fetch('/api/perfil/foto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ foto: foto }) })
+          .then(function (r) { if (!r.ok) throw new Error(); desenharAvatar(foto); })
+          .catch(function () { alert('Não foi possível salvar a foto.'); });
+      }, function (msg) { alert(msg); });
+    });
+    var btFoto = el('button', { type: 'button', role: 'menuitem', 'class': 'ms-user-item' }, '<i data-lucide="camera" aria-hidden="true"></i>Foto do perfil');
+    btFoto.addEventListener('click', function () { arquivo.click(); });
+
+    var escuro = lerTema() === 'dark';
+    var chave = el('span', { 'class': 'ms-switch', 'data-on': String(escuro) });
+    var btTema = el('button', { type: 'button', role: 'menuitemcheckbox', 'aria-checked': String(escuro), 'class': 'ms-user-item' }, '<i data-lucide="moon" aria-hidden="true"></i>Tema escuro');
+    btTema.appendChild(chave);
+    btTema.addEventListener('click', function () {
+      escuro = !escuro;
+      var tema = escuro ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', tema);
+      try { localStorage.setItem(CHAVE_TEMA, tema); } catch (e) { /* sem armazenamento */ }
+      chave.setAttribute('data-on', String(escuro));
+      btTema.setAttribute('aria-checked', String(escuro));
+    });
+
+    var btSair = el('button', { type: 'button', role: 'menuitem', 'class': 'ms-user-item ms-user-item--sair' }, '<i data-lucide="log-out" aria-hidden="true"></i>Sair');
+    btSair.addEventListener('click', function () {
+      fetch('/api/co/auth/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/entrar'; });
+    });
+
+    caixa.appendChild(btFoto); caixa.appendChild(arquivo); caixa.appendChild(btTema);
+    caixa.appendChild(el('div', { 'class': 'ms-user-sep' }));
+    caixa.appendChild(btSair);
+
+    function abrir(sim) {
+      if (sim) caixa.removeAttribute('hidden'); else caixa.setAttribute('hidden', '');
+      bt.setAttribute('aria-expanded', String(sim));
+    }
+    bt.addEventListener('click', function () { abrir(caixa.hasAttribute('hidden')); });
+    document.addEventListener('mousedown', function (e) { if (!acoes.contains(e.target)) abrir(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') abrir(false); });
+
+    acoes.appendChild(bt); acoes.appendChild(caixa);
+    topo.appendChild(acoes);
+    return topo;
+  }
+
   function montar(menu) {
     var atual = itemAtual(menu);
     var aberto = atual.modulo || (menu.modulos[0] && menu.modulos[0].id);
@@ -51,8 +148,6 @@
 
     var btRecolher = el('button', { type: 'button', 'class': 'ms-rail-menu', 'aria-controls': 'ms-painel' }, icone('menu'));
     rail.appendChild(btRecolher);
-    var marca = el('a', { href: '/inicio', 'class': 'ms-brand-mark', title: 'Sousa Araujo · Market Share', style: 'text-decoration:none' }, 'SA');
-    rail.appendChild(marca);
 
     function desenharPainel() {
       var m = menu.modulos.filter(function (x) { return x.id === aberto; })[0];
@@ -60,7 +155,6 @@
       if (!m) return;
       painel.setAttribute('aria-label', m.nome);
       painel.appendChild(el('h4', {}, '')).textContent = m.nome;
-      painel.appendChild(el('p', { 'class': 'ms-panel-sub' }, '')).textContent = m.resumo;
       m.grupos.forEach(function (g) {
         painel.appendChild(el('div', { 'class': 'ms-panel-group' }, '')).textContent = g.nome;
         g.itens.forEach(function (i) {
@@ -98,7 +192,6 @@
       rail.appendChild(a);
     });
 
-    var pe = el('div', { 'class': 'ms-rail-foot' });
     function alternar() {
       var fechado = dual.classList.toggle('is-collapsed');
       btRecolher.setAttribute('aria-expanded', String(!fechado));
@@ -108,26 +201,20 @@
     btRecolher.setAttribute('aria-expanded', String(!recolhido));
     btRecolher.title = recolhido ? 'Expandir menu' : 'Recolher menu';
     btRecolher.addEventListener('click', alternar);
-    var btSair = el('button', { type: 'button', title: 'Sair' }, icone('logout'));
-    btSair.addEventListener('click', function () {
-      fetch('/api/co/auth/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/entrar'; });
-    });
-    var avatar = el('span', { 'class': 'ms-avatar' });
-    avatar.textContent = menu.usuario.iniciais;
-    avatar.title = menu.usuario.nome + ' · ' + menu.usuario.perfil;
-    pe.appendChild(btSair); pe.appendChild(avatar);
-    rail.appendChild(pe);
 
     dual.appendChild(rail);
     dual.appendChild(painel);
     desenharPainel();
 
-    var shell = el('div', { 'class': 'ms-shell ms-legado' });
+    var app = el('div', { 'class': 'ms-app ms-legado' });
+    var shell = el('div', { 'class': 'ms-shell' });
     var main = el('div', { 'class': 'ms-main' });
     while (document.body.firstChild) main.appendChild(document.body.firstChild);
     shell.appendChild(dual);
     shell.appendChild(main);
-    document.body.appendChild(shell);
+    app.appendChild(navbar(menu.usuario));
+    app.appendChild(shell);
+    document.body.appendChild(app);
     if (window.lucide) window.lucide.createIcons({ attrs: { width: 18, height: 18, 'stroke-width': 1.75 } });
   }
 

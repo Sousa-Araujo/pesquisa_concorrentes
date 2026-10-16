@@ -23,6 +23,26 @@
     if (num) num.remove();
     return t.textContent.trim();
   }
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+  // Nome resumido de cada etapa no fluxo (o nome completo fica no título).
+  var CURTOS = {
+    'identificação da visita': 'Identificação',
+    'atendimento da recepção': 'Recepção',
+    'atendimento do corretor': 'Corretor',
+    'qualidade e estrutura do pdv': 'PDV',
+    'materiais de marketing': 'Marketing',
+    'capacidade de negociação do corretor': 'Negociação',
+    'conhecimento técnico do empreendimento e políticas de venda': 'Conhecimento',
+    'jornada comercial': 'Jornada',
+    'mapa de gaps': 'Gaps'
+  };
+  function curto(t) {
+    var k = t.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (CURTOS[k]) return CURTOS[k];
+    var p = t.split(/\s+/);
+    return p.length > 2 ? p.slice(0, 2).join(' ') : t;
+  }
 
   function Fluxo(cfg, vista) {
     this.cfg = cfg;
@@ -64,18 +84,16 @@
     if (this.atual > n - 1) this.atual = n - 1;
     var self = this;
 
-    // Barra de progresso com o nome de cada etapa (as já alcançadas são clicáveis).
-    var pct = n > 1 ? Math.round((this.atual / (n - 1)) * 100) : 100;
-    var html = '<div class="ms-steps-head"><b>Etapa ' + (this.atual + 1) + ' de ' + n + '</b><span></span></div>' +
-      '<div class="ms-steps-track"><i style="width:' + pct + '%"></i></div><ol class="ms-steps-list">';
+    // Fluxo: um segmento por etapa com o nome resumido embaixo (as já
+    // alcançadas são clicáveis).
+    var html = '<div class="ms-steps-head"><b>Etapa ' + (this.atual + 1) + ' de ' + n + '</b></div><ol class="ms-steps-flow">';
     etapas.forEach(function (p, i) {
       var estado = i < self.atual ? 'is-done' : i === self.atual ? 'is-current' : (i <= self.vistas ? 'is-seen' : '');
       html += '<li class="' + estado + '"><button type="button" data-etapa="' + i + '"' + (i <= self.vistas ? '' : ' disabled') +
-        ' title="' + titulo(p).replace(/"/g, '&quot;') + '"><span>' + (i < self.atual ? '✓' : i + 1) + '</span></button></li>';
+        (i === self.atual ? ' aria-current="step"' : '') + ' title="' + esc(titulo(p)) + '"><i></i><span>' + esc(curto(titulo(p))) + '</span></button></li>';
     });
     html += '</ol>';
     this.barra.innerHTML = html;
-    this.barra.querySelector('.ms-steps-head span').textContent = titulo(etapas[this.atual]);
     this.barra.querySelectorAll('[data-etapa]').forEach(function (b) {
       b.addEventListener('click', function () { self.ir(Number(b.getAttribute('data-etapa'))); });
     });

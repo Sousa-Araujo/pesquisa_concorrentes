@@ -14,11 +14,14 @@ export default function Modal({
   onFechar,
   children,
   alinhamento = "centro",
+  largura = "larga",
 }: {
   titulo: string;
   onFechar: () => void;
   children: React.ReactNode;
   alinhamento?: "centro" | "base";
+  /** "larga" para formulários de cadastro; "estreita" para confirmações. */
+  largura?: "larga" | "estreita";
 }) {
   const painelRef = useRef<HTMLDivElement>(null);
   const focoAnterior = useRef<HTMLElement | null>(null);
@@ -67,7 +70,7 @@ export default function Modal({
         aria-modal="true"
         aria-label={titulo}
         tabIndex={-1}
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl outline-none"
+        className={`w-full ${largura === "larga" ? "max-w-2xl" : "max-w-md"} rounded-2xl bg-[var(--surface)] p-6 shadow-xl outline-none`}
       >
         {children}
       </div>

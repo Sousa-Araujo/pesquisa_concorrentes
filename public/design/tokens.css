@@ -1,4 +1,4 @@
-/* Market Share Sousa Araujo — tokens (gerado do design system, tokens.json). Tema claro. */
+/* Market Share Sousa Araujo — tokens (gerado do design system, tokens.json). Tema claro e tema escuro (data-theme="dark" no <html>). */
 :root {
   --brand: #ae2628;
   --brand-hover: #922022;
@@ -7,6 +7,7 @@
   --brand-tint: #f8e9e9;
   --on-brand: #ffffff;
   --ink: #111111;
+  --ink-rgb: 17 17 17;
   --text: #1f1e1c;
   --text-2: #65645e;
   --text-3: #8f8d85;
@@ -45,4 +46,36 @@
   --radius-frame: 20px;
   --radius-pill: 999px;
   --font-sans: Satoshi, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+/* Tema escuro: escolhido no menu do usuário (navbar) e guardado no navegador. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --brand: #c0393b;
+  --brand-hover: #d24a4c;
+  --brand-deep: #2c0505;
+  --brand-text: #f19a9b;
+  --brand-tint: #3b1d1e;
+  --ink: #f5f4f1;
+  --ink-rgb: 245 244 241;
+  --text: #e9e7e2;
+  --text-2: #b3b1a9;
+  --text-3: #87857d;
+  --bg: #151413;
+  --surface: #1f1e1c;
+  --surface-2: #2a2926;
+  --line: #34322f;
+  --line-strong: #4b4945;
+  --excep-tint: #16283f;
+  --excep-ink: #a3c4f0;
+  --good-tint: #14301a;
+  --good-ink: #92d992;
+  --warning-tint: #3a2f14;
+  --warning-ink: #f2cc78;
+  --serious-tint: #3b2419;
+  --serious-ink: #f1a98a;
+  --critical-tint: #3e1c1c;
+  --critical-ink: #f0a0a0;
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-overlay: 0 8px 24px rgba(0,0,0,0.5);
 }

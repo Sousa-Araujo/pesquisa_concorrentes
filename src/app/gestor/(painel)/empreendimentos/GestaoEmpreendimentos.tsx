@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import type { LinhaEmpreendimento } from "@/lib/data/gestor";
 import { actCidades } from "@/app/agente/actions";
@@ -42,7 +43,7 @@ export default function GestaoEmpreendimentos({
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink">Empreendimentos</h1>
-        <button className="btn-primary !w-auto !py-2.5 !text-base" onClick={() => setCriando(true)}>
+        <button className="btn-primary btn-cabecalho" onClick={() => setCriando(true)}>
           Cadastrar empreendimento
         </button>
       </div>
@@ -97,15 +98,16 @@ export default function GestaoEmpreendimentos({
                     {e.ativo ? "Ativo" : "Inativo"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="btn-ghost" onClick={() => setEditando(e)}>Editar</button>
-                  <button className="btn-ghost"
+                <td className="px-4 py-3"><div className="acoes-linha">
+                  <button className="btn-acao" onClick={() => setEditando(e)}><Pencil size={13} aria-hidden="true" />Editar</button>
+                  <button className="btn-acao btn-acao--neutro"
                     onClick={async () => {
                       await definirStatusEmpreendimento(e.id_empreendimento, !e.ativo);
                       recarregar();
                     }}>
                     {e.ativo ? "Inativar" : "Ativar"}
                   </button>
+                </div>
                 </td>
               </tr>
             ))}
@@ -216,10 +218,10 @@ function FormEmpreendimento({
         {erro && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{erro}</p>}
       </div>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>
           Cancelar
         </button>
-        <button className="btn-primary flex-1 !py-3" onClick={salvar} disabled={salvando}>
+        <button className="btn-primary flex-1" onClick={salvar} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar"}
         </button>
       </div>

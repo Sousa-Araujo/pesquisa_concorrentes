@@ -391,7 +391,7 @@ function ModalNovoConcorrente({
   }
 
   return (
-    <Modal titulo="Cadastrar novo concorrente" onFechar={onFechar} alinhamento="base">
+    <Modal titulo="Cadastrar novo concorrente" onFechar={onFechar} alinhamento="base" largura="estreita">
       <h2 className="text-lg font-semibold text-ink">Cadastrar novo concorrente</h2>
       <p className="mt-1 text-sm text-ink/60">Informe apenas o nome. O código é gerado automaticamente.</p>
       {/* Contexto já definido pela seleção em cascata (seção 13: exibir
@@ -408,7 +408,7 @@ function ModalNovoConcorrente({
       </div>
       {erro && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>
           Cancelar
         </button>
         <button className="btn-primary flex-1" onClick={salvar} disabled={salvando || !nome.trim()}>
@@ -425,13 +425,13 @@ function Confirmacao({
   competencia: string; onCancelar: () => void; onAtualizar: () => void; ocupado: boolean;
 }) {
   return (
-    <Modal titulo="Coleta já existente" onFechar={onCancelar} alinhamento="base">
+    <Modal titulo="Coleta já existente" onFechar={onCancelar} alinhamento="base" largura="estreita">
       <h2 className="text-lg font-semibold text-ink">Coleta já existente</h2>
       <p className="mt-2 text-sm text-ink/70">
         Já existe uma coleta para este concorrente em <strong>{competencia}</strong>. Deseja atualizar?
       </p>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onCancelar}>
+        <button className="btn-secundario flex-1" onClick={onCancelar}>
           Cancelar
         </button>
         <button className="btn-primary flex-1" onClick={onAtualizar} disabled={ocupado}>

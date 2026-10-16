@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import type { LinhaUsuario } from "@/lib/data/gestor";
 import { DOMINIO_EMAIL_EMPRESA, PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
@@ -51,7 +52,7 @@ export default function GestaoUsuarios({
             Sem exclusão — apenas inativação.
           </p>
         </div>
-        <button className="btn-primary !w-auto px-5" onClick={() => { setMensagem(null); setCriando(true); }}>
+        <button className="btn-primary btn-cabecalho" onClick={() => { setMensagem(null); setCriando(true); }}>
           {ehAdmin ? "Cadastrar usuário" : "Cadastrar avaliador"}
         </button>
       </div>
@@ -100,15 +101,15 @@ export default function GestaoUsuarios({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => { setMensagem(null); setEditando(u); }}>Editar</button>
+                    <div className="acoes-linha">
+                      <button className="btn-acao" onClick={() => { setMensagem(null); setEditando(u); }}><Pencil size={13} aria-hidden="true" />Editar</button>
                       {u.ativo && (
-                        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => executar(() => reenviarConvite(u.id_usuario))}>
+                        <button className="btn-acao btn-acao--neutro" onClick={() => executar(() => reenviarConvite(u.id_usuario))}>
                           Reenviar convite
                         </button>
                       )}
                       {!ehVoce && (
-                        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => executar(() => definirStatusUsuario(u.id_usuario, !u.ativo))}>
+                        <button className="btn-acao btn-acao--neutro" onClick={() => executar(() => definirStatusUsuario(u.id_usuario, !u.ativo))}>
                           {u.ativo ? "Inativar" : "Ativar"}
                         </button>
                       )}
@@ -234,8 +235,8 @@ function FormUsuario({
         {erro && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{erro}</p>}
       </div>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>Cancelar</button>
-        <button className="btn-primary flex-1 !py-3" onClick={salvar} disabled={salvando || !nome.trim() || !email.trim()}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>Cancelar</button>
+        <button className="btn-primary flex-1" onClick={salvar} disabled={salvando || !nome.trim() || !email.trim()}>
           {salvando ? "Salvando…" : usuario ? "Salvar" : "Salvar e enviar convite"}
         </button>
       </div>

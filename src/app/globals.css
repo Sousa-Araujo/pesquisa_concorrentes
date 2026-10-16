@@ -11,6 +11,9 @@
 html {
   color-scheme: light;
 }
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
 
 body {
   background: var(--bg, #f5f4f1);
@@ -55,6 +58,32 @@ body {
     border-radius: var(--radius-control);
   }
   .btn-ghost:hover { background: var(--brand-tint); }
+  .btn-primary.btn-cabecalho { width: auto; min-height: 32px; padding: 0 14px; font-size: 11.5px; }
+  .btn-secundario {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 font-bold uppercase transition
+           disabled:cursor-not-allowed disabled:opacity-50;
+    min-height: 36px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    background: var(--surface);
+    color: var(--brand-text);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
+  }
+  .btn-secundario:hover:not(:disabled) { background: var(--brand-tint); }
+  /* Botões das linhas da tabela (Editar, Inativar…): pequenos, com borda, lado a lado. */
+  .acoes-linha { @apply flex flex-nowrap items-center justify-end gap-1.5; }
+  .btn-acao {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 text-[12px] font-bold transition;
+    min-height: 28px;
+    background: var(--surface);
+    color: var(--brand-text);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
+  }
+  .btn-acao:hover { background: var(--brand-tint); border-color: var(--brand); }
+  .btn-acao--neutro { color: var(--text-2); }
+  .btn-acao--perigo { color: var(--critical-ink, #b42318); }
   .card {
     @apply p-4;
     background: var(--surface);

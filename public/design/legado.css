@@ -4,7 +4,7 @@
  * régua de notas, e encaixa a página no menu lateral (trilho + painel).
  * Carregado por public/design/shell.js.
  */
-:root[data-theme="light"] {
+:root[data-theme] {
   --surface-1: var(--surface);
   --surface-2: var(--bg);
   --surface-3: var(--surface);
@@ -23,7 +23,7 @@
 .ms-legado body, body { font-family: var(--font-sans); }
 .ms-legado .ms-main { min-width: 0; }
 .ms-legado .app, .ms-legado .panel, .ms-legado main { min-width: 0; max-width: 100%; }
-.ms-legado .ms-dual { position: sticky; top: 0; height: 100dvh; }
+.ms-legado .ms-dual { position: sticky; top: 56px; height: calc(100dvh - 56px); }
 .ms-legado .ms-panel { overflow-y: auto; }
 
 /* Cabeçalho antigo: a marca, o nome da pessoa, o sair e o tema ficam no menu lateral. */

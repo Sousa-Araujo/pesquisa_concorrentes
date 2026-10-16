@@ -1,15 +1,16 @@
 "use client";
 
 /**
- * Menu lateral padrão do design system: trilho (ícones dos módulos) +
- * painel (itens do módulo escolhido). O botão ☰ no topo do trilho recolhe o
- * painel com animação; o conteúdo ocupa a largura que sobrar. A escolha fica
- * guardada no navegador. Ícones: Lucide. Classes ms-* de public/design/ms.css.
+ * Estrutura padrão das telas: navbar (logo e menu da pessoa) em cima e, abaixo,
+ * o menu lateral do design system: trilho (ícones dos módulos) + painel (itens
+ * do módulo escolhido). O botão ☰ no topo do trilho recolhe o painel com
+ * animação; o conteúdo ocupa a largura que sobrar. A escolha fica guardada no
+ * navegador. Ícones: Lucide. Classes ms-* de public/design/ms.css.
  */
 import { useEffect, useLayoutEffect, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartColumn, Eye, FileText, House, LogOut, Menu as MenuIcon, Users, type LucideIcon } from "lucide-react";
+import { ChartColumn, Eye, FileText, House, Menu as MenuIcon, Users, type LucideIcon } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import type { Icone, Menu, ModuloMenu } from "@/lib/menu";
 
 const CHAVE_RECOLHIDO = "ms-menu-recolhido";
@@ -29,11 +30,6 @@ function itemAtual(menu: Menu, caminho: string): { modulo?: string; href?: strin
     }
   }
   return melhor;
-}
-
-async function sair() {
-  await fetch("/api/co/auth/logout", { method: "POST" }).catch(() => {});
-  window.location.href = "/entrar";
 }
 
 export default function AppShell({ menu, children }: { menu: Menu; children: React.ReactNode }) {
@@ -62,8 +58,10 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
   const temPendencia = (m: ModuloMenu) => m.grupos.some((g) => g.itens.some((i) => i.contador));
 
   return (
-    <div className="ms-shell" style={{ minHeight: "100dvh" }}>
-      <div className={`ms-dual${recolhido ? " is-collapsed" : ""}`} data-pronto={pronto ? "" : undefined} style={{ position: "sticky", top: 0, height: "100dvh" }}>
+    <div className="ms-app">
+      <Navbar usuario={menu.usuario} />
+      <div className="ms-shell">
+      <div className={`ms-dual${recolhido ? " is-collapsed" : ""}`} data-pronto={pronto ? "" : undefined}>
         <div className="ms-rail">
           <button
             type="button"
@@ -75,7 +73,6 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
           >
             <MenuIcon size={18} aria-hidden="true" />
           </button>
-          <Link href="/inicio" className="ms-brand-mark" title="Sousa Araujo · Market Share" style={{ textDecoration: "none" }}>SA</Link>
           {menu.modulos.map((m) => {
             const Ic = ICONES[m.icone];
             return (
@@ -97,15 +94,10 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
               </a>
             );
           })}
-          <div className="ms-rail-foot">
-            <button type="button" onClick={sair} title="Sair"><LogOut size={18} aria-hidden="true" /></button>
-            <span className="ms-avatar" title={`${menu.usuario.nome} · ${menu.usuario.perfil}`}>{menu.usuario.iniciais}</span>
-          </div>
         </div>
         {modulo && (
           <nav className="ms-panel" id="ms-painel" aria-label={modulo.nome} aria-hidden={recolhido} style={{ overflowY: "auto" }}>
             <h4>{modulo.nome}</h4>
-            <p className="ms-panel-sub">{modulo.resumo}</p>
             {modulo.grupos.map((g) => (
               <div key={g.nome}>
                 <div className="ms-panel-group">{g.nome}</div>
@@ -125,6 +117,7 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
         )}
       </div>
       <div className="ms-main">{children}</div>
+      </div>
     </div>
   );
 }

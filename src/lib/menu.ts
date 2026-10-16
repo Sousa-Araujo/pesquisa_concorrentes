@@ -28,7 +28,7 @@ export interface ModuloMenu {
   grupos: GrupoMenu[];
 }
 export interface Menu {
-  usuario: { nome: string; iniciais: string; perfil: string };
+  usuario: { nome: string; email: string; iniciais: string; perfil: string; foto: string | null };
   modulos: ModuloMenu[];
 }
 
@@ -103,8 +103,14 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   }
 
   const principal = p.find(ehPerfil);
+  const { rows: [foto] } = await db().query<{ foto: string | null }>(
+    `select foto from usuarios where id_usuario = $1`, [u.id_usuario],
+  );
   return {
-    usuario: { nome: u.nome, iniciais: iniciais(u.nome), perfil: principal ? ROTULO_PERFIL[principal] : "" },
+    usuario: {
+      nome: u.nome, email: u.email, iniciais: iniciais(u.nome),
+      perfil: principal ? ROTULO_PERFIL[principal] : "", foto: foto?.foto ?? null,
+    },
     modulos,
   };
 }

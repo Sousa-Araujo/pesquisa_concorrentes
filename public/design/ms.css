@@ -115,7 +115,6 @@
 /* Menu padrão: trilho + painel ocupando a altura da tela */
 .ms-shell > .ms-dual { min-height: 100%; border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; }
 .ms-dual .ms-panel { width: 216px; flex: none; box-sizing: border-box; overflow: hidden; white-space: nowrap; transition: width 0.22s ease, padding 0.22s ease, opacity 0.18s ease; }
-.ms-panel-sub { margin: -6px var(--space-2) var(--space-3); font-size: 12px; line-height: 16px; color: var(--text-2); }
 .ms-panel-group { margin: var(--space-3) var(--space-3) var(--space-1); font: 700 11px/14px var(--font-sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
 /* Recolhido: some o painel, fica o trilho (64px) */
 .ms-dual.is-collapsed .ms-panel { width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
@@ -127,7 +126,7 @@
 .ms-rail a[aria-current="page"] { opacity: 1; background: var(--brand); }
 .ms-rail .ms-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--warning); }
 .ms-panel { flex: 1; min-width: 0; padding: var(--space-4) var(--space-3); }
-.ms-panel h4 { margin: var(--space-1) var(--space-2) var(--space-3); font-size: 14px; line-height: 20px; color: var(--ink); }
+.ms-panel h4 { display: flex; align-items: center; min-height: 36px; margin: 0 0 var(--space-2); padding: 0 var(--space-3); color: var(--on-brand, #fff); font-size: 14px; line-height: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
 .ms-panel a { display: flex; align-items: center; gap: var(--space-3); min-height: 34px; padding: 0 var(--space-3); border-radius: var(--radius-control); color: var(--text-2); text-decoration: none; font-size: 13.5px; }
 .ms-panel a:hover { background: var(--surface-2); color: var(--text); }
 .ms-panel a[aria-current="page"] { background: var(--brand-tint); color: var(--brand-text); font-weight: 700; }
@@ -159,15 +158,62 @@
 .ms-steps { position: sticky; top: 0; z-index: 5; margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 .ms-steps-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: 13px; line-height: 18px; }
 .ms-steps-head b { color: var(--ink); }
-.ms-steps-head span { color: var(--text-2); text-align: right; }
-.ms-steps-track { height: 6px; margin: var(--space-2) 0 var(--space-3); background: var(--surface-2); border-radius: var(--radius-pill); overflow: hidden; }
-.ms-steps-track i { display: block; height: 100%; background: var(--brand); border-radius: var(--radius-pill); transition: width 0.25s ease; }
-.ms-steps-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.ms-steps-list button { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--surface); color: var(--text-2); font: 700 11px/1 var(--font-sans); cursor: pointer; }
-.ms-steps-list .is-done button { background: var(--brand-tint); color: var(--brand-text); border-color: transparent; }
-.ms-steps-list .is-current button { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
-.ms-steps-list button:disabled { opacity: 0.45; cursor: default; }
+.ms-steps-flow { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+.ms-steps-flow button { width: 100%; display: grid; gap: 6px; padding: 0; background: none; border: 0; text-align: left; cursor: pointer; font: 500 12px/16px var(--font-sans); color: var(--text-3); }
+.ms-steps-flow button:disabled { cursor: default; }
+.ms-steps-flow i { display: block; height: 6px; border-radius: var(--radius-pill); background: var(--surface-2); transition: background 0.2s ease; }
+.ms-steps-flow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-steps-flow .is-done i { background: var(--brand-deep, #5a1416); }
+.ms-steps-flow .is-done button, .ms-steps-flow .is-seen button { color: var(--text-2); }
+.ms-steps-flow .is-seen i { background: var(--brand-tint); }
+.ms-steps-flow .is-current i { background: var(--brand); }
+.ms-steps-flow .is-current button { color: var(--ink); font-weight: 700; }
+.ms-steps-flow button:not(:disabled):hover i { filter: brightness(1.1); }
+.ms-steps-flow button:not(:disabled):hover span { color: var(--brand-text); }
 .ms-steps-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); }
 .ms-steps-pos { flex: 1; text-align: center; font-size: 12.5px; color: var(--text-2); }
 .ms-step-hidden { display: none !important; }
 .ms-step-current .panel-num { display: none; }
+
+/* Painel do menu no mesmo vinho do trilho, separado por uma linha sutil */
+.ms-dual .ms-panel { background: var(--brand-deep); border-left: 1px solid rgba(255, 255, 255, 0.08); }
+.ms-panel .ms-panel-group { color: rgba(255, 255, 255, 0.5); }
+.ms-panel a { color: rgba(255, 255, 255, 0.78); }
+.ms-panel a:hover { background: rgba(255, 255, 255, 0.08); color: var(--on-brand, #fff); }
+.ms-panel a[aria-current="page"] { background: var(--brand); color: var(--on-brand, #fff); }
+.ms-panel a .ms-count { background: var(--on-brand, #fff); color: var(--brand-deep); }
+.ms-panel .ms-panel-off { color: rgba(255, 255, 255, 0.4); }
+.ms-shell > .ms-dual { border-right-color: transparent; }
+
+/* Navbar: logo da Sousa Araujo à esquerda, menu da pessoa à direita */
+.ms-app { min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); }
+.ms-app > .ms-shell { flex: 1; min-height: 0; }
+.ms-app .ms-shell > .ms-dual { position: sticky; top: 56px; height: calc(100dvh - 56px); }
+.ms-topbar { position: sticky; top: 0; z-index: 30; height: 56px; flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 0 var(--space-4); background: var(--surface); border-bottom: 1px solid var(--line); }
+.ms-topbar-logo { display: flex; align-items: center; height: 100%; }
+.ms-topbar-logo img { height: 36px; width: auto; display: block; }
+.ms-logo-escuro { display: none !important; }
+:root[data-theme="dark"] .ms-logo-claro { display: none !important; }
+:root[data-theme="dark"] .ms-logo-escuro { display: block !important; }
+.ms-topbar-acoes { position: relative; display: flex; align-items: center; gap: var(--space-2); }
+.ms-icon-btn { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: var(--surface); color: var(--text-2); cursor: pointer; }
+.ms-icon-btn:hover, .ms-icon-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--text-3); background: var(--surface-2); }
+.ms-icon-btn svg { width: 18px; height: 18px; }
+.ms-user-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 290px; box-sizing: border-box; padding: var(--space-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-overlay); }
+.ms-user-menu[hidden] { display: none; }
+.ms-user-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); min-width: 0; }
+.ms-user-head > div { min-width: 0; }
+.ms-user-head .ms-avatar { width: 44px; height: 44px; font-size: 14px; background: var(--brand-tint); color: var(--brand-text); }
+.ms-user-head b { display: block; color: var(--ink); font-size: 14px; line-height: 18px; }
+.ms-user-head small { display: block; color: var(--text-2); font-size: 12.5px; line-height: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-user-sep { height: 1px; margin: var(--space-1) 0; background: var(--line); }
+.ms-user-item { width: 100%; display: flex; align-items: center; gap: var(--space-3); min-height: 38px; padding: 0 var(--space-3); border: 0; background: none; border-radius: var(--radius-control); color: var(--text); font: 500 13.5px/1 var(--font-sans); text-align: left; cursor: pointer; }
+.ms-user-item:hover { background: var(--surface-2); }
+.ms-user-item svg { width: 16px; height: 16px; flex: none; color: var(--text-2); }
+.ms-user-item--sair, .ms-user-item--sair svg { color: var(--critical); }
+.ms-switch { position: relative; flex: none; width: 34px; height: 20px; margin-left: auto; border-radius: var(--radius-pill); background: var(--line-strong); transition: background 0.2s ease; }
+.ms-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s ease; }
+.ms-switch[data-on="true"] { background: var(--brand); }
+.ms-switch[data-on="true"]::after { transform: translateX(14px); }
+.ms-avatar { overflow: hidden; }
+.ms-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }

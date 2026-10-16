@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import DialogoConfirmacao from "@/components/DialogoConfirmacao";
 import { formatarCompetenciaCurta } from "@/lib/domain/competencia";
@@ -39,9 +40,9 @@ export default function AcoesPesquisa({ coleta }: { coleta: Coleta }) {
 
   return (
     <>
-      <div className="flex justify-end gap-1">
-        <button className="btn-ghost" onClick={() => setEditando(true)}>Editar</button>
-        <button className="btn-ghost text-red-600" onClick={() => setExcluindo(true)}>Excluir</button>
+      <div className="acoes-linha">
+        <button className="btn-acao" onClick={() => setEditando(true)}><Pencil size={13} aria-hidden="true" />Editar</button>
+        <button className="btn-acao btn-acao--perigo" onClick={() => setExcluindo(true)}>Excluir</button>
       </div>
 
       {editando && (
@@ -129,10 +130,10 @@ function FormEdicao({
         {erro && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
       </div>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>
           Cancelar
         </button>
-        <button className="btn-primary flex-1 !py-3" onClick={salvar} disabled={salvando}>
+        <button className="btn-primary flex-1" onClick={salvar} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar"}
         </button>
       </div>
