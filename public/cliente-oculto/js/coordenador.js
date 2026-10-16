@@ -6,7 +6,33 @@
   const CFG = window.COConfig;
   const { PILARES, JORNADA, STATUS_JORNADA, GRAVIDADES, STATUS_AVALIACAO,
           bandFor, toneColorVar, toneTintVar, pilarLabel, tipoTagHtml, mesReferencia,
-          escapeHtml, escapeAttr } = CFG;
+          escapeHtml, escapeAttr, PERGUNTA_ORIGEM, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml } = CFG;
+
+  // Atendimento prévio online: tempos a partir do contato do cliente oculto.
+  function previaHtml(idz) {
+    const ind = indicadoresPrevia(idz);
+    if (!ind.temPrevia) return '';
+    const por = idz.previaPrimeiroRetornoPor === 'ia' ? ' (robô/IA)' : idz.previaPrimeiroRetornoPor === 'pessoa' ? ' (pessoa)' : '';
+    const linhas = [
+      ['Canal', idz.previaCanal],
+      ['Contato do cliente oculto', formatarDataHora(idz.previaContatoEm)],
+      ['Primeiro retorno', formatarDataHora(idz.previaPrimeiroRetornoEm) + (idz.previaPrimeiroRetornoEm ? por : '')],
+      ['Contato do corretor', formatarDataHora(idz.previaSegundoContatoEm)],
+      ['Visita agendada para', formatarDataHora(idz.previaAgendamentoEm)],
+    ];
+    return `
+      <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:14px;">
+        <div class="stat-tile"><div class="label">Tempo até o primeiro retorno${por}</div><div class="value">${formatarDuracao(ind.primeiroRetorno)}</div></div>
+        <div class="stat-tile"><div class="label">Tempo até o contato do corretor</div><div class="value">${formatarDuracao(ind.segundoContato)}</div></div>
+        <div class="stat-tile"><div class="label">Do contato até a visita agendada</div><div class="value">${formatarDuracao(ind.agendamento)}</div></div>
+      </div>
+      <dl class="id-grid">${linhas.map(([l, v]) => `<div class="id-item"><dt>${l}</dt><dd>${escapeHtml(v) || '—'}</dd></div>`).join('')}</dl>
+      ${idz.previaObservacoes ? `<p class="pillar-evid" style="margin-top:8px;"><b>Observações:</b> ${escapeHtml(idz.previaObservacoes)}</p>` : ''}`;
+  }
+  function perguntaOrigemTexto(idz) {
+    const p = PERGUNTA_ORIGEM[idz.recepcaoPerguntouOrigem];
+    return p ? p.label : 'Não informado';
+  }
   const api = window.CoworkApi;
 
   document.getElementById('themeToggle').addEventListener('click', () => {
@@ -248,7 +274,7 @@
     const idCell = hasChildren ? `<div class="group-id-cell">${toggle}${r.id}</div>` : r.id;
     return `<tr class="row-clickable ${rowClass} ${groupClass}" data-id="${escapeAttr(r.id)}">
       <td class="id-mono">${idCell}</td>
-      <td class="cel-emp">${escapeHtml(r.empreendimento) || '—'}${tipoTagHtml(r.tipoEmpreendimento)}${vinculoAvulso}${childChip}</td>
+      <td class="cel-emp">${escapeHtml(r.empreendimento) || '—'}${tipoTagHtml(r.tipoEmpreendimento)}${r.somentePrevia ? '<span class="tipo-tag" style="background:var(--excep-tint);color:var(--excep-ink);border:1px solid var(--excep);">Só prévia</span>' : ''}${vinculoAvulso}${childChip}</td>
       <td>${escapeHtml(r.regional) || '—'}</td>
       <td class="cel-data">${escapeHtml(r.dataVisita) || '—'}</td>
       <td><span class="status-badge ${st.tone || 'tone-muted'}">${st.icon || ''} ${r.status}</span></td>
@@ -272,6 +298,60 @@
     return (j.statusCalibrado !== null && j.statusCalibrado !== undefined && j.statusCalibrado !== '') ? j.statusCalibrado : j.status;
   }
 
+  // Ligação com o cadastro da Pesquisa de Concorrentes: mostra o empreendimento
+  // Sousa de referência e, quando o avaliador digitou um concorrente que não
+  // estava na lista, deixa o Coordenador escolher o certo ou cadastrar um novo.
+  async function desenharCadastroCoord(av) {
+    const box = document.getElementById('coordCadastroBox');
+    if (!box) return;
+    const idz = av.identificacao;
+    if (idz.tipoEmpreendimento !== 'concorrente') {
+      box.innerHTML = idz.idEmpreendimento
+        ? `<p class="field-help" style="margin-top:10px;">Cadastro da Pesquisa: <b>${escapeHtml(idz.empreendimentoCadastro || '')}</b> ✓</p>`
+        : `<p class="field-help" style="margin-top:10px;">⚠ Empreendimento ainda não ligado ao cadastro da Pesquisa (registro antigo).</p>`;
+      return;
+    }
+    const ref = idz.idEmpreendimento
+      ? `Empreendimento Sousa de referência: <b>${escapeHtml(idz.empreendimentoCadastro || '')}</b>`
+      : '⚠ Sem empreendimento Sousa de referência (registro antigo).';
+    if (idz.idConcorrente) {
+      box.innerHTML = `<p class="field-help" style="margin-top:10px;">${ref} · Concorrente do cadastro: <b>${escapeHtml(idz.concorrenteCadastro || '')}</b> ✓</p>`;
+      return;
+    }
+    if (!idz.idEmpreendimento) { box.innerHTML = `<p class="field-help" style="margin-top:10px;">${ref}</p>`; return; }
+    let lista = [];
+    try { lista = await api.cadastroConcorrentes(idz.idEmpreendimento); } catch (err) { lista = []; }
+    const digitado = idz.empreendimento || '';
+    box.innerHTML = `
+      <div class="field" style="margin-top:12px;">
+        <label>Ligar ao cadastro de concorrentes</label>
+        <p class="field-help" style="margin:0 0 6px;">${ref}. O Cliente Oculto digitou <b>"${escapeHtml(digitado)}"</b>, que não estava na lista.</p>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select data-coord-conc style="flex:1;">
+            <option value="">Selecione…</option>
+            ${lista.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('')}
+            ${digitado ? `<option value="novo">Cadastrar novo concorrente: "${escapeHtml(digitado)}"</option>` : ''}
+          </select>
+          <button type="button" class="btn btn-primary btn-sm" data-coord-ligar>Ligar</button>
+        </div>
+      </div>`;
+    box.querySelector('[data-coord-ligar]').addEventListener('click', async () => {
+      const v = box.querySelector('[data-coord-conc]').value;
+      if (!v) { toast('Escolha o concorrente ou cadastre um novo.'); return; }
+      const ind = document.getElementById('calibSaveIndicator');
+      if (ind) ind.textContent = 'Salvando…';
+      try {
+        const atualizada = await api.ligarConcorrenteCadastro(av.id, v === 'novo' ? { novoConcorrente: digitado } : { idConcorrente: Number(v) });
+        if (ind) ind.textContent = 'Salvo ✓';
+        Object.assign(av.identificacao, atualizada.identificacao);
+        desenharCadastroCoord(av);
+      } catch (err) {
+        if (ind) ind.textContent = 'Erro ao salvar';
+        toast(err.message);
+      }
+    });
+  }
+
   function renderCalibragem(av) {
     const prelim = preliminarInformada(av);
     const band = bandFor(prelim);
@@ -282,6 +362,7 @@
         <span class="status-badge tone-abaixo">⏳ Aguardando Calibragem</span>
       </div>
       <p class="panel-hint">${escapeHtml(av.identificacao.regional) || '—'} · ${escapeHtml(av.identificacao.dataVisita) || '—'} · Cliente oculto: ${escapeHtml(av.identificacao.clienteOculto) || '—'} · Corretor: ${escapeHtml(av.identificacao.corretor) || '—'}</p>
+      <p class="panel-hint">${av.identificacao.somentePrevia ? '<b>Só prévia</b> (a visita não foi realizada) · ' : ''}Recepção perguntou a origem do cliente: <b>${perguntaOrigemTexto(av.identificacao)}</b>${indicadoresPrevia(av.identificacao).temPrevia ? ` · Prévia online: primeiro retorno em <b>${formatarDuracao(indicadoresPrevia(av.identificacao).primeiroRetorno)}</b>, corretor em <b>${formatarDuracao(indicadoresPrevia(av.identificacao).segundoContato)}</b>` : ''}</p>
       <div class="nota-row">
         <span class="nota-badge ${band.tone}" style="font-size:13px; padding:8px 14px;">${prelim !== null ? prelim.toFixed(1) + ' · ' : ''}${band.label}</span>
         <span class="field-help">Resultado preliminar — baseado nas Notas Informadas (sujeito a calibragem)</span>
@@ -303,7 +384,9 @@
             <p class="field-help" id="coordVinculoStatus"></p>
           </div>
         </div>
+        <div id="coordCadastroBox"></div>
       </div>`;
+    desenharCadastroCoord(av);
 
     const coordTipoToggle = document.getElementById('coordTipoToggle');
     const coordVinculoField = document.getElementById('coordVinculoField');
@@ -380,6 +463,7 @@
             <span class="band-chip ${infBand.tone}">${st.notaInformada !== null ? st.notaInformada.toFixed(1) + ' · ' : ''}${infBand.label}</span>
           </div>
           <p class="pillar-evid"><b>Evidências:</b> ${st.evidencia ? escapeHtml(st.evidencia) : '<span style="color:var(--text-muted)">Nenhuma evidência registrada.</span>'}</p>
+          ${fotosHtml(av.fotos, p.key)}
         </div>
         <div class="calib-zone">
           <div class="calib-zone-label">🖊️ Calibragem do Coordenador — sua avaliação final para este pilar</div>
@@ -793,6 +877,8 @@
       ['Qtd. pré-chaves', idz.qtdPreChaves], ['Qtd. pós-chaves', idz.qtdPosChaves], ['Desconto informado', idz.descontoDisplay], ['Previsão de entrega', idz.previsaoEntrega], ['Campanha vigente', idz.campanhaVigente],
     ];
     if ((idz.tipoEmpreendimento || 'sousa') === 'concorrente') idRows.splice(1, 0, ['Construtora (concorrente)', idz.construtora]);
+    idRows.push(['Recepção perguntou a origem do cliente', perguntaOrigemTexto(idz)]);
+    const previaSecao = previaHtml(idz);
     const idHtml = idRows.map(([label, val]) => `<div class="id-item"><dt>${label}</dt><dd>${escapeHtml(val) || '—'}</dd></div>`).join('');
 
     const scorecardHtml = PILARES.map(p => {
@@ -831,6 +917,7 @@
           <span class="band-chip ${b.tone}">${st.notaCalibrada !== null && st.notaCalibrada !== undefined ? st.notaCalibrada.toFixed(1) + ' · ' : ''}${b.label}</span>
         </div>
         <p class="pillar-evid">${st.evidencia ? escapeHtml(st.evidencia) : '<span style="color:var(--text-muted)">Sem evidências registradas.</span>'}</p>
+        ${fotosHtml(av.fotos, p.key)}
         ${showDiff ? `<div class="calib-note"><b>Nota informada: ${st.notaInformada.toFixed(1)}</b> &nbsp;|&nbsp; <b>Nota calibrada: ${st.notaCalibrada.toFixed(1)}</b><br>${st.justificativaCalibragem ? escapeHtml(st.justificativaCalibragem) : 'Calibragem aplicada conforme a régua de avaliação.'}</div>` : ''}
       </div>`;
     }).join('');
@@ -869,6 +956,8 @@
 
         <div class="section-title"><span class="n">1</span>Identificação da visita</div>
         <dl class="id-grid">${idHtml}</dl>
+        ${previaSecao ? `<div class="section-title"><span class="n">1.1</span>Atendimento prévio online — tempo de atendimento</div>${previaSecao}` : ''}
+        ${idz.somentePrevia ? `<div class="empty-state">Só prévia: a visita ao decorado/PDV não foi realizada. Não há notas, jornada nem gaps.</div>` : `
 
         <div class="section-title"><span class="n">2</span>Score geral da experiência</div>
         <div class="kpi-hero-row">
@@ -904,6 +993,7 @@
           <div class="synth-card"><h4>Principais gaps</h4>${synth.principais.length ? `<ul>${synth.principais.map(d => `<li>${d}</li>`).join('')}</ul>` : '<p style="color:var(--text-muted)">Nenhum gap identificado.</p>'}</div>
           <div class="synth-card synth-full"><h4>Leitura geral</h4><p>${synth.leitura}</p></div>
         </div>
+        `}
 
         <div class="legend-row">
           <span class="legend-item"><span class="legend-dot" style="background:var(--excep)"></span>9,5–10 Excepcional</span>
@@ -916,6 +1006,8 @@
       </div>
     `;
     document.getElementById('reportContent').innerHTML = html;
+    const reciboBtn = document.getElementById('reciboBtn');
+    if (reciboBtn) reciboBtn.href = `recibo.html?id=${encodeURIComponent(av.id)}`;
     wireExport(av, notaGeral, bandGeral, counts, gaps, synth);
     document.querySelectorAll('#reportContent [data-open-report]').forEach(el => {
       el.addEventListener('click', (e) => { e.preventDefault(); openLinkedReport(el.getAttribute('data-open-report')); });

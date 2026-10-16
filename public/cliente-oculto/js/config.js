@@ -111,16 +111,77 @@
     empreendimento: 'Empreendimento', dataVisita: 'Data da visita',
     clienteOculto: 'Cliente oculto (avaliador)', corretor: 'Corretor', regional: 'Regional',
   };
+  // Só prévia (a visita ao decorado não aconteceu): não há data da visita nem
+  // corretor do PDV, mas a prévia precisa ter pelo menos o primeiro contato.
+  const CAMPOS_OBRIGATORIOS_SO_PREVIA = {
+    empreendimento: 'Empreendimento', clienteOculto: 'Cliente oculto (avaliador)', regional: 'Regional',
+    previaContatoEm: 'Data e horário do contato (prévia online)',
+  };
   function validarCamposObrigatorios(identificacao) {
     const faltando = [];
-    Object.entries(CAMPOS_OBRIGATORIOS_LABELS).forEach(([key, label]) => {
+    const campos = identificacao && identificacao.somentePrevia ? CAMPOS_OBRIGATORIOS_SO_PREVIA : CAMPOS_OBRIGATORIOS_LABELS;
+    Object.entries(campos).forEach(([key, label]) => {
       const v = identificacao ? identificacao[key] : null;
       if (!v || !String(v).trim()) faltando.push(label);
     });
-    if (identificacao && identificacao.tipoEmpreendimento === 'concorrente' && !identificacao.vinculoSousaId) {
-      faltando.push('Empreendimento Sousa Araujo comparado');
+    // Empreendimento e concorrente vêm do cadastro da Pesquisa de Concorrentes.
+    if (identificacao && !identificacao.idEmpreendimento) {
+      faltando.push(identificacao.tipoEmpreendimento === 'concorrente'
+        ? 'Empreendimento Sousa Araujo de referência' : 'Empreendimento (escolha na lista)');
     }
     return faltando;
+  }
+
+  // -------------------------------------------------------------------------
+  // Fotos de comprovação (somente leitura: calibragem e relatório)
+  // -------------------------------------------------------------------------
+  function fotosHtml(fotos, pilarKey) {
+    const lista = (fotos || []).filter(f => f.pilarKey === pilarKey);
+    if (!lista.length) return '';
+    return `<div class="fotos-grid fotos-leitura">${lista.map(f => `
+      <figure class="foto-item"><a href="${escapeAttr(f.url)}" target="_blank" rel="noopener"><img src="${escapeAttr(f.url)}" alt="${escapeAttr(f.legenda || 'Foto da visita')}" loading="lazy"></a>
+      ${f.legenda ? `<figcaption>${escapeHtml(f.legenda)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+  }
+
+  // -------------------------------------------------------------------------
+  // Pergunta da recepção e atendimento prévio online
+  // -------------------------------------------------------------------------
+  const PERGUNTA_ORIGEM = {
+    sim: { label: 'Sim, perguntou', curto: 'Sim', tone: 'tone-bom' },
+    nao: { label: 'Não perguntou', curto: 'Não', tone: 'tone-critico' },
+    na: { label: 'Não houve recepção', curto: 'Não houve recepção', tone: 'tone-muted' },
+  };
+  const CANAIS_PREVIA = ['WhatsApp', 'Site / formulário', 'Instagram / Facebook', 'Portal imobiliário', 'Telefone', 'E-mail', 'Outro'];
+
+  // "AAAA-MM-DDTHH:MM" (horário local) → minutos desde 1970, sem fuso.
+  function minutosDe(valor) {
+    const m = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000;
+  }
+  function formatarDataHora(valor) {
+    const m = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : '';
+  }
+  function formatarDuracao(min) {
+    if (min === null || min === undefined) return '—';
+    if (min < 0) return 'data anterior ao contato';
+    if (min < 60) return `${Math.round(min)} min`;
+    const h = Math.floor(min / 60), r = Math.round(min % 60);
+    if (h < 24) return r ? `${h} h ${r} min` : `${h} h`;
+    const d = Math.floor(h / 24), hh = h % 24;
+    return hh ? `${d} d ${hh} h` : `${d} d`;
+  }
+  // Tempos de atendimento contados a partir do contato do cliente oculto.
+  function indicadoresPrevia(idz) {
+    const ini = minutosDe(idz && idz.previaContatoEm);
+    const ate = (v) => { const f = minutosDe(v); return ini === null || f === null ? null : f - ini; };
+    return {
+      temPrevia: !!(idz && (idz.previaContatoEm || idz.previaCanal)),
+      primeiroRetorno: ate(idz && idz.previaPrimeiroRetornoEm),
+      segundoContato: ate(idz && idz.previaSegundoContatoEm),
+      agendamento: ate(idz && idz.previaAgendamentoEm),
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -170,6 +231,7 @@
     CAMPOS_OBRIGATORIOS_LABELS,
     bandFor, toneColorVar, toneTintVar, pilarLabel, tipoTagHtml,
     regionalOptionsHtml, mesReferencia, validarCamposObrigatorios,
+    PERGUNTA_ORIGEM, CANAIS_PREVIA, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml,
     moneyMaskFromDigits, centavosToDisplay, areaMaskFromInput, percentMaskFromInput,
     escapeHtml, escapeAttr,
   };

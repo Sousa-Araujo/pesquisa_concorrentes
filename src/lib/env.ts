@@ -12,3 +12,8 @@ export function requireEnv(name: string): string {
   }
   return value;
 }
+
+/** Endereço público do sistema (links de convite e imagens dos e-mails). */
+export function urlBase(): string {
+  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+}

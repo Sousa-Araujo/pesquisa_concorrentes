@@ -70,12 +70,21 @@ const IDENTIFICACAO: Record<string, string> = {
   descontoDisplay: "desconto_display", previsaoEntrega: "previsao_entrega", campanhaVigente: "campanha_vigente",
   tipoEmpreendimento: "tipo_empreendimento", construtora: "construtora_texto",
   vinculoSousaId: "vinculo_sousa_id", vinculoSousaLabel: "vinculo_sousa_label",
+  idEmpreendimento: "id_empreendimento", idConcorrente: "id_concorrente",
+  // Pergunta da recepção e atendimento prévio online
+  recepcaoPerguntouOrigem: "recepcao_perguntou_origem", somentePrevia: "somente_previa",
+  previaCanal: "previa_canal", previaContatoEm: "previa_contato_em",
+  previaPrimeiroRetornoEm: "previa_primeiro_retorno_em", previaPrimeiroRetornoPor: "previa_primeiro_retorno_por",
+  previaSegundoContatoEm: "previa_segundo_contato_em", previaAgendamentoEm: "previa_agendamento_em",
+  previaObservacoes: "previa_observacoes",
 };
 
 /** Normaliza o valor vindo da tela antes de gravar (string vazia em data/número vira null). */
 function valorColuna(coluna: string, v: unknown): unknown {
   if (v === undefined) return null;
-  if (v === "" && (coluna === "data_visita" || coluna === "vinculo_sousa_id" || coluna.endsWith("_centavos")
+  if (coluna === "somente_previa") return v === true || v === "true";
+  if (v === "" && (coluna.startsWith("previa_") || coluna === "recepcao_perguntou_origem")) return null;
+  if (v === "" && (coluna === "data_visita" || coluna === "vinculo_sousa_id" || coluna.startsWith("id_") || coluna.endsWith("_centavos")
     || coluna === "area_unidade_m2" || coluna === "desconto_percentual" || coluna === "desconto_tipo")) return null;
   return v;
 }
@@ -125,18 +134,40 @@ function linhaParaAvaliacao(r: Linha) {
       campanhaVigente: r.campanha_vigente,
       tipoEmpreendimento: r.tipo_empreendimento,
       construtora: r.construtora_texto,
+      // Ligação com o cadastro da Pesquisa de Concorrentes.
+      idEmpreendimento: num(r.id_empreendimento),
+      idConcorrente: num(r.id_concorrente),
+      empreendimentoCadastro: (r.cad_empreendimento as string | null) ?? null,
+      concorrenteCadastro: (r.cad_concorrente as string | null) ?? null,
+      recepcaoPerguntouOrigem: r.recepcao_perguntou_origem ?? null,
+      somentePrevia: !!r.somente_previa,
+      previaCanal: r.previa_canal ?? null,
+      previaContatoEm: r.previa_contato_em ?? null,
+      previaPrimeiroRetornoEm: r.previa_primeiro_retorno_em ?? null,
+      previaPrimeiroRetornoPor: r.previa_primeiro_retorno_por ?? null,
+      previaSegundoContatoEm: r.previa_segundo_contato_em ?? null,
+      previaAgendamentoEm: r.previa_agendamento_em ?? null,
+      previaObservacoes: r.previa_observacoes ?? null,
     },
   };
 }
+
+/** Avaliação com os nomes do cadastro (empreendimento Sousa e concorrente) ao lado. */
+const SELECT_AVALIACAO = `
+  select a.*, e.empreendimento as cad_empreendimento, c.concorrente as cad_concorrente
+    from co_avaliacoes a
+    left join empreendimentos e on e.id_empreendimento = a.id_empreendimento
+    left join concorrentes c on c.id_concorrente = a.id_concorrente`;
 
 type Avaliacao = ReturnType<typeof linhaParaAvaliacao> & {
   pilares: Record<string, unknown>;
   jornada: Record<string, unknown>;
   gaps: unknown[];
+  fotos: unknown[];
 };
 
 async function carregarAvaliacao(id: string): Promise<Avaliacao | null> {
-  const { rows } = await q(`select * from co_avaliacoes where id = $1`, [id]);
+  const { rows } = await q(`${SELECT_AVALIACAO} where a.id = $1`, [id]);
   if (!rows[0]) return null;
   const av = linhaParaAvaliacao(rows[0]) as Avaliacao;
 
@@ -163,6 +194,14 @@ async function carregarAvaliacao(id: string): Promise<Avaliacao | null> {
   av.gaps = gaps.map((g) => ({
     id: g.id, gap: g.gap, pilarRelacionado: g.pilar_relacionado,
     evidencia: g.evidencia, gravidade: g.gravidade, createdAt: g.criado_em,
+  }));
+
+  // Fotos de comprovação (a imagem vem por /api/co/fotos/:id).
+  const { rows: fotos } = await q(
+    `select id, pilar_key, legenda, criado_em from co_fotos where avaliacao_id = $1 order by criado_em, id`, [id],
+  );
+  av.fotos = fotos.map((f) => ({
+    id: f.id, pilarKey: f.pilar_key, legenda: f.legenda ?? "", criadoEm: f.criado_em, url: `/api/co/fotos/${f.id}`,
   }));
   return av;
 }
@@ -241,6 +280,9 @@ export async function listarAvaliacoes(quem: Quem, f: Record<string, string | un
     gapsAltaCritica: quem.papel === "avaliador" ? 0 : Number(r.gaps_alta_critica),
     tipoEmpreendimento: r.tipo_empreendimento,
     construtora: r.construtora_texto,
+    idEmpreendimento: num(r.id_empreendimento),
+    idConcorrente: num(r.id_concorrente),
+    somentePrevia: !!r.somente_previa,
     vinculoSousaId: r.vinculo_sousa_id,
     vinculoSousaLabel: r.vinculo_sousa_label,
     calibragemAberta: !!r.calibragem_aberta,
@@ -300,7 +342,94 @@ async function exigirEditavelPeloAvaliador(quem: Quem, id: string) {
   if (!pode) throw new ErroCO(409, "Esta avaliação já está em calibragem e não pode mais ser editada pelo Cliente Oculto.");
 }
 
-async function gravarIdentificacao(id: string, campos: Campos) {
+/**
+ * Quando a tela escolhe o empreendimento ou o concorrente do cadastro da
+ * Pesquisa, o nome e a regional vêm do cadastro (não do que foi digitado).
+ * Concorrente sempre pertence a um empreendimento Sousa: o id_empreendimento
+ * da avaliação de concorrente é o empreendimento Sousa de referência.
+ */
+async function completarComCadastro(id: string, campos: Campos): Promise<Campos> {
+  const temEmp = campos.idEmpreendimento !== undefined;
+  const temConc = campos.idConcorrente !== undefined;
+  if (!temEmp && !temConc) return campos;
+  const c = { ...campos };
+  const { rows: [atual] } = await q(`select tipo_empreendimento, id_empreendimento from co_avaliacoes where id = $1`, [id]);
+  const tipo = String(c.tipoEmpreendimento ?? atual?.tipo_empreendimento ?? "sousa");
+
+  const idConc = temConc && c.idConcorrente !== null && c.idConcorrente !== "" ? Number(c.idConcorrente) : null;
+  if (idConc !== null) {
+    const { rows: [conc] } = await q(
+      `select c.id_empreendimento, c.concorrente, cid.regional
+         from concorrentes c join empreendimentos e on e.id_empreendimento = c.id_empreendimento
+         join cidades cid on cid.id_cidade = e.id_cidade
+        where c.id_concorrente = $1`,
+      [idConc],
+    );
+    if (!conc) throw new ErroCO(400, "Concorrente não encontrado no cadastro.");
+    c.idConcorrente = idConc;
+    c.idEmpreendimento = conc.id_empreendimento;
+    c.empreendimento = conc.concorrente;
+    c.regional = conc.regional;
+    return c;
+  }
+
+  const idEmp = temEmp && c.idEmpreendimento !== null && c.idEmpreendimento !== "" ? Number(c.idEmpreendimento) : null;
+  if (temEmp && idEmp !== null) {
+    const { rows: [emp] } = await q(
+      `select e.empreendimento, cid.regional from empreendimentos e
+         join cidades cid on cid.id_cidade = e.id_cidade where e.id_empreendimento = $1`,
+      [idEmp],
+    );
+    if (!emp) throw new ErroCO(400, "Empreendimento não encontrado no cadastro.");
+    c.idEmpreendimento = idEmp;
+    c.regional = emp.regional;
+    // Na visita Sousa o nome é o do empreendimento; na de concorrente ele é só a referência.
+    if (tipo === "sousa") {
+      c.empreendimento = emp.empreendimento;
+      c.idConcorrente = null;
+    } else if (!temConc && Number(atual?.id_empreendimento) !== idEmp) {
+      c.idConcorrente = null;
+    }
+  }
+  return c;
+}
+
+/**
+ * Comparativo automático: a avaliação de concorrente se liga à avaliação
+ * Sousa do mesmo empreendimento no mesmo mês (a mais recente). Só preenche
+ * vínculo vazio — a escolha do Coordenador nunca é trocada.
+ */
+async function vincularAutomatico(id: string) {
+  const { rows: [a] } = await q(
+    `select tipo_empreendimento, id_empreendimento, data_visita, vinculo_sousa_id, excluida
+       from co_avaliacoes where id = $1`,
+    [id],
+  );
+  if (!a || a.excluida || !a.id_empreendimento || !a.data_visita) return;
+  const rotulo = `coalesce(empreendimento_texto, id) || ' — ' || coalesce(to_char(data_visita, 'YYYY-MM-DD'), 's/ data')`;
+  if (a.tipo_empreendimento === "concorrente" && !a.vinculo_sousa_id) {
+    await q(
+      `update co_avaliacoes c set vinculo_sousa_id = s.id, vinculo_sousa_label = s.rotulo
+         from (select id, ${rotulo} as rotulo from co_avaliacoes
+                where tipo_empreendimento = 'sousa' and not excluida and id_empreendimento = $2
+                  and date_trunc('month', data_visita) = date_trunc('month', $3::date)
+                order by data_visita desc limit 1) s
+        where c.id = $1`,
+      [id, a.id_empreendimento, a.data_visita],
+    );
+  } else if (a.tipo_empreendimento === "sousa") {
+    await q(
+      `update co_avaliacoes set vinculo_sousa_id = $1,
+              vinculo_sousa_label = (select ${rotulo} from co_avaliacoes where id = $1)
+        where tipo_empreendimento = 'concorrente' and not excluida and vinculo_sousa_id is null
+          and id_empreendimento = $2 and date_trunc('month', data_visita) = date_trunc('month', $3::date)`,
+      [id, a.id_empreendimento, a.data_visita],
+    );
+  }
+}
+
+async function gravarIdentificacao(id: string, entrada: Campos) {
+  const campos = await completarComCadastro(id, entrada ?? {});
   const sets: string[] = [];
   const params: unknown[] = [];
   for (const [k, v] of Object.entries(campos ?? {})) {
@@ -313,10 +442,13 @@ async function gravarIdentificacao(id: string, campos: Campos) {
   params.push(id);
   try {
     await q(`update co_avaliacoes set ${sets.join(", ")} where id = $${params.length}`, params);
+    if (["idEmpreendimento", "idConcorrente", "dataVisita", "tipoEmpreendimento"].some((k) => k in campos)) {
+      await vincularAutomatico(id);
+    }
   } catch (e) {
     const code = (e as { code?: string }).code;
     if (code === "22007" || code === "22P02" || code === "23514") throw new ErroCO(400, "Valor inválido em um dos campos.");
-    if (code === "23503") throw new ErroCO(400, "Vínculo com avaliação Sousa inválido.");
+    if (code === "23503") throw new ErroCO(400, "Vínculo inválido (avaliação Sousa ou cadastro).");
     throw e;
   }
 }
@@ -411,9 +543,63 @@ export async function atualizarVinculoCoord(quem: Quem, id: string, c: Campos) {
     if (!["sousa", "concorrente"].includes(String(c.tipoEmpreendimento))) throw new ErroCO(400, "Tipo inválido.");
     campos.tipoEmpreendimento = c.tipoEmpreendimento;
   }
+  if (c.idEmpreendimento !== undefined) campos.idEmpreendimento = c.idEmpreendimento || null;
   if (c.vinculoSousaId !== undefined) campos.vinculoSousaId = c.vinculoSousaId || null;
   if (c.vinculoSousaLabel !== undefined) campos.vinculoSousaLabel = c.vinculoSousaLabel || null;
   await gravarIdentificacao(id, campos);
+  return obterAvaliacao(quem, id);
+}
+
+// ---------------------------------------------------------------------------
+// Cadastro da Pesquisa de Concorrentes (listas para escolher no formulário)
+// ---------------------------------------------------------------------------
+export async function cadastroEmpreendimentos() {
+  const { rows } = await q(
+    `select e.id_empreendimento as id, e.empreendimento as nome, cid.cidade, cid.regional
+       from empreendimentos e join cidades cid on cid.id_cidade = e.id_cidade
+      where e.ativo order by e.empreendimento`,
+  );
+  return rows;
+}
+
+export async function cadastroConcorrentes(idEmpreendimento: number) {
+  const { rows } = await q(
+    `select id_concorrente as id, concorrente as nome from concorrentes
+      where id_empreendimento = $1 and ativo order by concorrente`,
+    [idEmpreendimento],
+  );
+  return rows;
+}
+
+/**
+ * Coordenador liga ao cadastro um concorrente que o avaliador digitou:
+ * escolhe um existente (idConcorrente) ou cadastra um novo (novoConcorrente)
+ * no empreendimento Sousa de referência da avaliação.
+ */
+export async function ligarConcorrenteCadastro(quem: Quem, id: string, c: Campos) {
+  const { rows: [a] } = await q(`select tipo_empreendimento, id_empreendimento from co_avaliacoes where id = $1`, [id]);
+  if (!a) throw new ErroCO(404, "Avaliação não encontrada");
+  if (a.tipo_empreendimento !== "concorrente") throw new ErroCO(400, "Só avaliações de concorrente são ligadas a um concorrente.");
+  const idEmp = c.idEmpreendimento ? Number(c.idEmpreendimento) : a.id_empreendimento;
+  if (!idEmp) throw new ErroCO(400, "Escolha antes o empreendimento Sousa Araujo de referência.");
+  let idConc = c.idConcorrente ? Number(c.idConcorrente) : null;
+  const nome = String(c.novoConcorrente ?? "").trim();
+  if (!idConc && nome) {
+    try {
+      const { rows } = await q(`select id_concorrente from inserir_concorrente($1, $2, $3)`, [idEmp, nome, quem.id_usuario]);
+      idConc = rows[0].id_concorrente;
+    } catch (e) {
+      const erro = e as { code?: string; message?: string };
+      if (erro.code === "23505" || /duplicad/i.test(erro.message ?? "")) {
+        throw new ErroCO(409, "Já existe um concorrente com esse nome neste empreendimento. Escolha-o na lista.");
+      }
+      throw e;
+    }
+  }
+  if (!idConc) throw new ErroCO(400, "Escolha o concorrente na lista ou informe o nome do novo concorrente.");
+  const { rows: [conc] } = await q(`select id_empreendimento from concorrentes where id_concorrente = $1`, [idConc]);
+  if (!conc || conc.id_empreendimento !== idEmp) throw new ErroCO(400, "Esse concorrente não pertence ao empreendimento escolhido.");
+  await gravarIdentificacao(id, { idConcorrente: idConc });
   return obterAvaliacao(quem, id);
 }
 

@@ -4,7 +4,7 @@
   if (!authUser) return;
 
   const { PILARES, JORNADA, STATUS_JORNADA, escapeAttr, escapeHtml, bandFor, toneColorVar,
-          regionalOptionsHtml, validarCamposObrigatorios, tipoTagHtml,
+          regionalOptionsHtml, validarCamposObrigatorios, tipoTagHtml, PERGUNTA_ORIGEM, CANAIS_PREVIA,
           moneyMaskFromDigits, centavosToDisplay, areaMaskFromInput, percentMaskFromInput } = window.COConfig;
   const api = window.CoworkApi;
 
@@ -63,6 +63,7 @@
   function showLocked() {
     document.getElementById('lockedState').style.display = 'block';
     document.getElementById('lockedIdText').textContent = avaliacao.id;
+    document.getElementById('reciboLink').href = `recibo.html?id=${encodeURIComponent(avaliacao.id)}`;
     const badge = document.getElementById('lockedStatusBadge');
     badge.textContent = avaliacao.status;
     badge.className = 'status-badge ' + (window.COConfig.STATUS_AVALIACAO[avaliacao.status] || {}).tone;
@@ -93,6 +94,7 @@
   function showForm() {
     document.getElementById('formState').style.display = 'block';
     buildIdFields();
+    buildPreviaFields();
     buildPillarPanels();
     buildJourneyFields();
     fillFormFromState();
@@ -118,13 +120,83 @@
     host.parentNode.insertBefore(banner, host);
   }
 
+  // Empreendimento e concorrente vêm do cadastro da Pesquisa de Concorrentes.
+  // Visita Sousa: escolhe o empreendimento. Visita a concorrente: escolhe o
+  // empreendimento Sousa de referência e o concorrente dele; se não estiver
+  // na lista, marca "Outro" e digita o nome (o Coordenador liga depois).
+  let concorrenteOutro = false;
   function applyTipoEmpreendimentoUI(tipo) {
-    const vinculoField = document.getElementById('vinculoSousaField');
-    const construtoraField = document.getElementById('construtoraField');
+    const conc = tipo === 'concorrente';
+    const mostra = (id, sim) => { const e = document.getElementById(id); if (e) e.style.display = sim ? '' : 'none'; };
+    mostra('cadConcField', conc);
+    mostra('construtoraField', conc);
+    mostra('empreendimentoField', conc && concorrenteOutro);
+    const rotulo = document.querySelector('[data-cad-emp-label]');
+    if (rotulo) rotulo.textContent = conc ? 'Empreendimento Sousa Araujo de referência' : 'Empreendimento';
     const empLabel = document.querySelector('#empreendimentoField label');
-    if (vinculoField) vinculoField.style.display = tipo === 'concorrente' ? '' : 'none';
-    if (construtoraField) construtoraField.style.display = tipo === 'concorrente' ? '' : 'none';
-    if (empLabel) empLabel.innerHTML = (tipo === 'concorrente' ? 'Nome do empreendimento concorrente' : 'Empreendimento') + ' <span class="required-mark">*</span>';
+    if (empLabel) empLabel.innerHTML = 'Nome do empreendimento concorrente <span class="required-mark">*</span>';
+  }
+
+  let cadastroEmps = null;
+  async function carregarCadastroEmps() {
+    if (!cadastroEmps) {
+      try { cadastroEmps = await api.cadastroEmpreendimentos(); } catch (err) { cadastroEmps = []; }
+    }
+    return cadastroEmps;
+  }
+
+  async function preencherCadEmp() {
+    const idz = avaliacao.identificacao;
+    const sel = document.querySelector('[data-cad-emp]');
+    if (!sel) return;
+    const reg = document.querySelector('[data-idfield="regional"]').value;
+    const lista = (await carregarCadastroEmps()).filter(e => !reg || e.regional === reg);
+    sel.innerHTML = `<option value="">${reg ? 'Selecione…' : 'Escolha a regional primeiro'}</option>` +
+      lista.map(e => `<option value="${e.id}">${escapeHtml(e.nome)} — ${escapeHtml(e.cidade)}</option>`).join('');
+    sel.disabled = !reg;
+    sel.value = idz.idEmpreendimento && lista.some(e => e.id === idz.idEmpreendimento) ? String(idz.idEmpreendimento) : '';
+    const ajuda = document.querySelector('[data-cad-emp-help]');
+    if (ajuda) {
+      // Avaliações antigas guardavam só o nome digitado.
+      const antigo = !idz.idEmpreendimento && tipoEmpreendimento === 'sousa' && idz.empreendimento;
+      ajuda.textContent = antigo ? `Registro antigo: "${idz.empreendimento}". Escolha o empreendimento na lista.` : '';
+    }
+    if (tipoEmpreendimento === 'concorrente') await preencherCadConc();
+  }
+
+  async function preencherCadConc() {
+    const idz = avaliacao.identificacao;
+    const sel = document.querySelector('[data-cad-conc]');
+    if (!sel) return;
+    if (!idz.idEmpreendimento) {
+      sel.innerHTML = '<option value="">Escolha o empreendimento Sousa primeiro</option>';
+      sel.disabled = true;
+      return;
+    }
+    let lista = [];
+    try { lista = await api.cadastroConcorrentes(idz.idEmpreendimento); } catch (err) { lista = []; }
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Selecione…</option>' +
+      lista.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('') +
+      '<option value="outro">Outro — não está na lista</option>';
+    sel.value = idz.idConcorrente ? String(idz.idConcorrente) : (concorrenteOutro ? 'outro' : '');
+  }
+
+  // Salva já esperando a resposta: nome e regional vêm do cadastro no servidor.
+  async function salvarCadastro(payload) {
+    saving('Salvando…');
+    try {
+      avaliacao = await api.atualizarIdentificacao(avaliacao.id, payload);
+      saving('Salvo ✓');
+    } catch (err) {
+      saving('Erro ao salvar');
+      toast(err.message);
+    }
+    const idz = avaliacao.identificacao;
+    const reg = document.querySelector('[data-idfield="regional"]');
+    if (reg && idz.regional) reg.value = idz.regional;
+    const nome = document.querySelector('[data-idfield="empreendimento"]');
+    if (nome) nome.value = idz.empreendimento || '';
   }
 
   function buildIdFields() {
@@ -140,24 +212,34 @@
         <button type="button" data-val="sousa" class="active">✓ Sousa Araujo</button>
         <button type="button" data-val="concorrente">Concorrente</button>
       </div>
-      <p class="field-help" style="margin-top:6px;">Se esta visita foi a um empreendimento concorrente, você poderá vinculá-la a um projeto Sousa Araujo para comparação no relatório final.</p>`;
+      <p class="field-help" style="margin-top:6px;">Se for um concorrente, escolha o empreendimento Sousa Araujo de referência e o concorrente. O comparativo no relatório é ligado automaticamente.</p>`;
     el.appendChild(tipoDiv);
+
+    const regDiv = document.createElement('div');
+    regDiv.className = 'field';
+    regDiv.innerHTML = `<label>Regional <span class="required-mark">*</span></label><select data-idfield="regional">${regionalOptionsHtml('')}</select>`;
+    el.appendChild(regDiv);
+
+    const cadEmpDiv = document.createElement('div');
+    cadEmpDiv.className = 'field';
+    cadEmpDiv.id = 'cadEmpField';
+    cadEmpDiv.innerHTML = `<label><span data-cad-emp-label>Empreendimento</span> <span class="required-mark">*</span></label>
+      <select data-cad-emp></select><p class="field-help" data-cad-emp-help></p>`;
+    el.appendChild(cadEmpDiv);
+
+    const cadConcDiv = document.createElement('div');
+    cadConcDiv.className = 'field';
+    cadConcDiv.id = 'cadConcField';
+    cadConcDiv.style.display = 'none';
+    cadConcDiv.innerHTML = `<label>Concorrente <span class="required-mark">*</span></label>
+      <select data-cad-conc></select>
+      <p class="field-help">Não achou na lista? Escolha "Outro" e digite o nome. O Coordenador de Market Share liga ao cadastro na calibragem.</p>`;
+    el.appendChild(cadConcDiv);
 
     const empField = makeSimpleField(ID_FIELDS_SIMPLE.find(f => f.key === 'empreendimento'));
     empField.id = 'empreendimentoField';
+    empField.style.display = 'none';
     el.appendChild(empField);
-
-    const vinculoDiv = document.createElement('div');
-    vinculoDiv.className = 'field';
-    vinculoDiv.id = 'vinculoSousaField';
-    vinculoDiv.style.gridColumn = '1 / -1';
-    vinculoDiv.style.display = 'none';
-    vinculoDiv.innerHTML = `
-      <label>Empreendimento Sousa Araujo comparado <span class="required-mark">*</span></label>
-      <input type="text" list="vinculoSousaOptions" placeholder="Digite para buscar o projeto Sousa Araujo do mesmo período..." data-vinculo-sousa>
-      <datalist id="vinculoSousaOptions"></datalist>
-      <p class="field-help" id="vinculoSousaStatus"></p>`;
-    el.appendChild(vinculoDiv);
 
     const construtoraDiv = document.createElement('div');
     construtoraDiv.className = 'field';
@@ -167,11 +249,6 @@
     el.appendChild(construtoraDiv);
 
     ID_FIELDS_SIMPLE.slice(1, 3).forEach(f => el.appendChild(makeSimpleField(f)));
-
-    const regDiv = document.createElement('div');
-    regDiv.className = 'field';
-    regDiv.innerHTML = `<label>Regional <span class="required-mark">*</span></label><select data-idfield="regional">${regionalOptionsHtml('')}</select>`;
-    el.appendChild(regDiv);
 
     ID_FIELDS_SIMPLE.slice(3, 6).forEach(f => el.appendChild(makeSimpleField(f)));
 
@@ -215,19 +292,46 @@
       const btn = e.target.closest('button'); if (!btn) return;
       tipoToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      tipoEmpreendimento = btn.getAttribute('data-val');
+      const novo = btn.getAttribute('data-val');
+      if (novo === tipoEmpreendimento) return;
+      tipoEmpreendimento = novo;
+      concorrenteOutro = false;
       applyTipoEmpreendimentoUI(tipoEmpreendimento);
-      if (tipoEmpreendimento === 'concorrente') refreshVinculoSousaOptions();
-      saveIdentificacao({ tipoEmpreendimento });
+      const idEmp = avaliacao.identificacao.idEmpreendimento;
+      // Trocou o tipo: o nome do empreendimento é refeito a partir do cadastro.
+      const payload = { tipoEmpreendimento, idConcorrente: null };
+      if (idEmp) payload.idEmpreendimento = idEmp;
+      if (tipoEmpreendimento === 'concorrente') payload.empreendimento = '';
+      salvarCadastro(payload).then(preencherCadEmp);
     });
 
-    // vínculo Sousa — autocomplete resolvido no blur
-    const vinculoInput = el.querySelector('[data-vinculo-sousa]');
-    vinculoInput.addEventListener('blur', () => {
-      const typed = vinculoInput.value.trim();
-      const match = vinculoSousaOpcoesCache.find(o => o.label === typed);
-      updateVinculoStatus(match ? match.id : null, typed);
-      saveIdentificacao({ vinculoSousaId: match ? match.id : null, vinculoSousaLabel: match ? match.label : typed });
+    // Empreendimento e concorrente do cadastro
+    el.querySelector('[data-idfield="regional"]').addEventListener('change', async () => {
+      await preencherCadEmp();
+      const sel = el.querySelector('[data-cad-emp]');
+      if (avaliacao.identificacao.idEmpreendimento && !sel.value) {
+        await salvarCadastro({ idEmpreendimento: null, idConcorrente: null });
+        await preencherCadEmp();
+      }
+    });
+    el.querySelector('[data-cad-emp]').addEventListener('change', async (e) => {
+      concorrenteOutro = false;
+      await salvarCadastro({ idEmpreendimento: e.target.value || null, idConcorrente: null });
+      applyTipoEmpreendimentoUI(tipoEmpreendimento);
+      await preencherCadEmp();
+    });
+    el.querySelector('[data-cad-conc]').addEventListener('change', async (e) => {
+      if (e.target.value === 'outro') {
+        concorrenteOutro = true;
+        await salvarCadastro({ idConcorrente: null, empreendimento: '' });
+        applyTipoEmpreendimentoUI(tipoEmpreendimento);
+        const nome = el.querySelector('[data-idfield="empreendimento"]');
+        if (nome) nome.focus();
+        return;
+      }
+      concorrenteOutro = false;
+      await salvarCadastro({ idConcorrente: e.target.value || null });
+      applyTipoEmpreendimentoUI(tipoEmpreendimento);
     });
 
     // wire simple text/date/time fields
@@ -281,26 +385,6 @@
     });
   }
 
-  // Opções Sousa Araujo (mesmo período/regional) disponíveis para o vínculo de
-  // comparação — cacheadas após a última busca, para resolver o texto digitado
-  // no autocomplete para o id da avaliação Sousa correspondente no blur.
-  let vinculoSousaOpcoesCache = [];
-  async function refreshVinculoSousaOptions() {
-    try {
-      const opcoes = await api.opcoesVinculo(avaliacao.id);
-      vinculoSousaOpcoesCache = opcoes;
-      const dl = document.getElementById('vinculoSousaOptions');
-      if (dl) dl.innerHTML = opcoes.map(o => `<option value="${escapeAttr(o.label)}">`).join('');
-    } catch (err) { /* silencioso — autocomplete é auxiliar, não bloqueia o preenchimento */ }
-  }
-  function updateVinculoStatus(resolvedId, typed) {
-    const statusEl = document.getElementById('vinculoSousaStatus');
-    if (!statusEl) return;
-    if (!typed) { statusEl.textContent = ''; return; }
-    if (resolvedId) { statusEl.textContent = '✓ Vinculado — o comparativo aparecerá no relatório final.'; statusEl.style.color = 'var(--good-deep)'; }
-    else { statusEl.textContent = '⏳ Projeto ainda não localizado — verifique o nome e o período, ou avise o Coordenador de Market Share para ajustar o vínculo na calibragem.'; statusEl.style.color = 'var(--text-muted)'; }
-  }
-
   function makeSimpleField(f) {
     const div = document.createElement('div');
     div.className = 'field';
@@ -331,6 +415,67 @@
     if (!debounceKey) { doSave(); return; }
     clearTimeout(idSaveTimers[debounceKey]);
     idSaveTimers[debounceKey] = setTimeout(doSave, 200);
+  }
+
+  // ---------------------------------------------------------------------
+  // Atendimento prévio online — contatos antes da visita. Pode existir sem
+  // a visita ("só prévia"): aí os pilares e a jornada saem do formulário.
+  // ---------------------------------------------------------------------
+  const PREVIA_DATAS = [
+    { key: 'previaContatoEm', label: 'Data e horário do contato', help: 'Quando você mandou a primeira mensagem ou ligou.' },
+    { key: 'previaPrimeiroRetornoEm', label: 'Primeiro retorno (data e horário)', help: 'A primeira resposta, de uma pessoa ou de um robô/IA.' },
+    { key: 'previaSegundoContatoEm', label: 'Contato do corretor (data e horário)', help: 'Quando um corretor falou com você.' },
+    { key: 'previaAgendamentoEm', label: 'Visita agendada para (data e horário)', help: 'A data e o horário marcados no decorado/PDV.' },
+  ];
+  function buildPreviaFields() {
+    const el = document.getElementById('previaFields');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="field">
+        <label>Canal do contato</label>
+        <select data-previa="previaCanal"><option value="">Selecione…</option>${CANAIS_PREVIA.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('')}</select>
+      </div>
+      ${PREVIA_DATAS.map(f => `
+      <div class="field">
+        <label>${f.label}</label>
+        <input type="datetime-local" data-previa="${f.key}">
+        <p class="field-help">${f.help}</p>
+        ${f.key === 'previaPrimeiroRetornoEm' ? `
+        <div class="segmented small" id="previaRetornoPor" style="margin-top:6px;">
+          <button type="button" data-val="pessoa">Pessoa</button>
+          <button type="button" data-val="ia">Robô / IA</button>
+        </div>` : ''}
+      </div>`).join('')}
+      <div class="field" style="grid-column:1 / -1;">
+        <label>Observações da prévia</label>
+        <textarea rows="2" data-previa="previaObservacoes" placeholder="Ex.: respondeu só no dia seguinte; pediu para ligar; não ofereceu horário."></textarea>
+      </div>
+      <div class="field" style="grid-column:1 / -1;">
+        <label class="check-line"><input type="checkbox" data-somente-previa> Só prévia: a visita ao decorado/PDV não foi realizada</label>
+        <p class="field-help">Marque quando o contato online foi feito mas a visita não aconteceu. Os pilares e a jornada saem do formulário e você já pode finalizar.</p>
+      </div>`;
+    el.querySelectorAll('[data-previa]').forEach(inp => {
+      const salvar = () => saveIdentificacao({ [inp.getAttribute('data-previa')]: inp.value }, inp.getAttribute('data-previa'));
+      inp.addEventListener('change', salvar);
+      if (inp.tagName === 'TEXTAREA') inp.addEventListener('blur', salvar);
+    });
+    const porSeg = document.getElementById('previaRetornoPor');
+    porSeg.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      const jaAtivo = btn.classList.contains('active');
+      porSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      if (!jaAtivo) btn.classList.add('active');
+      saveIdentificacao({ previaPrimeiroRetornoPor: jaAtivo ? '' : btn.getAttribute('data-val') });
+    });
+    el.querySelector('[data-somente-previa]').addEventListener('change', (e) => {
+      aplicarSomentePrevia(e.target.checked);
+      saveIdentificacao({ somentePrevia: e.target.checked });
+    });
+  }
+
+  // Só prévia: pilares e jornada saem do fluxo de etapas (e da validação).
+  function aplicarSomentePrevia(sim) {
+    document.querySelectorAll('#pillarPanels > .panel, #panel-jornada').forEach(p => p.classList.toggle('ms-step-fora', sim));
   }
 
   // ---------------------------------------------------------------------
@@ -366,9 +511,33 @@
               <textarea rows="2" placeholder="Fatos concretos observados na visita (não opiniões genéricas)" data-evidencia="${p.key}"></textarea>
             </div>
           </div>
+          <div class="fotos-pilar">
+            <div class="fotos-head">
+              <label>Fotos de comprovação <span class="field-help" style="display:inline;">(opcional — ex.: parede mofada, decorado desorganizado, sujeira)</span></label>
+              <label class="btn btn-ghost btn-sm fotos-add">+ Adicionar foto<input type="file" accept="image/*" multiple hidden data-foto-input="${p.key}"></label>
+            </div>
+            <div class="fotos-grid" data-fotos-grid="${p.key}"></div>
+          </div>
         </div>
       `;
       wrap.appendChild(panel);
+
+      // Antes da avaliação da recepção: ela seguiu o protocolo de perguntar a origem do cliente?
+      if (p.key === 'recepcao') {
+        const perg = document.createElement('div');
+        perg.className = 'field';
+        perg.style.marginBottom = '12px';
+        perg.innerHTML = `<label>A recepção perguntou como você ficou sabendo do empreendimento?</label>
+          <div class="segmented" id="perguntaOrigem">${Object.entries(PERGUNTA_ORIGEM).map(([k, v]) => `<button type="button" data-val="${k}">${v.label}</button>`).join('')}</div>
+          <p class="field-help">Protocolo da recepção: perguntar a origem do cliente para registrar na ferramenta.</p>`;
+        panel.insertBefore(perg, panel.querySelector('.criteria-label'));
+        const segPerg = perg.querySelector('#perguntaOrigem');
+        segPerg.addEventListener('click', (e) => {
+          const btn = e.target.closest('button'); if (!btn) return;
+          segPerg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+          saveIdentificacao({ recepcaoPerguntouOrigem: btn.getAttribute('data-val') });
+        });
+      }
 
       const seg = panel.querySelector(`[data-avaliado="${p.key}"]`);
       const body = panel.querySelector(`[data-body="${p.key}"]`);
@@ -382,6 +551,11 @@
         savePilarInformada(p.key);
       });
 
+      panel.querySelector(`[data-foto-input="${p.key}"]`).addEventListener('change', (e) => {
+        enviarFotos(p.key, [...e.target.files]);
+        e.target.value = '';
+      });
+
       const informadaInput = panel.querySelector(`[data-informada="${p.key}"]`);
       const badge = panel.querySelector(`[data-badge="${p.key}"]`);
       informadaInput.addEventListener('input', () => refreshBadge(informadaInput, badge));
@@ -389,6 +563,67 @@
       panel.querySelector(`[data-evidencia="${p.key}"]`).addEventListener('blur', () => savePilarInformada(p.key));
     });
   }
+
+  // ---------------------------------------------------------------------
+  // Fotos de comprovação por pilar: reduzidas no aparelho antes de enviar
+  // ---------------------------------------------------------------------
+  function reduzirFoto(arquivo, lado, qualidade) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(arquivo);
+      const img = new Image();
+      img.onload = () => {
+        const escala = Math.min(1, lado / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * escala); c.height = Math.round(img.height * escala);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', qualidade));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler a foto.')); };
+      img.src = url;
+    });
+  }
+  async function enviarFotos(pilarKey, arquivos) {
+    for (const arq of arquivos) {
+      saving('Enviando foto…');
+      try {
+        let imagem = await reduzirFoto(arq, 1600, 0.8);
+        if (imagem.length > 900000) imagem = await reduzirFoto(arq, 1280, 0.65);
+        avaliacao.fotos = await api.adicionarFoto(avaliacao.id, { pilarKey, imagem });
+        saving('Foto enviada ✓');
+      } catch (err) {
+        saving('Erro ao enviar foto');
+        toast(err.message);
+      }
+      desenharFotos();
+    }
+  }
+  function desenharFotos() {
+    PILARES.forEach(p => {
+      const grid = document.querySelector(`[data-fotos-grid="${p.key}"]`);
+      if (!grid) return;
+      const lista = (avaliacao.fotos || []).filter(f => f.pilarKey === p.key);
+      grid.innerHTML = lista.map(f => `
+        <figure class="foto-item">
+          <a href="${escapeAttr(f.url)}" target="_blank" rel="noopener"><img src="${escapeAttr(f.url)}" alt="" loading="lazy"></a>
+          <input type="text" placeholder="Legenda (opcional)" value="${escapeAttr(f.legenda || '')}" data-legenda-foto="${f.id}">
+          <button type="button" class="btn btn-ghost btn-sm" data-remover-foto="${f.id}">Remover</button>
+        </figure>`).join('');
+    });
+  }
+  document.addEventListener('change', async (e) => {
+    const fotoId = e.target.getAttribute && e.target.getAttribute('data-legenda-foto');
+    if (!fotoId) return;
+    try { avaliacao.fotos = await api.legendaFoto(avaliacao.id, fotoId, e.target.value); saving('Salvo ✓'); }
+    catch (err) { toast(err.message); }
+  });
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest && e.target.closest('[data-remover-foto]');
+    if (!btn) return;
+    if (!confirm('Remover esta foto?')) return;
+    try { avaliacao.fotos = await api.removerFoto(avaliacao.id, btn.getAttribute('data-remover-foto')); desenharFotos(); }
+    catch (err) { toast(err.message); }
+  });
 
   function refreshBadge(input, badgeEl) {
     const v = input.value === '' ? null : parseFloat(input.value);
@@ -452,6 +687,7 @@
   function fillFormFromState() {
     const idz = avaliacao.identificacao;
     tipoEmpreendimento = idz.tipoEmpreendimento || 'sousa';
+    concorrenteOutro = tipoEmpreendimento === 'concorrente' && !idz.idConcorrente && !!idz.empreendimento;
     const tipoToggle = document.getElementById('tipoEmpreendimentoToggle');
     tipoToggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') === tipoEmpreendimento));
     applyTipoEmpreendimentoUI(tipoEmpreendimento);
@@ -464,12 +700,8 @@
     if (regSel) regSel.value = idz.regional || '';
     document.querySelector('[data-idfield="construtora"]').value = idz.construtora || '';
 
-    const vinculoInput = document.querySelector('[data-vinculo-sousa]');
-    if (vinculoInput) {
-      vinculoInput.value = avaliacao.vinculoSousaLabel || '';
-      updateVinculoStatus(avaliacao.vinculoSousaId, avaliacao.vinculoSousaLabel);
-      if (tipoEmpreendimento === 'concorrente') refreshVinculoSousaOptions();
-    }
+    applyTipoEmpreendimentoUI(tipoEmpreendimento);
+    preencherCadEmp();
 
     const areaInput = document.querySelector('[data-mask="area"]');
     if (areaInput) areaInput.value = idz.areaUnidadeDisplay || '';
@@ -499,6 +731,16 @@
       const sel = document.querySelector(`[data-jornada="${j.key}"]`);
       sel.value = (avaliacao.jornada[j.key] && avaliacao.jornada[j.key].status) || 'realizada';
     });
+
+    desenharFotos();
+
+    // Prévia online e pergunta da recepção
+    document.querySelectorAll('[data-previa]').forEach(inp => { inp.value = idz[inp.getAttribute('data-previa')] || ''; });
+    document.querySelectorAll('#previaRetornoPor button').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') === idz.previaPrimeiroRetornoPor));
+    const soPrevia = document.querySelector('[data-somente-previa]');
+    if (soPrevia) soPrevia.checked = !!idz.somentePrevia;
+    aplicarSomentePrevia(!!idz.somentePrevia);
+    document.querySelectorAll('#perguntaOrigem button').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') === idz.recepcaoPerguntouOrigem));
   }
 
   // ---------------------------------------------------------------------

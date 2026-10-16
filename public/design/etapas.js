@@ -28,6 +28,7 @@
   // Nome resumido de cada etapa no fluxo (o nome completo fica no título).
   var CURTOS = {
     'identificação da visita': 'Identificação',
+    'atendimento prévio online': 'Prévia',
     'atendimento da recepção': 'Recepção',
     'atendimento do corretor': 'Corretor',
     'qualidade e estrutura do pdv': 'PDV',
@@ -66,7 +67,8 @@
     var fixas = this.cfg.fixas;
     return Array.prototype.filter.call(
       this.vista.querySelectorAll(':scope > .panel, :scope > div > .panel'),
-      function (p) { return !fixas.some(function (s) { return p.matches(s); }); }
+      // .ms-step-fora: seção fora do fluxo nesta avaliação (ex.: só prévia, sem pilares).
+      function (p) { return !p.classList.contains('ms-step-fora') && !fixas.some(function (s) { return p.matches(s); }); }
     );
   };
 

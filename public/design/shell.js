@@ -40,6 +40,8 @@
         });
       });
     });
+    // Páginas do Cliente Oculto fora do menu (ex.: recibo) abrem o módulo do Cliente Oculto.
+    if (!melhor.modulo && caminho.indexOf('/cliente-oculto/') === 0) melhor.modulo = 'co';
     return melhor;
   }
 
@@ -139,8 +141,10 @@
   function montar(menu) {
     var atual = itemAtual(menu);
     var aberto = atual.modulo || (menu.modulos[0] && menu.modulos[0].id);
-    var recolhido = false;
-    try { recolhido = localStorage.getItem(CHAVE) === '1'; } catch (e) { /* sem armazenamento */ }
+    // No celular o painel abre por cima do conteúdo (gaveta), então começa sempre fechado.
+    var celular = window.matchMedia('(max-width: 720px)');
+    var recolhido = celular.matches;
+    if (!celular.matches) try { recolhido = localStorage.getItem(CHAVE) === '1'; } catch (e) { /* sem armazenamento */ }
 
     var dual = el('div', { 'class': 'ms-dual' + (recolhido ? ' is-collapsed' : ''), 'data-pronto': '' });
     var rail = el('div', { 'class': 'ms-rail' });
@@ -196,8 +200,12 @@
       var fechado = dual.classList.toggle('is-collapsed');
       btRecolher.setAttribute('aria-expanded', String(!fechado));
       btRecolher.title = fechado ? 'Expandir menu' : 'Recolher menu';
-      try { localStorage.setItem(CHAVE, fechado ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+      if (!celular.matches) try { localStorage.setItem(CHAVE, fechado ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
     }
+    // Celular: tocar fora do menu aberto fecha o painel.
+    document.addEventListener('pointerdown', function (e) {
+      if (celular.matches && !dual.classList.contains('is-collapsed') && !dual.contains(e.target)) alternar();
+    });
     btRecolher.setAttribute('aria-expanded', String(!recolhido));
     btRecolher.title = recolhido ? 'Expandir menu' : 'Recolher menu';
     btRecolher.addEventListener('click', alternar);

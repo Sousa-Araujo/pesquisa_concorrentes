@@ -23,6 +23,11 @@ function envioSimulado(): boolean {
   return !emProducao() || process.env.ENVIO_SIMULADO === "1";
 }
 
+/** Verdadeiro quando os e-mails só vão para o log (sem chave do Resend ou ENVIO_SIMULADO=1). */
+export function emailSimulado(): boolean {
+  return !process.env.RESEND_API_KEY || process.env.ENVIO_SIMULADO === "1";
+}
+
 export interface Email {
   para: string;
   assunto: string;
@@ -42,7 +47,7 @@ export async function enviarEmail(email: Email): Promise<void> {
     method: "POST",
     headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: process.env.EMAIL_REMETENTE ?? "Market Share <onboarding@resend.dev>",
+      from: process.env.EMAIL_REMETENTE ?? "Market Share Sousa Araujo <nao-responda@sousaaraujo.com.br>",
       to: [email.para],
       subject: email.assunto,
       text: email.texto,

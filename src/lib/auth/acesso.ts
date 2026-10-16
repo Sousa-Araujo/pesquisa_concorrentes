@@ -16,7 +16,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db/pool";
-import { requireEnv } from "@/lib/env";
+import { requireEnv, urlBase } from "@/lib/env";
 import {
   CODIGO_JANELA_MIN,
   CODIGO_VALIDADE_MIN,
@@ -303,10 +303,6 @@ export async function entrarComCodigoAgente(telefone: string, codigo: string): P
 // ---------------------------------------------------------------------------
 // Convites
 // ---------------------------------------------------------------------------
-
-function urlBase(): string {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
-}
 
 /** Gera um novo link de convite (invalida o anterior) e envia por e-mail. */
 export async function enviarConvite(idUsuario: string): Promise<Resultado> {

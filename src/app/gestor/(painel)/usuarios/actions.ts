@@ -16,6 +16,8 @@ import {
   type UsuarioAtual,
 } from "@/lib/auth/acesso";
 import { podeGerirUsuarioCom } from "@/lib/auth/perfis";
+import { emailSimulado, enviarEmail } from "@/lib/notificacoes/envio";
+import { emailTeste } from "@/lib/notificacoes/modelos";
 import { usuarioSchema } from "@/lib/validation/schemas";
 
 type R = { ok: true; aviso?: string } | { ok: false; erro: string };
@@ -160,4 +162,18 @@ export async function reenviarConvite(id: string): Promise<R> {
   if (!alvo.ativo) return { ok: false, erro: "Ative o usuário antes de reenviar o convite." };
   const r = await enviarConvite(id);
   return r.ok ? { ok: true, aviso: "Convite reenviado." } : r;
+}
+
+/** Administrador: manda um e-mail de teste para si mesmo para conferir a configuração do envio. */
+export async function testarEnvioEmail(): Promise<R> {
+  const eu = await exigirPermissao("gerirUsuarios");
+  if (!eu.perfis.includes("admin")) return semPermissao();
+  try {
+    await enviarEmail(emailTeste(eu.email, eu.nome));
+  } catch (e) {
+    return { ok: false, erro: `O envio falhou: ${e instanceof Error ? e.message : "erro desconhecido"}` };
+  }
+  return emailSimulado()
+    ? { ok: true, aviso: "Envio simulado: o e-mail de teste apareceu só no log do servidor. Falta configurar o Resend (RESEND_API_KEY)." }
+    : { ok: true, aviso: `E-mail de teste enviado para ${eu.email}. Confira a caixa de entrada (e o spam).` };
 }

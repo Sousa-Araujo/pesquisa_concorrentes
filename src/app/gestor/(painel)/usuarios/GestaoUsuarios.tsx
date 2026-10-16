@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Mail, Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import type { LinhaUsuario } from "@/lib/data/gestor";
 import { DOMINIO_EMAIL_EMPRESA, PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
-import { criarUsuario, definirStatusUsuario, editarUsuario, reenviarConvite } from "./actions";
+import { criarUsuario, definirStatusUsuario, editarUsuario, reenviarConvite, testarEnvioEmail } from "./actions";
 import CampoData from "@/components/CampoData";
 
 function dataCurta(iso: string | null): string {
@@ -52,9 +52,16 @@ export default function GestaoUsuarios({
             Sem exclusão — apenas inativação.
           </p>
         </div>
-        <button className="btn-primary btn-cabecalho" onClick={() => { setMensagem(null); setCriando(true); }}>
-          {ehAdmin ? "Cadastrar usuário" : "Cadastrar avaliador"}
-        </button>
+        <div className="flex items-center gap-2">
+          {ehAdmin && (
+            <button className="btn-acao" title="Envia um e-mail de teste para você" onClick={() => executar(testarEnvioEmail)}>
+              <Mail size={13} aria-hidden="true" />Testar envio de e-mail
+            </button>
+          )}
+          <button className="btn-primary btn-cabecalho" onClick={() => { setMensagem(null); setCriando(true); }}>
+            {ehAdmin ? "Cadastrar usuário" : "Cadastrar avaliador"}
+          </button>
+        </div>
       </div>
 
       {mensagem && (

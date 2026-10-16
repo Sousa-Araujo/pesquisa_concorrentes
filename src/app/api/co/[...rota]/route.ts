@@ -9,6 +9,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { encerrarSessao, usuarioAtual } from "@/lib/auth/acesso";
 import * as co from "@/lib/cliente-oculto/repo";
+import * as recibo from "@/lib/cliente-oculto/recibo";
+import * as fotos from "@/lib/cliente-oculto/fotos";
 import { ErroCO, papelCO, type PapelCO, type Quem } from "@/lib/cliente-oculto/repo";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,22 @@ const rotas: Rota[] = [
   { metodo: "PUT", re: new RegExp(`^avaliacoes/${ID}/pilares/${ID}/informada$`), papeis: ["avaliador"], h: (u, m, c) => co.atualizarPilarInformada(u, m[1], m[2], c) },
   { metodo: "PUT", re: new RegExp(`^avaliacoes/${ID}/jornada/${ID}$`), papeis: ["avaliador"], h: (u, m, c) => co.atualizarJornada(u, m[1], m[2], c.status) },
   { metodo: "POST", re: new RegExp(`^avaliacoes/${ID}/finalizar$`), papeis: ["avaliador"], h: (u, m) => co.finalizar(u, m[1]) },
+
+  // Cadastro da Pesquisa (empreendimentos Sousa e seus concorrentes)
+  { metodo: "GET", re: /^cadastro\/empreendimentos$/, h: () => co.cadastroEmpreendimentos() },
+  { metodo: "GET", re: /^cadastro\/concorrentes\/(\d+)$/, h: (_u, m) => co.cadastroConcorrentes(Number(m[1])) },
+  { metodo: "PUT", re: new RegExp(`^avaliacoes/${ID}/concorrente-cadastro$`), papeis: ["coordenador"], h: (u, m, c) => co.ligarConcorrenteCadastro(u, m[1], c) },
+
+  // Fotos de comprovação (a imagem em si: src/app/api/co/fotos/[id]/route.ts)
+  { metodo: "POST", re: new RegExp(`^avaliacoes/${ID}/fotos$`), papeis: ["avaliador"], status: 201, h: (u, m, c) => fotos.adicionarFoto(u, m[1], c) },
+  { metodo: "PUT", re: new RegExp(`^avaliacoes/${ID}/fotos/(\\d+)$`), papeis: ["avaliador"], h: (u, m, c) => fotos.atualizarLegenda(u, m[1], Number(m[2]), c.legenda) },
+  { metodo: "DELETE", re: new RegExp(`^avaliacoes/${ID}/fotos/(\\d+)$`), papeis: ["avaliador"], h: (u, m) => fotos.removerFoto(u, m[1], Number(m[2])) },
+
+  // Recibo de pagamento do Cliente Oculto
+  { metodo: "GET", re: new RegExp(`^avaliacoes/${ID}/recibo$`), h: (u, m) => recibo.obterRecibo(u, m[1]) },
+  { metodo: "PUT", re: new RegExp(`^avaliacoes/${ID}/recibo$`), papeis: ["avaliador"], h: (u, m, c) => recibo.salvarRecibo(u, m[1], c) },
+  { metodo: "POST", re: new RegExp(`^avaliacoes/${ID}/recibo/assinar$`), papeis: ["avaliador"], h: (u, m, c) => recibo.assinarRecibo(u, m[1], c) },
+  { metodo: "POST", re: new RegExp(`^avaliacoes/${ID}/recibo/pago$`), papeis: ["coordenador"], h: (u, m, c) => recibo.marcarReciboPago(u, m[1], c.pago !== false) },
 
   // Vínculo Sousa x Concorrente
   { metodo: "GET", re: new RegExp(`^avaliacoes/${ID}/opcoes-vinculo$`), h: (u, m) => co.opcoesVinculo(u, m[1]) },

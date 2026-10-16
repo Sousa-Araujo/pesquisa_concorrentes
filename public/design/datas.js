@@ -1,6 +1,6 @@
 // Calendário, seletor de mês e de horário do design system (Flatpickr, em português)
 // nas telas do Cliente Oculto. Troca os campos nativos date/month/time sem mudar o valor
-// que as telas leem: data "AAAA-MM-DD", mês "AAAA-MM", horário "HH:MM". A pessoa vê
+// que as telas leem: data "AAAA-MM-DD", data e hora "AAAA-MM-DDTHH:MM", mês "AAAA-MM", horário "HH:MM". A pessoa vê
 // "14/10/2026", "outubro de 2026" e "09:30". Campos criados depois (formulários
 // montados por script) também são trocados.
 (function () {
@@ -12,6 +12,7 @@
   function opcoes(tipo) {
     var base = { allowInput: true, disableMobile: true, altInput: true };
     if (tipo === 'date') return Object.assign(base, { dateFormat: 'Y-m-d', altFormat: 'd/m/Y' });
+    if (tipo === 'datetime-local') return Object.assign(base, { enableTime: true, time_24hr: true, dateFormat: 'Y-m-d\TH:i', altFormat: 'd/m/Y H:i' });
     if (tipo === 'month') {
       var plugins = window.monthSelectPlugin ? [new monthSelectPlugin({ shorthand: true, dateFormat: 'Y-m', altFormat: 'F \\d\\e Y' })] : [];
       return Object.assign(base, { dateFormat: 'Y-m', altFormat: 'F \\d\\e Y', plugins: plugins });
@@ -26,7 +27,7 @@
     var fp = flatpickr(input, opcoes(tipo));
     if (fp.altInput) {
       fp.altInput.className = input.className + ' ms-data';
-      fp.altInput.placeholder = tipo === 'date' ? 'dd/mm/aaaa' : tipo === 'month' ? 'Escolha o mês' : 'hh:mm';
+      fp.altInput.placeholder = tipo === 'date' ? 'dd/mm/aaaa' : tipo === 'datetime-local' ? 'dd/mm/aaaa hh:mm' : tipo === 'month' ? 'Escolha o mês' : 'hh:mm';
       fp.altInput.disabled = input.disabled;
     }
     // Quando a tela preenche o campo por script (ao abrir uma avaliação), o calendário acompanha.
@@ -44,7 +45,7 @@
   }
 
   function varrer(raiz) {
-    raiz.querySelectorAll('input[type="date"], input[type="month"], input[type="time"]').forEach(aplicar);
+    raiz.querySelectorAll('input[type="date"], input[type="datetime-local"], input[type="month"], input[type="time"]').forEach(aplicar);
   }
 
   function iniciar() {

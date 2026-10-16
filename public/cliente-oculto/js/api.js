@@ -36,6 +36,22 @@
     atualizarJornada: (id, etapaKey, status) => request('PUT', `/avaliacoes/${encodeURIComponent(id)}/jornada/${etapaKey}`, { status }),
     finalizar: (id) => request('POST', `/avaliacoes/${encodeURIComponent(id)}/finalizar`),
 
+    // Fotos de comprovação
+    adicionarFoto: (id, dados) => request('POST', `/avaliacoes/${encodeURIComponent(id)}/fotos`, dados),
+    legendaFoto: (id, fotoId, legenda) => request('PUT', `/avaliacoes/${encodeURIComponent(id)}/fotos/${Number(fotoId)}`, { legenda }),
+    removerFoto: (id, fotoId) => request('DELETE', `/avaliacoes/${encodeURIComponent(id)}/fotos/${Number(fotoId)}`),
+
+    // Recibo de pagamento do Cliente Oculto
+    obterRecibo: (id) => request('GET', `/avaliacoes/${encodeURIComponent(id)}/recibo`),
+    salvarRecibo: (id, dados) => request('PUT', `/avaliacoes/${encodeURIComponent(id)}/recibo`, dados),
+    assinarRecibo: (id, assinatura) => request('POST', `/avaliacoes/${encodeURIComponent(id)}/recibo/assinar`, { assinatura }),
+    marcarReciboPago: (id, pago) => request('POST', `/avaliacoes/${encodeURIComponent(id)}/recibo/pago`, { pago }),
+
+    // Cadastro da Pesquisa de Concorrentes
+    cadastroEmpreendimentos: () => request('GET', '/cadastro/empreendimentos'),
+    cadastroConcorrentes: (idEmp) => request('GET', `/cadastro/concorrentes/${Number(idEmp)}`),
+    ligarConcorrenteCadastro: (id, campos) => request('PUT', `/avaliacoes/${encodeURIComponent(id)}/concorrente-cadastro`, campos),
+
     // Vínculo Sousa x Concorrente
     opcoesVinculo: (id) => request('GET', `/avaliacoes/${encodeURIComponent(id)}/opcoes-vinculo`),
     concorrentesVinculados: (id) => request('GET', `/avaliacoes/${encodeURIComponent(id)}/concorrentes`),

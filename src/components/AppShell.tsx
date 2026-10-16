@@ -7,7 +7,7 @@
  * animação; o conteúdo ocupa a largura que sobrar. A escolha fica guardada no
  * navegador. Ícones: Lucide. Classes ms-* de public/design/ms.css.
  */
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChartColumn, Eye, FileText, House, Menu as MenuIcon, Users, type LucideIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -32,6 +32,11 @@ function itemAtual(menu: Menu, caminho: string): { modulo?: string; href?: strin
   return melhor;
 }
 
+/** Mesma largura do @media do menu em public/design/ms.css. */
+function ehCelular(): boolean {
+  return window.matchMedia("(max-width: 720px)").matches;
+}
+
 export default function AppShell({ menu, children }: { menu: Menu; children: React.ReactNode }) {
   const caminho = usePathname();
   const atual = itemAtual(menu, caminho);
@@ -41,15 +46,29 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
   const [pronto, setPronto] = useState(false);
 
   useLayoutEffect(() => {
-    try { setRecolhido(localStorage.getItem(CHAVE_RECOLHIDO) === "1"); } catch { /* sem armazenamento */ }
+    // No celular o painel abre por cima do conteúdo, então a tela sempre começa com ele fechado.
+    if (ehCelular()) setRecolhido(true);
+    else try { setRecolhido(localStorage.getItem(CHAVE_RECOLHIDO) === "1"); } catch { /* sem armazenamento */ }
     const t = requestAnimationFrame(() => setPronto(true));
     return () => cancelAnimationFrame(t);
   }, []);
   useEffect(() => { if (atual.modulo) setAberto(atual.modulo); }, [atual.modulo]);
 
+  // Celular: tocar fora do menu aberto fecha o painel.
+  const dual = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (recolhido) return;
+    const fora = (e: PointerEvent) => {
+      if (ehCelular() && !dual.current?.contains(e.target as Node)) setRecolhido(true);
+    };
+    document.addEventListener("pointerdown", fora);
+    return () => document.removeEventListener("pointerdown", fora);
+  }, [recolhido]);
+
   function alternar() {
     setRecolhido((r) => {
-      try { localStorage.setItem(CHAVE_RECOLHIDO, r ? "0" : "1"); } catch { /* sem armazenamento */ }
+      // A escolha só fica guardada no computador; no celular o painel é uma gaveta.
+      if (!ehCelular()) try { localStorage.setItem(CHAVE_RECOLHIDO, r ? "0" : "1"); } catch { /* sem armazenamento */ }
       return !r;
     });
   }
@@ -61,7 +80,7 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
     <div className="ms-app">
       <Navbar usuario={menu.usuario} />
       <div className="ms-shell">
-      <div className={`ms-dual${recolhido ? " is-collapsed" : ""}`} data-pronto={pronto ? "" : undefined}>
+      <div ref={dual} className={`ms-dual${recolhido ? " is-collapsed" : ""}`} data-pronto={pronto ? "" : undefined}>
         <div className="ms-rail">
           <button
             type="button"

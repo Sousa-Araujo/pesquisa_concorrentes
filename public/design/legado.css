@@ -89,3 +89,20 @@
 .ms-legado #view-list td .status-badge { padding: 3px 8px; font-size: 11.5px; }
 .ms-legado #view-list .av-table th { letter-spacing: 0.02em; }
 .ms-legado .app { padding-left: var(--space-5); padding-right: var(--space-5); }
+
+/* Caixa de marcar com o texto ao lado (ex.: "Só prévia"). */
+.ms-legado .check-line { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.ms-legado .check-line input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand); }
+
+/* Fotos de comprovação do Cliente Oculto */
+.fotos-pilar { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line, #e9e8e4); }
+.fotos-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.fotos-head label:first-child { font-weight: 700; font-size: 13px; }
+.fotos-add { cursor: pointer; }
+.fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.foto-item { margin: 0; display: grid; gap: 6px; padding: 6px; border: 1px solid var(--line, #e9e8e4); border-radius: 10px; background: var(--surface, #fff); }
+.foto-item img { display: block; width: 100%; height: 110px; object-fit: cover; border-radius: 7px; background: var(--surface-2, #eeede9); }
+.foto-item input { font-size: 12px; padding: 5px 8px; min-height: 0; }
+.foto-item figcaption { font-size: 12px; line-height: 16px; color: var(--text-2, #65645e); }
+.fotos-leitura { margin-top: 10px; }
+@media print { .foto-item { break-inside: avoid; } .foto-item img { height: 120px; } }

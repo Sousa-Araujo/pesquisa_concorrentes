@@ -45,7 +45,9 @@
       <p>Sua avaliação foi registrada e está com o Coordenador de Market Share para calibragem. Os dados que você preencheu ficam preservados como o registro original da visita.</p>
       <div class="confirm-id" id="lockedIdText">—</div>
       <p><span class="status-badge tone-abaixo" id="lockedStatusBadge">Aguardando Calibragem</span></p>
-      <p style="margin-top:26px;"><a class="btn btn-ghost" href="cliente-oculto.html">+ Iniciar nova avaliação</a></p>
+      <p style="margin-top:22px;">Para receber o pagamento, preencha e assine o recibo.</p>
+      <p style="margin-top:10px;"><a class="btn btn-primary" id="reciboLink" href="#">Preencher recibo de pagamento</a></p>
+      <p style="margin-top:14px;"><a class="btn btn-ghost" href="cliente-oculto.html">+ Iniciar nova avaliação</a></p>
     </div>
   </div>
 
@@ -55,6 +57,12 @@
       <div class="panel-head"><h2><span class="panel-num">i</span>Identificação da Visita</h2></div>
       <p class="panel-hint">Dados cadastrais da visita. Não interferem nas notas.</p>
       <div class="grid" id="idFields"></div>
+    </div>
+
+    <div class="panel" id="panel-previa">
+      <div class="panel-head"><h2>Atendimento Prévio Online</h2></div>
+      <p class="panel-hint">Contatos feitos pelos canais online antes da visita (site, WhatsApp, redes sociais, portais). Se não houve prévia, deixe em branco e siga.</p>
+      <div class="grid" id="previaFields"></div>
     </div>
 
     <div id="pillarPanels"></div>
