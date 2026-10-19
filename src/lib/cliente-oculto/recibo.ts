@@ -1,6 +1,8 @@
 /**
  * Recibo de pagamento do Cliente Oculto (avaliador).
- * O avaliador informa nome, CPF, chave PIX, valor e cidade e assina na tela;
+ * Modelo oficial: o avaliador informa nome, telefone, CPF, chave PIX, a
+ * quantidade de pesquisas realizadas e o valor unitário, e assina na tela;
+ * empreendimento, data e hora da visita vêm da avaliação;
  * o Coordenador de Market Share (ou o administrador) vê o recibo e marca como
  * pago. Mudar qualquer dado depois de assinado apaga a assinatura.
  */
@@ -17,7 +19,7 @@ const ASSINATURA_MAX = 300_000;
 
 async function avaliacaoDoRecibo(quem: Quem, id: string) {
   const { rows: [a] } = await q(
-    `select id, avaliador_id, empreendimento_texto, data_visita, cliente_oculto_nome, somente_previa
+    `select id, avaliador_id, empreendimento_texto, data_visita, horario, cliente_oculto_nome, somente_previa, previa_contato_em
        from co_avaliacoes where id = $1 and not excluida`,
     [id],
   );
@@ -33,16 +35,20 @@ function paraTela(a: Record<string, unknown>, r: Record<string, unknown> | undef
       id: a.id,
       empreendimento: a.empreendimento_texto,
       dataVisita: a.data_visita,
+      horario: a.horario,
+      previaContatoEm: a.previa_contato_em,
       clienteOculto: a.cliente_oculto_nome,
       somentePrevia: !!a.somente_previa,
     },
     recibo: {
       nomeCompleto: r?.nome_completo ?? "",
+      telefone: r?.telefone ?? "",
       cpf: r?.cpf ?? "",
       chavePixTipo: r?.chave_pix_tipo ?? "",
       chavePix: r?.chave_pix ?? "",
+      quantidadePesquisas: r?.quantidade_pesquisas ?? null,
+      valorUnitarioCentavos: r?.valor_unitario_centavos === null || r?.valor_unitario_centavos === undefined ? null : Number(r.valor_unitario_centavos),
       valorCentavos: r?.valor_centavos === null || r?.valor_centavos === undefined ? null : Number(r.valor_centavos),
-      cidade: r?.cidade ?? "",
       assinatura: r?.assinatura ?? null,
       assinadoEm: r?.assinado_em ?? null,
       pagoEm: r?.pago_em ?? null,
@@ -70,19 +76,28 @@ export async function salvarRecibo(quem: Quem, id: string, c: Record<string, unk
   if (cpf && !/^\d{11}$/.test(cpf)) throw new ErroCO(400, "CPF deve ter 11 números.");
   const tipo = texto(c.chavePixTipo);
   if (tipo && !(TIPOS_PIX as readonly string[]).includes(tipo)) throw new ErroCO(400, "Tipo de chave PIX inválido.");
-  let valor: number | null = null;
-  if (c.valorCentavos !== undefined && c.valorCentavos !== null && c.valorCentavos !== "") {
-    valor = Number(c.valorCentavos);
-    if (!Number.isInteger(valor) || valor <= 0) throw new ErroCO(400, "Valor inválido.");
-  }
+  const inteiroPositivo = (v: unknown, erro: string): number | null => {
+    if (v === undefined || v === null || v === "") return null;
+    const n = Number(v);
+    if (!Number.isInteger(n) || n <= 0) throw new ErroCO(400, erro);
+    return n;
+  };
+  const quantidade = inteiroPositivo(c.quantidadePesquisas, "Quantidade de pesquisas inválida.");
+  const unitario = inteiroPositivo(c.valorUnitarioCentavos, "Valor unitário inválido.");
+  // Valor total sempre calculado aqui, nunca digitado.
+  const total = quantidade && unitario ? quantidade * unitario : null;
   await q(
-    `insert into co_recibos (avaliacao_id, nome_completo, cpf, chave_pix_tipo, chave_pix, valor_centavos, cidade)
-     values ($1, $2, $3, $4, $5, $6, $7)
+    `insert into co_recibos (avaliacao_id, nome_completo, telefone, cpf, chave_pix_tipo, chave_pix,
+                             quantidade_pesquisas, valor_unitario_centavos, valor_centavos)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      on conflict (avaliacao_id) do update set
-       nome_completo = excluded.nome_completo, cpf = excluded.cpf, chave_pix_tipo = excluded.chave_pix_tipo,
-       chave_pix = excluded.chave_pix, valor_centavos = excluded.valor_centavos, cidade = excluded.cidade,
+       nome_completo = excluded.nome_completo, telefone = excluded.telefone, cpf = excluded.cpf,
+       chave_pix_tipo = excluded.chave_pix_tipo, chave_pix = excluded.chave_pix,
+       quantidade_pesquisas = excluded.quantidade_pesquisas, valor_unitario_centavos = excluded.valor_unitario_centavos,
+       valor_centavos = excluded.valor_centavos,
        assinatura = null, assinado_em = null, atualizado_em = now()`,
-    [id, texto(c.nomeCompleto), cpf, tipo, texto(c.chavePix), valor, texto(c.cidade)],
+    [id, texto(c.nomeCompleto), texto(c.telefone)?.replace(/\D/g, "") || null, cpf, tipo, texto(c.chavePix),
+      quantidade, unitario, total],
   );
   return obterRecibo(quem, id);
 }
@@ -98,10 +113,11 @@ export async function assinarRecibo(quem: Quem, id: string, c: Record<string, un
   const { rows: [r] } = await q(`select * from co_recibos where avaliacao_id = $1`, [id]);
   const faltando: string[] = [];
   if (!r?.nome_completo) faltando.push("nome completo");
+  if (!r?.telefone || String(r.telefone).length < 10) faltando.push("telefone com DDD");
   if (!r?.cpf || !cpfValido(r.cpf)) faltando.push("CPF válido");
   if (!r?.chave_pix_tipo || !r?.chave_pix) faltando.push("chave PIX");
-  if (!r?.valor_centavos) faltando.push("valor");
-  if (!r?.cidade) faltando.push("cidade");
+  if (!r?.quantidade_pesquisas) faltando.push("quantidade de pesquisas");
+  if (!r?.valor_unitario_centavos) faltando.push("valor unitário");
   if (faltando.length) throw new ErroCO(400, `Preencha antes de assinar: ${faltando.join(", ")}.`);
   await q(
     `update co_recibos set assinatura = $2, assinado_em = now(), atualizado_em = now() where avaliacao_id = $1`,
@@ -120,4 +136,51 @@ export async function marcarReciboPago(quem: Quem, id: string, pago: boolean) {
     [id, pago ? quem.id_usuario : null],
   );
   return obterRecibo(quem, id);
+}
+
+export type StatusRecibo = "nao_assinado" | "aguardando_pagamento" | "pago";
+
+export interface LinhaRecibo {
+  avaliacaoId: string;
+  avaliador: string | null;
+  empreendimento: string | null;
+  dataVisita: string | null;
+  quantidade: number | null;
+  valorCentavos: number | null;
+  assinadoEm: string | null;
+  pagoEm: string | null;
+  status: StatusRecibo;
+}
+
+/**
+ * Tela de recibos (administrador): todas as avaliações já enviadas pelo
+ * Cliente Oculto, com o recibo (ou a falta dele). Filtro por mês da visita.
+ */
+export async function listarRecibos(f: { status?: string; mes?: string }): Promise<LinhaRecibo[]> {
+  const params: unknown[] = [];
+  let sql = `
+    select a.id, coalesce(r.nome_completo, a.cliente_oculto_nome) as avaliador, a.empreendimento_texto,
+           to_char(coalesce(a.data_visita, left(a.previa_contato_em, 10)::date), 'YYYY-MM-DD') as data_visita,
+           r.quantidade_pesquisas, r.valor_centavos, r.assinado_em, r.pago_em
+      from co_avaliacoes a
+      left join co_recibos r on r.avaliacao_id = a.id
+     where not a.excluida and a.status <> 'Em Preenchimento'`;
+  if (f.mes && /^\d{4}-\d{2}$/.test(f.mes)) {
+    params.push(f.mes);
+    sql += ` and to_char(coalesce(a.data_visita, left(a.previa_contato_em, 10)::date), 'YYYY-MM') = $${params.length}`;
+  }
+  sql += " order by a.data_visita desc nulls last, a.id desc";
+  const { rows } = await q(sql, params);
+  const linhas: LinhaRecibo[] = rows.map((r) => ({
+    avaliacaoId: r.id,
+    avaliador: r.avaliador,
+    empreendimento: r.empreendimento_texto,
+    dataVisita: r.data_visita,
+    quantidade: r.quantidade_pesquisas,
+    valorCentavos: r.valor_centavos === null ? null : Number(r.valor_centavos),
+    assinadoEm: r.assinado_em ? new Date(r.assinado_em).toISOString() : null,
+    pagoEm: r.pago_em ? new Date(r.pago_em).toISOString() : null,
+    status: r.pago_em ? "pago" : r.assinado_em ? "aguardando_pagamento" : "nao_assinado",
+  }));
+  return f.status ? linhas.filter((l) => l.status === f.status) : linhas;
 }

@@ -1,13 +1,13 @@
-// Recibo de pagamento do Cliente Oculto (avaliador).
-// O avaliador preenche os dados do PIX e o valor, assina no quadro e envia;
-// o Coordenador de Market Share vê o mesmo recibo e marca como pago.
-// TEXTO DE EXEMPLO: será trocado pelo modelo oficial da Sousa Araujo.
+// Recibo de pagamento do Cliente Oculto (avaliador), no modelo oficial da Sousa Araujo.
+// O avaliador preenche os dados pessoais e do PIX, a quantidade de pesquisas e o valor
+// unitário (o total é calculado), assina no quadro e envia; o Coordenador de Market
+// Share vê o mesmo recibo e marca como pago. Empreendimento, data e hora vêm da avaliação.
 (async function () {
   'use strict';
   const authUser = await COAuth.requireLogin(['avaliador', 'coordenador']);
   if (!authUser) return;
 
-  const { escapeHtml, moneyMaskFromDigits, centavosToDisplay } = window.COConfig;
+  const { escapeHtml, moneyMaskFromDigits, centavosToDisplay, formatarDataHora } = window.COConfig;
   const api = window.CoworkApi;
   const ehAvaliador = authUser.papel === 'avaliador' || authUser.papel === 'admin';
   const ehCoordenador = authUser.papel === 'coordenador' || authUser.papel === 'admin';
@@ -62,31 +62,65 @@
   }
 
   // ---------------------------------------------------------------------
-  // Formulário
+  // Formatação
   // ---------------------------------------------------------------------
   const campo = (k) => document.querySelector(`[data-r="${k}"]`);
   const cpfMascara = (v) => {
     const d = String(v || '').replace(/\D/g, '').slice(0, 11);
     return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
   };
+  const telMascara = (v) => {
+    const d = String(v || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 2) return d ? `(${d}` : '';
+    if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  };
   function cpfValido(c) {
     if (!/^\d{11}$/.test(c) || /^(\d)\1{10}$/.test(c)) return false;
     const dig = (n) => { let s = 0; for (let i = 0; i < n; i++) s += +c[i] * (n + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };
     return dig(9) === +c[9] && dig(10) === +c[10];
   }
-  let valorCentavos = null;
+  const TIPO_PIX = { cpf: 'CPF', celular: 'Celular', email: 'E-mail', aleatoria: 'Chave aleatória' };
+  const dataBR = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '';
+  const visitaBR = (d) => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+  const ou = (v, alt) => v ? escapeHtml(String(v)) : `<span style="color:#8f8d85">${alt}</span>`;
+
+  // Empreendimento, data e hora da visita vêm da avaliação (na "só prévia", a data do contato).
+  function visita() {
+    const a = dados.avaliacao;
+    const previa = a.somentePrevia && a.previaContatoEm ? formatarDataHora(a.previaContatoEm).split(' ') : null;
+    return {
+      empreendimento: a.empreendimento || '',
+      data: previa ? previa[0] : visitaBR(a.dataVisita),
+      hora: previa ? previa[1] : (a.horario || ''),
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Formulário
+  // ---------------------------------------------------------------------
+  let valorUnitario = null;
+  const quantidade = () => { const n = parseInt(campo('quantidadePesquisas').value, 10); return n > 0 ? n : null; };
+  const total = () => (quantidade() && valorUnitario ? quantidade() * valorUnitario : null);
+  function atualizarTotal() { document.getElementById('valorTotal').value = total() ? centavosToDisplay(total()) : ''; }
 
   function preencher() {
     const r = dados.recibo;
     campo('nomeCompleto').value = r.nomeCompleto || dados.avaliacao.clienteOculto || '';
+    campo('telefone').value = telMascara(r.telefone);
     campo('cpf').value = cpfMascara(r.cpf);
-    campo('cidade').value = r.cidade || '';
     campo('chavePixTipo').value = r.chavePixTipo || '';
     campo('chavePix').value = r.chavePix || '';
-    valorCentavos = r.valorCentavos;
-    campo('valor').value = centavosToDisplay(valorCentavos);
-    const bloqueado = !ehAvaliador || !!r.pagoEm;
-    document.querySelectorAll('#reciboForm input, #reciboForm select, #reciboForm button').forEach(e => { e.disabled = bloqueado; });
+    campo('quantidadePesquisas').value = r.quantidadePesquisas || 1;
+    valorUnitario = r.valorUnitarioCentavos;
+    campo('valorUnitario').value = centavosToDisplay(valorUnitario);
+    atualizarTotal();
+    const v = visita();
+    document.getElementById('dadosVisita').innerHTML =
+      `<div><dt>Empreendimento visitado</dt><dd>${ou(v.empreendimento, '—')}</dd></div>` +
+      `<div><dt>Data da visita</dt><dd>${ou(v.data, '—')}</dd></div>` +
+      `<div><dt>Hora da visita</dt><dd>${ou(v.hora, '—')}</dd></div>`;
     document.getElementById('reciboForm').style.display = ehAvaliador ? '' : 'none';
     if (!ehAvaliador) document.querySelector('.recibo-layout').style.gridTemplateColumns = 'minmax(0, 1fr)';
   }
@@ -94,11 +128,12 @@
   function payload() {
     return {
       nomeCompleto: campo('nomeCompleto').value,
+      telefone: campo('telefone').value.replace(/\D/g, ''),
       cpf: campo('cpf').value.replace(/\D/g, ''),
-      cidade: campo('cidade').value,
       chavePixTipo: campo('chavePixTipo').value,
       chavePix: campo('chavePix').value,
-      valorCentavos,
+      quantidadePesquisas: quantidade(),
+      valorUnitarioCentavos: valorUnitario,
     };
   }
 
@@ -123,11 +158,13 @@
     const d = e.target.value.replace(/\D/g, '');
     document.getElementById('cpfAviso').textContent = d.length === 11 && !cpfValido(d) ? 'CPF inválido — confira os números.' : '';
   });
-  campo('valor').addEventListener('input', (e) => {
+  campo('telefone').addEventListener('input', (e) => { e.target.value = telMascara(e.target.value); });
+  campo('valorUnitario').addEventListener('input', (e) => {
     const { centavos, display } = moneyMaskFromDigits(e.target.value);
-    valorCentavos = centavos; e.target.value = display;
+    valorUnitario = centavos; e.target.value = display; atualizarTotal();
   });
-  ['nomeCompleto', 'cpf', 'cidade', 'chavePixTipo', 'chavePix', 'valor'].forEach(k => {
+  campo('quantidadePesquisas').addEventListener('input', atualizarTotal);
+  ['nomeCompleto', 'telefone', 'cpf', 'chavePixTipo', 'chavePix', 'quantidadePesquisas', 'valorUnitario'].forEach(k => {
     campo(k).addEventListener('change', salvar);
   });
 
@@ -148,7 +185,7 @@
   let desenhando = false;
   const ponto = (e) => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   canvas.addEventListener('pointerdown', (e) => {
-    if (canvas.closest('#reciboForm').querySelector('input').disabled) return;
+    if (campo('cpf').disabled) return;
     desenhando = true; canvas.setPointerCapture(e.pointerId);
     const [x, y] = ponto(e); ctx.beginPath(); ctx.moveTo(x, y);
   });
@@ -181,36 +218,43 @@
   // ---------------------------------------------------------------------
   // Documento (o que sai na impressão / PDF)
   // ---------------------------------------------------------------------
-  const TIPO_PIX = { cpf: 'CPF', celular: 'Celular', email: 'E-mail', aleatoria: 'Chave aleatória' };
-  const dataBR = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '';
-  const visitaBR = (d) => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
-  const ou = (v, alt) => v ? escapeHtml(v) : `<span style="color:#8f8d85">${alt}</span>`;
-
   function desenharDoc() {
-    const r = dados.recibo, a = dados.avaliacao;
-    const v = r.valorCentavos;
-    const servico = a.somentePrevia
-      ? `contato prévio online com o empreendimento ${ou(a.empreendimento, '[empreendimento]')}`
-      : `visita ao empreendimento ${ou(a.empreendimento, '[empreendimento]')}${a.dataVisita ? ` em ${visitaBR(a.dataVisita)}` : ''}`;
+    const r = dados.recibo, a = dados.avaliacao, v = visita();
+    const tot = r.valorCentavos;
+    const linha = (rot, val) => `<tr><th>${rot}</th><td>${val}</td></tr>`;
     document.getElementById('reciboDoc').innerHTML = `
       <img class="logo" src="/design/logo-sousa-araujo.svg" alt="Construtora Sousa Araujo">
       <h2>RECIBO</h2>
-      <p class="valor">${v ? centavosToDisplay(v) : 'R$ [valor]'}</p>
-      <p>Recebi da <b>Construtora Sousa Araujo</b> a importância de <b>${v ? centavosToDisplay(v) : 'R$ [valor]'}</b>
-        (${v ? valorPorExtenso(v) : '[valor por extenso]'}), referente à prestação de serviço de cliente oculto
-        — avaliação <b>${escapeHtml(a.id)}</b>, ${servico}.</p>
+      <p class="valor">${tot ? centavosToDisplay(tot) : 'R$ [valor total]'}</p>
+      <p>Recebi da <b>Construtora Sousa Araujo</b> a importância de <b>${tot ? centavosToDisplay(tot) : 'R$ [valor total]'}</b>
+        (${tot ? valorPorExtenso(tot) : '[valor por extenso]'}), referente à prestação de serviço de cliente oculto
+        — avaliação <b>${escapeHtml(a.id)}</b>, conforme os dados abaixo.</p>
+      <h3>Dados do prestador</h3>
+      <table>
+        ${linha('Nome completo', ou(r.nomeCompleto, '[nome completo]'))}
+        ${linha('Telefone', r.telefone ? telMascara(r.telefone) : ou('', '[telefone]'))}
+        ${linha('CPF', r.cpf ? cpfMascara(r.cpf) : ou('', '[CPF]'))}
+        ${linha('Tipo de chave PIX', r.chavePixTipo ? TIPO_PIX[r.chavePixTipo] : ou('', '[tipo]'))}
+        ${linha('Chave PIX', ou(r.chavePix, '[chave PIX]'))}
+      </table>
+      <h3>Visita</h3>
+      <table>
+        ${linha('Empreendimento visitado', ou(v.empreendimento, '[empreendimento]'))}
+        ${linha('Data da visita', ou(v.data, '[data]'))}
+        ${linha('Hora da visita', ou(v.hora, '[hora]'))}
+      </table>
+      <h3>Pagamento</h3>
+      <table>
+        ${linha('Quantidade de pesquisas realizadas', ou(r.quantidadePesquisas, '[quantidade]'))}
+        ${linha('Valor unitário por pesquisa', r.valorUnitarioCentavos ? centavosToDisplay(r.valorUnitarioCentavos) : ou('', '[valor unitário]'))}
+        ${linha('Valor total', tot ? `<b>${centavosToDisplay(tot)}</b>` : ou('', '[valor total]'))}
+      </table>
       <p>Para clareza, firmo o presente recibo, dando plena e geral quitação do valor acima.</p>
-      <dl class="dados">
-        <div><dt>Nome</dt><dd>${ou(r.nomeCompleto, '[nome completo]')}</dd></div>
-        <div><dt>CPF</dt><dd>${r.cpf ? cpfMascara(r.cpf) : ou('', '[CPF]')}</dd></div>
-        <div><dt>Chave PIX</dt><dd>${r.chavePixTipo ? TIPO_PIX[r.chavePixTipo] + ': ' : ''}${ou(r.chavePix, '[chave PIX]')}</dd></div>
-      </dl>
-      <p class="local">${ou(r.cidade, '[cidade]')}, ${r.assinadoEm ? dataBR(r.assinadoEm) : '[data]'}.</p>
+      <p class="local">Data: ${r.assinadoEm ? dataBR(r.assinadoEm) : '[data da assinatura]'}</p>
       <div class="assinatura">
         ${r.assinatura ? `<img src="${r.assinatura}" alt="Assinatura">` : ''}
         ${ou(r.nomeCompleto, '[nome completo]')}
-      </div>
-      <p style="margin-top:28px; font-size:11.5px; color:#8f8d85; text-align:center;">Modelo de exemplo — será substituído pelo modelo oficial da Sousa Araujo.</p>`;
+      </div>`;
 
     const st = document.getElementById('reciboStatus');
     st.innerHTML = r.pagoEm
@@ -221,16 +265,15 @@
     const pagoBtn = document.getElementById('pagoBtn');
     pagoBtn.style.display = ehCoordenador && r.assinadoEm ? '' : 'none';
     pagoBtn.textContent = r.pagoEm ? 'Desfazer pagamento' : 'Marcar como pago';
-    preencherBloqueio();
-  }
-  function preencherBloqueio() {
-    const bloqueado = !ehAvaliador || !!dados.recibo.pagoEm;
+    const bloqueado = !ehAvaliador || !!r.pagoEm;
     document.querySelectorAll('#reciboForm input, #reciboForm select, #reciboForm button').forEach(e => { e.disabled = bloqueado; });
+    document.getElementById('valorTotal').disabled = false;
   }
 
   preencher();
   desenharDoc();
-  ['nomeCompleto', 'cidade', 'chavePix'].forEach(k => campo(k).addEventListener('input', () => {
+  // O documento acompanha a digitação antes de salvar.
+  ['nomeCompleto', 'chavePix'].forEach(k => campo(k).addEventListener('input', () => {
     dados.recibo[k] = campo(k).value; desenharDoc();
   }));
 })();

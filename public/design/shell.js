@@ -20,7 +20,7 @@
   document.documentElement.setAttribute('data-theme', lerTema());
 
   // Ícones do Lucide (public/design/vendor/lucide.min.js), os mesmos das telas em React.
-  var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', menu: 'menu', logout: 'log-out' };
+  var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', receipt: 'receipt', menu: 'menu', logout: 'log-out' };
   function icone(nome) {
     return '<i data-lucide="' + (ICONES[nome] || nome) + '" aria-hidden="true"></i>';
   }

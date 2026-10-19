@@ -34,6 +34,8 @@ export const PERMISSOES = {
   auditoriaPesquisa: ["coordenador_market_share"],
   /** Tela de usuários. O Coordenador de Market Share só gere avaliadores. */
   gerirUsuarios: ["coordenador_market_share"],
+  /** Tela de recibos de pagamento do Cliente Oculto: só o administrador. */
+  recibos: [],
 } as const satisfies Record<string, readonly Perfil[]>;
 
 export type Permissao = keyof typeof PERMISSOES;

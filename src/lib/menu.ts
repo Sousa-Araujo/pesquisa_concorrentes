@@ -10,7 +10,7 @@ import { temPermissao, ROTULO_PERFIL, ehPerfil } from "@/lib/auth/perfis";
 import { papelCO } from "@/lib/cliente-oculto/repo";
 import type { UsuarioAtual } from "@/lib/auth/acesso";
 
-export type Icone = "home" | "chart" | "eye" | "doc" | "users";
+export type Icone = "home" | "chart" | "eye" | "doc" | "users" | "receipt";
 
 export interface ItemMenu {
   nome: string;
@@ -44,6 +44,14 @@ async function aguardandoCalibragem(): Promise<number> {
   return rows[0].n;
 }
 
+async function recibosAPagar(): Promise<number> {
+  const { rows } = await db().query<{ n: number }>(
+    `select count(*)::int as n from co_recibos r join co_avaliacoes a on a.id = r.avaliacao_id
+      where r.assinado_em is not null and r.pago_em is null and not a.excluida`,
+  );
+  return rows[0].n;
+}
+
 export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   const p = u.perfis;
   const ehAdmin = p.includes("admin");
@@ -53,7 +61,10 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   if (temPermissao(p, "painelPesquisa")) {
     modulos.push({
       id: "inicio", nome: "Dashboard", icone: "home", resumo: "Resumo do mês",
-      grupos: [{ nome: "Geral", itens: [{ nome: "Visão geral", href: "/gestor" }] }],
+      grupos: [{ nome: "Geral", itens: [
+        { nome: "Comparativo", href: "/gestor/comparativo" },
+        { nome: "Visão geral", href: "/gestor" },
+      ] }],
     });
     const cadastros: ItemMenu[] = [];
     if (temPermissao(p, "cadastros")) {
@@ -95,6 +106,16 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     });
   }
 
+  // Recibos de pagamento do Cliente Oculto: módulo próprio, só do administrador.
+  if (temPermissao(p, "recibos")) {
+    const n = await recibosAPagar();
+    modulos.push({
+      id: "recibos", nome: "Recibos", icone: "receipt",
+      resumo: n ? `${n} aguardando pagamento` : "Nenhum recibo a pagar",
+      grupos: [{ nome: "Pagamentos", itens: [{ nome: "Recibos do Cliente Oculto", href: "/gestor/recibos", contador: n || undefined }] }],
+    });
+  }
+
   if (temPermissao(p, "gerirUsuarios")) {
     modulos.push({
       id: "admin", nome: "Administração", icone: "users", resumo: ehAdmin ? "Pessoas, perfis e convites" : "Avaliadores e acessos",
@@ -117,7 +138,8 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
 
 /** Tela em que cada perfil entra direto (design system: "Tela inicial de cada perfil"). */
 export function telaInicial(perfis: readonly string[]): string | null {
-  if (perfis.includes("admin") || perfis.includes("diretoria")) return "/gestor";
+  if (perfis.includes("diretoria") && !perfis.includes("admin")) return "/gestor/comparativo";
+  if (perfis.includes("admin")) return "/gestor";
   if (perfis.includes("coordenador_market_share")) return "/cliente-oculto/coordenador.html";
   if (perfis.includes("coordenador_produto")) return "/gestor/concorrentes";
   if (perfis.includes("avaliador")) return "/cliente-oculto/cliente-oculto.html";

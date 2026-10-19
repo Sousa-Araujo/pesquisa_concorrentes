@@ -9,13 +9,13 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ChartColumn, Eye, FileText, House, Menu as MenuIcon, Users, type LucideIcon } from "lucide-react";
+import { ChartColumn, Eye, FileText, House, Menu as MenuIcon, Receipt, Users, type LucideIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import type { Icone, Menu, ModuloMenu } from "@/lib/menu";
 
 const CHAVE_RECOLHIDO = "ms-menu-recolhido";
 
-const ICONES: Record<Icone, LucideIcon> = { home: House, chart: ChartColumn, eye: Eye, doc: FileText, users: Users };
+const ICONES: Record<Icone, LucideIcon> = { home: House, chart: ChartColumn, eye: Eye, doc: FileText, users: Users, receipt: Receipt };
 
 /** O item cujo href mais longo casa com o endereço atual. */
 function itemAtual(menu: Menu, caminho: string): { modulo?: string; href?: string } {
