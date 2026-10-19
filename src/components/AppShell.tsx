@@ -9,13 +9,16 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ChartColumn, Eye, FileText, House, Menu as MenuIcon, Receipt, Users, type LucideIcon } from "lucide-react";
+import { ChartColumn, CirclePlus, Eye, FileText, House, ListChecks, Menu as MenuIcon, Receipt, Users, type LucideIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import BarraInferior from "@/components/BarraInferior";
 import type { Icone, Menu, ModuloMenu } from "@/lib/menu";
 
 const CHAVE_RECOLHIDO = "ms-menu-recolhido";
 
-const ICONES: Record<Icone, LucideIcon> = { home: House, chart: ChartColumn, eye: Eye, doc: FileText, users: Users, receipt: Receipt };
+const ICONES: Record<Icone, LucideIcon> = {
+  home: House, chart: ChartColumn, eye: Eye, doc: FileText, users: Users, receipt: Receipt, plus: CirclePlus, list: ListChecks,
+};
 
 /** O item cujo href mais longo casa com o endereço atual. */
 function itemAtual(menu: Menu, caminho: string): { modulo?: string; href?: string } {
@@ -137,6 +140,7 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
       </div>
       <div className="ms-main">{children}</div>
       </div>
+      <BarraInferior menu={menu} icones={ICONES} moduloAtual={atual.modulo} hrefAtual={atual.href} />
     </div>
   );
 }

@@ -88,7 +88,9 @@
 
     // Fluxo: um segmento por etapa com o nome resumido embaixo (as já
     // alcançadas são clicáveis).
-    var html = '<div class="ms-steps-head"><b>Etapa ' + (this.atual + 1) + ' de ' + n + '</b></div><ol class="ms-steps-flow">';
+    // No celular os nomes somem da barra e o da etapa atual vai para o título.
+    var html = '<div class="ms-steps-head"><b>Etapa ' + (this.atual + 1) + ' de ' + n +
+      '<span class="ms-steps-atual"> · ' + esc(titulo(etapas[this.atual])) + '</span></b></div><ol class="ms-steps-flow">';
     etapas.forEach(function (p, i) {
       var estado = i < self.atual ? 'is-done' : i === self.atual ? 'is-current' : (i <= self.vistas ? 'is-seen' : '');
       html += '<li class="' + estado + '"><button type="button" data-etapa="' + i + '"' + (i <= self.vistas ? '' : ' disabled') +

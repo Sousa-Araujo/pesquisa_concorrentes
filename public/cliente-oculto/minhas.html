@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cliente Oculto — Minhas avaliações</title>
+<link rel="stylesheet" href="css/styles.css">
+<script src="/design/vendor/lucide.min.js"></script>
+<script src="/design/shell.js"></script>
+<style>
+  .minhas-lista { display: grid; gap: 10px; }
+  .minha-av { display: grid; gap: 6px; padding: 14px 16px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; }
+  .minha-av .topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .minha-av .nome { font-weight: 700; font-size: 15px; color: var(--text-primary); }
+  .minha-av .info { font-size: 12.5px; color: var(--text-secondary); }
+  .minha-av .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="app">
+    <div class="panel-head" style="margin:6px 0 14px;">
+      <h2 style="font-size:20px;">Minhas avaliações</h2>
+      <a class="btn btn-primary" href="cliente-oculto.html">+ Nova avaliação</a>
+    </div>
+    <div class="minhas-lista" id="lista"><div class="report-empty">Carregando…</div></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/minhas.js"></script>
+</body>
+</html>

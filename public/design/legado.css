@@ -106,3 +106,16 @@
 .foto-item figcaption { font-size: 12px; line-height: 16px; color: var(--text-2, #65645e); }
 .fotos-leitura { margin-top: 10px; }
 @media print { .foto-item { break-inside: avoid; } .foto-item img { height: 120px; } }
+
+/* Celular: grupos de botões (ex.: "Sim, perguntou / Não perguntou / Não houve recepção")
+   um embaixo do outro, na largura toda, fáceis de tocar. Os pequenos (R$ / %) ficam lado a lado. */
+@media (max-width: 720px) {
+  .ms-legado .segmented:not(.small) { display: flex; flex-direction: column; width: 100%; }
+  .ms-legado .segmented:not(.small) button { width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; font-size: 14px; }
+  .ms-legado .segmented:not(.small) button + button { border-left: 0; border-top: 1px solid var(--border-strong); }
+  .ms-legado .panel-head > .segmented { order: 3; flex-basis: 100%; }
+  .ms-legado .app { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Botões que são links não ficam sublinhados. */
+.ms-legado a.btn { text-decoration: none; }

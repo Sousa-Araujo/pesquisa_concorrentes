@@ -20,7 +20,7 @@
   document.documentElement.setAttribute('data-theme', lerTema());
 
   // Ícones do Lucide (public/design/vendor/lucide.min.js), os mesmos das telas em React.
-  var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', receipt: 'receipt', menu: 'menu', logout: 'log-out' };
+  var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', receipt: 'receipt', plus: 'circle-plus', list: 'list-checks', menu: 'menu', logout: 'log-out' };
   function icone(nome) {
     return '<i data-lucide="' + (ICONES[nome] || nome) + '" aria-hidden="true"></i>';
   }
@@ -138,6 +138,86 @@
     return topo;
   }
 
+  // Celular: barra de baixo com os módulos e gaveta com os itens (a mesma de
+  // src/components/BarraInferior.tsx). Um módulo só: os itens viram as abas.
+  function barraInferior(menu, atual) {
+    var frag = document.createDocumentFragment();
+    var barra = el('nav', { 'class': 'ms-bottomnav', 'aria-label': 'Menu' });
+    var comLink = function (m) {
+      var r = [];
+      m.grupos.forEach(function (g) { g.itens.forEach(function (i) { if (i.href) r.push(i); }); });
+      return r;
+    };
+    var pendente = function (m) { return m.grupos.some(function (g) { return g.itens.some(function (i) { return i.contador; }); }); };
+    var rotulo = function (txt) { var s = el('span', { 'class': 'ms-bottomnav-rotulo' }); s.textContent = txt; return s; };
+
+    if (menu.modulos.length === 1) {
+      var unico = menu.modulos[0];
+      comLink(unico).forEach(function (i) {
+        var a = el('a', { href: i.href }, icone(i.icone || unico.icone));
+        if (i.href === atual.href) a.setAttribute('aria-current', 'page');
+        a.appendChild(rotulo(i.nome));
+        barra.appendChild(a);
+      });
+      frag.appendChild(barra);
+      return frag;
+    }
+
+    var fundo = el('div', { 'class': 'ms-sheet-fundo', hidden: '' });
+    var gaveta = el('div', { 'class': 'ms-sheet', role: 'dialog', 'aria-modal': 'true', hidden: '' });
+    function fechar() { fundo.setAttribute('hidden', ''); gaveta.setAttribute('hidden', ''); }
+    function abrir(modulos, titulo) {
+      gaveta.innerHTML = '';
+      gaveta.setAttribute('aria-label', titulo);
+      gaveta.appendChild(el('div', { 'class': 'ms-sheet-alca' }));
+      modulos.forEach(function (m) {
+        gaveta.appendChild(el('h4')).textContent = m.nome;
+        m.grupos.forEach(function (g) {
+          gaveta.appendChild(el('div', { 'class': 'ms-sheet-grupo' })).textContent = g.nome;
+          g.itens.forEach(function (i) {
+            var item;
+            if (i.href) {
+              item = el('a', { href: i.href });
+              if (i.href === atual.href) item.setAttribute('aria-current', 'page');
+            } else item = el('span', { 'class': 'ms-sheet-off' });
+            item.textContent = i.nome;
+            if (i.contador) { var c = el('span', { 'class': 'ms-count' }); c.textContent = i.contador; item.appendChild(c); }
+            gaveta.appendChild(item);
+          });
+        });
+      });
+      fundo.removeAttribute('hidden'); gaveta.removeAttribute('hidden');
+    }
+    fundo.addEventListener('click', fechar);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
+
+    // Módulos que já têm tela vêm primeiro; os "em breve" ficam por último (no "Mais").
+    var ordem = menu.modulos.slice().sort(function (a, b) { return (comLink(b).length > 0) - (comLink(a).length > 0); });
+    var muitos = ordem.length > 5;
+    var naBarra = muitos ? ordem.slice(0, 4) : ordem;
+    var noMais = muitos ? ordem.slice(4) : [];
+    naBarra.forEach(function (m) {
+      var b = el('button', { type: 'button' }, icone(m.icone) + (pendente(m) ? '<span class="ms-dot"></span>' : ''));
+      if (m.id === atual.modulo) b.setAttribute('aria-current', 'page');
+      b.appendChild(rotulo(m.curto || m.nome));
+      b.addEventListener('click', function () {
+        var itens = comLink(m);
+        if (itens.length === 1) location.href = itens[0].href;
+        else abrir([m], m.nome);
+      });
+      barra.appendChild(b);
+    });
+    if (muitos) {
+      var mais = el('button', { type: 'button' }, icone('circle-ellipsis') + (noMais.some(pendente) ? '<span class="ms-dot"></span>' : ''));
+      if (noMais.some(function (m) { return m.id === atual.modulo; })) mais.setAttribute('aria-current', 'page');
+      mais.appendChild(rotulo('Mais'));
+      mais.addEventListener('click', function () { abrir(noMais, 'Mais'); });
+      barra.appendChild(mais);
+    }
+    frag.appendChild(barra); frag.appendChild(fundo); frag.appendChild(gaveta);
+    return frag;
+  }
+
   function montar(menu) {
     var atual = itemAtual(menu);
     var aberto = atual.modulo || (menu.modulos[0] && menu.modulos[0].id);
@@ -222,6 +302,7 @@
     shell.appendChild(main);
     app.appendChild(navbar(menu.usuario));
     app.appendChild(shell);
+    app.appendChild(barraInferior(menu, atual));
     document.body.appendChild(app);
     if (window.lucide) window.lucide.createIcons({ attrs: { width: 18, height: 18, 'stroke-width': 1.75 } });
   }

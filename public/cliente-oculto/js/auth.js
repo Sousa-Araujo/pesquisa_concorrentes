@@ -9,7 +9,7 @@
   'use strict';
 
   const HOME_BY_PAPEL = {
-    avaliador: 'cliente-oculto.html',
+    avaliador: 'minhas.html',
     coordenador: 'coordenador.html',
     admin: 'admin.html',
   };

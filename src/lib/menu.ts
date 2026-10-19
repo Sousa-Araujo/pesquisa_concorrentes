@@ -10,18 +10,22 @@ import { temPermissao, ROTULO_PERFIL, ehPerfil } from "@/lib/auth/perfis";
 import { papelCO } from "@/lib/cliente-oculto/repo";
 import type { UsuarioAtual } from "@/lib/auth/acesso";
 
-export type Icone = "home" | "chart" | "eye" | "doc" | "users" | "receipt";
+export type Icone = "home" | "chart" | "eye" | "doc" | "users" | "receipt" | "plus" | "list";
 
 export interface ItemMenu {
   nome: string;
   /** Sem href = ainda não disponível. */
   href?: string;
+  /** Ícone do item na barra de baixo do celular, quando a pessoa só tem um módulo. */
+  icone?: Icone;
   contador?: number;
 }
 export interface GrupoMenu { nome: string; itens: ItemMenu[] }
 export interface ModuloMenu {
   id: string;
   nome: string;
+  /** Nome curto, para a barra de baixo do celular. */
+  curto: string;
   icone: Icone;
   /** Linha com o número que importa no módulo. */
   resumo: string;
@@ -60,7 +64,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
 
   if (temPermissao(p, "painelPesquisa")) {
     modulos.push({
-      id: "inicio", nome: "Dashboard", icone: "home", resumo: "Resumo do mês",
+      id: "inicio", nome: "Dashboard", curto: "Início", icone: "home", resumo: "Resumo do mês",
       grupos: [{ nome: "Geral", itens: [
         { nome: "Comparativo", href: "/gestor/comparativo" },
         { nome: "Visão geral", href: "/gestor" },
@@ -74,7 +78,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
       cadastros.push({ nome: "Agentes de campo", href: "/gestor/agentes" }, { nome: "Dados próprios", href: "/gestor/dados-proprios" });
     }
     modulos.push({
-      id: "pesquisa", nome: "Pesquisa de Concorrentes", icone: "chart", resumo: "Estoque e vendas dos concorrentes",
+      id: "pesquisa", nome: "Pesquisa de Concorrentes", curto: "Pesquisa", icone: "chart", resumo: "Estoque e vendas dos concorrentes",
       grupos: [{ nome: "Acompanhar", itens: [{ nome: "Coletas", href: "/gestor/pesquisas" }] },
         ...(cadastros.length ? [{ nome: "Cadastros", itens: cadastros }] : [])],
     });
@@ -85,7 +89,10 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     const itens: ItemMenu[] = [];
     let resumo = "Avaliações das visitas";
     if (papel === "avaliador" && !tem("coordenador_market_share")) {
-      itens.push({ nome: "Nova avaliação", href: "/cliente-oculto/cliente-oculto.html" });
+      itens.push(
+        { nome: "Nova avaliação", href: "/cliente-oculto/cliente-oculto.html", icone: "plus" },
+        { nome: "Minhas avaliações", href: "/cliente-oculto/minhas.html", icone: "list" },
+      );
     } else {
       const n = await aguardandoCalibragem();
       resumo = n ? `${n} aguardando calibragem` : "Nenhuma avaliação aguardando";
@@ -96,12 +103,12 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     // O administrador vê todas as funcionalidades, inclusive registrar uma visita.
     if (ehAdmin) grupos.push({ nome: "Visitas", itens: [{ nome: "Nova avaliação", href: "/cliente-oculto/cliente-oculto.html" }] });
     grupos.push({ nome: "Avaliações", itens });
-    modulos.push({ id: "co", nome: "Cliente Oculto", icone: "eye", resumo, grupos });
+    modulos.push({ id: "co", nome: "Cliente Oculto", curto: "Cliente oculto", icone: "eye", resumo, grupos });
   }
 
   if (tem("supervisor_parcerias", "coordenador_market_share")) {
     modulos.push({
-      id: "tabelas", nome: "Tabelas e espelhos", icone: "doc", resumo: "Em construção",
+      id: "tabelas", nome: "Tabelas e espelhos", curto: "Tabelas", icone: "doc", resumo: "Em construção",
       grupos: [{ nome: "Coleta por IA", itens: [{ nome: "Enviar tabela (em breve)" }, { nome: "Revisar leituras (em breve)" }] }],
     });
   }
@@ -110,7 +117,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   if (temPermissao(p, "recibos")) {
     const n = await recibosAPagar();
     modulos.push({
-      id: "recibos", nome: "Recibos", icone: "receipt",
+      id: "recibos", nome: "Recibos", curto: "Recibos", icone: "receipt",
       resumo: n ? `${n} aguardando pagamento` : "Nenhum recibo a pagar",
       grupos: [{ nome: "Pagamentos", itens: [{ nome: "Recibos do Cliente Oculto", href: "/gestor/recibos", contador: n || undefined }] }],
     });
@@ -118,7 +125,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
 
   if (temPermissao(p, "gerirUsuarios")) {
     modulos.push({
-      id: "admin", nome: "Administração", icone: "users", resumo: ehAdmin ? "Pessoas, perfis e convites" : "Avaliadores e acessos",
+      id: "admin", nome: "Administração", curto: "Admin", icone: "users", resumo: ehAdmin ? "Pessoas, perfis e convites" : "Avaliadores e acessos",
       grupos: [{ nome: "Acesso", itens: [{ nome: ehAdmin ? "Usuários" : "Avaliadores", href: "/gestor/usuarios" }] }],
     });
   }
@@ -142,6 +149,7 @@ export function telaInicial(perfis: readonly string[]): string | null {
   if (perfis.includes("admin")) return "/gestor";
   if (perfis.includes("coordenador_market_share")) return "/cliente-oculto/coordenador.html";
   if (perfis.includes("coordenador_produto")) return "/gestor/concorrentes";
-  if (perfis.includes("avaliador")) return "/cliente-oculto/cliente-oculto.html";
+  // O avaliador começa pela lista dele (abrir "Nova avaliação" já cria um rascunho).
+  if (perfis.includes("avaliador")) return "/cliente-oculto/minhas.html";
   return null; // Supervisor de Parcerias: módulo Tabelas e espelhos ainda em construção.
 }
