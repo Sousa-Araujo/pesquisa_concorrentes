@@ -36,6 +36,10 @@ export const PERMISSOES = {
   gerirUsuarios: ["coordenador_market_share"],
   /** Tela de recibos de pagamento do Cliente Oculto: só o administrador. */
   recibos: [],
+  /** Tabelas e espelhos: enviar o documento para leitura pela IA. */
+  tabelasEnviar: ["supervisor_parcerias", "coordenador_market_share"],
+  /** Tabelas e espelhos: conferir a leitura e aprovar (vai para a Pesquisa). */
+  tabelasConferir: ["coordenador_market_share"],
 } as const satisfies Record<string, readonly Perfil[]>;
 
 export type Permissao = keyof typeof PERMISSOES;

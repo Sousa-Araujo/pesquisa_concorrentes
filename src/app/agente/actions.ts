@@ -162,11 +162,19 @@ export async function salvarColeta(input: {
   const idAgente = sessao.id_agente;
 
   // Coleta existente para o concorrente/mês?
-  const { rows: existenteRows } = await pool.query<{ id_coleta: string }>(
-    `select id_coleta from coletas_mensais where id_concorrente = $1 and mes_ano = $2`,
+  const { rows: existenteRows } = await pool.query<{ id_coleta: string; origem: string }>(
+    `select id_coleta, origem from coletas_mensais where id_concorrente = $1 and mes_ano = $2`,
     [parsed.data.id_concorrente, mes_ano],
   );
   const existente = existenteRows[0];
+
+  // O número vindo da tabela da construtora (conferido) vale mais que a coleta em campo.
+  if (existente?.origem === "tabela") {
+    return {
+      ok: false,
+      erro: `Este concorrente já tem os números de ${formatarCompetenciaCurta(mes_ano)} pela tabela da construtora, conferida pela coordenação.`,
+    };
+  }
 
   if (existente && !parsed.data.atualizar) {
     return {

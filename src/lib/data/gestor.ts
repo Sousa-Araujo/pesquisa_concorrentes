@@ -67,10 +67,10 @@ export async function listarPesquisas(f: FiltroPesquisas): Promise<LinhaPesquisa
   const { rows } = await db().query<LinhaPesquisa>(
     `select cm.id_coleta, cm.id_concorrente, cm.coletado_em, cm.atualizado_em,
             cm.mes_ano, cm.estoque, cm.vendas,
-            ag.nome as agente, cid.regional, cid.cidade,
+            coalesce(ag.nome, 'Tabela da construtora') as agente, cid.regional, cid.cidade,
             emp.empreendimento, c.concorrente
        from coletas_mensais cm
-       join agentes_campo ag  on ag.id_agente = cm.id_agente
+       left join agentes_campo ag on ag.id_agente = cm.id_agente
        join concorrentes c    on c.id_concorrente = cm.id_concorrente
        join empreendimentos emp on emp.id_empreendimento = c.id_empreendimento
        join cidades cid       on cid.id_cidade = emp.id_cidade

@@ -106,10 +106,14 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     modulos.push({ id: "co", nome: "Cliente Oculto", curto: "Cliente oculto", icone: "eye", resumo, grupos });
   }
 
-  if (tem("supervisor_parcerias", "coordenador_market_share")) {
+  if (temPermissao(p, "tabelasEnviar") || temPermissao(p, "tabelasConferir")) {
+    const { rows: [pc] } = await db().query<{ n: number }>(`select count(*)::int as n from leituras_tabela where status = 'para_conferir'`);
+    const itens: ItemMenu[] = [{ nome: "Enviar e acompanhar", href: "/gestor/tabelas" }];
+    if (temPermissao(p, "tabelasConferir")) itens.push({ nome: "Para conferir", href: "/gestor/tabelas?status=para_conferir", contador: pc.n || undefined });
     modulos.push({
-      id: "tabelas", nome: "Tabelas e espelhos", curto: "Tabelas", icone: "doc", resumo: "Em construção",
-      grupos: [{ nome: "Coleta por IA", itens: [{ nome: "Enviar tabela (em breve)" }, { nome: "Revisar leituras (em breve)" }] }],
+      id: "tabelas", nome: "Tabelas e espelhos", curto: "Tabelas", icone: "doc",
+      resumo: pc.n ? `${pc.n} leitura(s) para conferir` : "Leitura de tabelas por IA",
+      grupos: [{ nome: "Leitura por IA", itens }],
     });
   }
 
@@ -151,5 +155,6 @@ export function telaInicial(perfis: readonly string[]): string | null {
   if (perfis.includes("coordenador_produto")) return "/gestor/concorrentes";
   // O avaliador começa pela lista dele (abrir "Nova avaliação" já cria um rascunho).
   if (perfis.includes("avaliador")) return "/cliente-oculto/minhas.html";
-  return null; // Supervisor de Parcerias: módulo Tabelas e espelhos ainda em construção.
+  if (perfis.includes("supervisor_parcerias")) return "/gestor/tabelas";
+  return null;
 }
