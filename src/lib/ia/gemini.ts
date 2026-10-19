@@ -54,38 +54,61 @@ export function iaConfigurada(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
-/** Erro passageiro do Google (sobrecarga, limite por minuto): vale tentar de novo. */
-class ErroPassageiro extends ErroIA {}
+type Motivo = "cota" | "sobrecarga" | "demora" | "conexao" | "resposta";
+
+/** Falha que vale tentar em outro modelo (ou mais tarde). */
+class ErroPassageiro extends ErroIA {
+  constructor(public modelo: string, public motivo: Motivo, detalhe: string) {
+    super(`${modelo}: ${detalhe}`);
+  }
+}
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Tenta o modelo configurado e, se o Google estiver sobrecarregado, tenta de
- * com os modelos reserva. Tudo dentro de ~160 s (a rota aceita 180 s).
+ * Tenta o modelo configurado e depois os reservas (cada modelo tem a sua cota
+ * no Google; no plano gratuito, 20 leituras por dia). Modelo sem cota não é tentado de novo. Tudo dentro de ~165 s
+ * (a rota aceita 180 s).
  */
 export async function lerTabelaComGemini(arquivo: Buffer, mime: string) {
   const chave = process.env.GEMINI_API_KEY;
   if (!chave) throw new ErroIA("A leitura por IA ainda não está configurada (GEMINI_API_KEY). Preencha os números na conferência.");
   const principal = process.env.GEMINI_MODELO || MODELO_PADRAO;
-  // Principal, reservas e de novo o principal: se um travar, os outros ainda têm tempo.
-  const modelos = [principal, ...MODELOS_RESERVA.filter((m) => m !== principal), principal];
-  const limite = Date.now() + 160_000;
-  let ultimo: ErroIA | null = null;
+  // Uma volta só: no plano gratuito, até as recusas por sobrecarga contam na cota do dia.
+  const modelos = [principal, ...MODELOS_RESERVA.filter((m) => m !== principal)];
+  const limite = Date.now() + 165_000;
+  const falhas: ErroPassageiro[] = [];
+  const semCota = new Set<string>();
   for (let i = 0; i < modelos.length; i++) {
+    const modelo = modelos[i];
+    if (semCota.has(modelo)) continue;
     const resta = limite - Date.now();
-    if (resta < 15_000) break;
+    if (resta < 20_000) break;
     try {
-      return await chamar(chave, modelos[i], arquivo, mime, Math.min(50_000, resta));
+      return await chamar(chave, modelo, arquivo, mime, Math.min(80_000, resta));
     } catch (e) {
       if (!(e instanceof ErroPassageiro)) throw e;
-      ultimo = e;
-      await esperar(2_000 * (i + 1));
+      console.warn(`[gemini] ${e.message}`);
+      falhas.push(e);
+      if (e.motivo === "cota") semCota.add(modelo);
+      else await esperar(2_000);
     }
   }
-  if (ultimo?.message.toLowerCase().includes("quota")) {
-    throw new ErroIA("O limite de uso da conta do Gemini foi atingido (no plano gratuito ele renova a cada dia). Use \"Ler de novo com IA\" mais tarde ou preencha os números.");
+  const tentados = new Set(falhas.map((f) => f.modelo));
+  const conta = (m: Motivo) => falhas.filter((f) => f.motivo === m).length;
+  let msg: string;
+  if (semCota.size > 0 && semCota.size === tentados.size) {
+    msg = "O limite de uso da conta do Gemini foi atingido em todos os modelos (no plano gratuito ele renova a cada dia).";
+  } else if (conta("demora") > 0 && conta("demora") >= conta("sobrecarga")) {
+    msg = "A IA demorou demais para ler este documento (o Google está lento agora).";
+  } else {
+    msg = "A IA está sobrecarregada no momento.";
   }
-  throw new ErroIA(`A IA está sobrecarregada no momento (${ultimo?.message ?? "sem resposta"}). Use "Ler de novo com IA" daqui a alguns minutos ou preencha os números.`);
+  const resumo = [...tentados].map((m) => {
+    const ultima = [...falhas].reverse().find((f) => f.modelo === m)!;
+    return `${m}: ${{ cota: "sem cota hoje", sobrecarga: "sobrecarregado", demora: "demorou demais", conexao: "sem conexão", resposta: "resposta incompleta" }[ultima.motivo]}`;
+  }).join("; ");
+  throw new ErroIA(`${msg} Use "Ler de novo com IA" daqui a alguns minutos ou preencha os números. (${resumo})`);
 }
 
 async function chamar(chave: string, modelo: string, arquivo: Buffer, mime: string, prazo: number) {
@@ -103,15 +126,16 @@ async function chamar(chave: string, modelo: string, arquivo: Buffer, mime: stri
       }),
     });
   } catch (e) {
-    if ((e as Error).name === "AbortError") throw new ErroPassageiro(`${modelo}: demorou demais para responder`);
-    throw new ErroPassageiro("Não foi possível falar com a IA.");
+    if ((e as Error).name === "AbortError") throw new ErroPassageiro(modelo, "demora", "demorou demais para responder");
+    throw new ErroPassageiro(modelo, "conexao", "não foi possível falar com a IA");
   } finally {
     clearTimeout(tempo);
   }
   const corpo = await resposta.json().catch(() => null) as Record<string, unknown> | null;
   if (!resposta.ok) {
     const msg = (corpo?.error as { message?: string } | undefined)?.message ?? `erro ${resposta.status}`;
-    if ([429, 500, 502, 503, 504].includes(resposta.status)) throw new ErroPassageiro(`${modelo}: ${msg}`);
+    if (resposta.status === 429) throw new ErroPassageiro(modelo, /quota/i.test(msg) ? "cota" : "sobrecarga", msg);
+    if ([500, 502, 503, 504].includes(resposta.status)) throw new ErroPassageiro(modelo, "sobrecarga", msg);
     throw new ErroIA(`A IA recusou o documento: ${msg}`);
   }
   const texto = ((corpo?.candidates as { content?: { parts?: { text?: string }[] } }[] | undefined)?.[0]?.content?.parts ?? [])
@@ -120,6 +144,7 @@ async function chamar(chave: string, modelo: string, arquivo: Buffer, mime: stri
     const json = JSON.parse(texto) as { unidades?: unknown; observacoes?: string };
     return { unidades: json.unidades ?? [], observacoes: json.observacoes ?? "", modelo };
   } catch {
-    throw new ErroIA("A IA não devolveu a lista de unidades. Preencha os números na conferência ou tente de novo.");
+    // Resposta cortada ou fora do formato: tenta o próximo modelo.
+    throw new ErroPassageiro(modelo, "resposta", "não devolveu a lista de unidades");
   }
 }

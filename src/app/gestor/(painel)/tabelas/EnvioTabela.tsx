@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import CampoData from "@/components/CampoData";
+import LendoComIA from "./LendoComIA";
 import { actCidades, actConcorrentes, actEmpreendimentos } from "@/app/agente/actions";
 
 type Item = { id: number; nome: string };
@@ -92,10 +93,10 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
             onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
         </div>
         <button className="btn-primary btn-cabecalho" onClick={enviar} disabled={enviando}>
-          <Upload size={14} aria-hidden="true" />{enviando ? "Lendo com IA…" : "Enviar e ler"}
+          {enviando ? <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload size={14} aria-hidden="true" />}{enviando ? "Lendo com IA…" : "Enviar e ler"}
         </button>
       </div>
-      {enviando && <p className="text-sm text-ink/60">A IA está lendo o documento. Isso pode levar até um minuto.</p>}
+      {enviando && <LendoComIA />}
       {erro && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
     </div>
   );

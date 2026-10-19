@@ -9,10 +9,11 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import type { Leitura } from "@/lib/data/tabelas";
 import { resumirUnidades, type Unidade } from "@/lib/domain/tabelas";
 import { STATUS_LEITURA } from "../ListaLeituras";
+import LendoComIA from "../LendoComIA";
 import ResumoUnidades from "./ResumoUnidades";
 import EditarUnidade from "./EditarUnidade";
 import { aprovar, lerDeNovo, recusar, salvar } from "./actions";
@@ -40,6 +41,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
+  const [lendo, setLendo] = useState(false);
 
   // Recalcula na hora (as vendas usam a referência que veio do servidor).
   const resumo = useMemo(() => {
@@ -83,9 +85,10 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
   }
   function fazerLerDeNovo() {
     setErro(null); setAviso(null);
+    setLendo(true);
     iniciar(async () => {
       const r = await lerDeNovo(leitura.id);
-      if (!r.ok) setErro(r.erro);
+      if (!r.ok) { setErro(r.erro); setLendo(false); }
       // Remonta a tela com o resultado novo (lista de unidades e cartões).
       else window.location.reload();
     });
@@ -113,11 +116,12 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${st.cor}`}>{st.rotulo}</span>
       </div>
 
-      {leitura.erroIa && leitura.status === "para_conferir" && (
+      {lendo && <LendoComIA />}
+      {!lendo && leitura.erroIa && leitura.status === "para_conferir" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-ink)]">
           <span className="min-w-0 flex-1">{leitura.erroIa}</span>
           {iaConfigurada && unidades.length === 0 && (
-            <button className="btn-secundario" onClick={fazerLerDeNovo} disabled={pendente}>{pendente ? "Lendo com IA…" : "Ler de novo com IA"}</button>
+            <button className="btn-secundario" onClick={fazerLerDeNovo} disabled={pendente}>{pendente ? <><Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />Lendo com IA…</> : "Ler de novo com IA"}</button>
           )}
         </div>
       )}
