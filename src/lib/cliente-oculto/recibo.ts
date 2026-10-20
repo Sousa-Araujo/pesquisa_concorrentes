@@ -112,6 +112,39 @@ async function paraTela(r: Record<string, unknown>) {
   };
 }
 
+/** Tela "Meus recibos" do avaliador: todos os recibos dele, o aberto primeiro. */
+export async function listarMeusRecibos(quem: Quem) {
+  await sincronizarRecibos(quem.id_usuario);
+  const { rows } = await q(
+    `select r.id, r.criado_em, r.assinado_em, r.aprovado_em, r.pago_em, r.devolvido_motivo,
+            count(v.avaliacao_id)::int as visitas, coalesce(sum(v.valor_centavos), 0)::bigint as total,
+            array_agg(distinct a.empreendimento_texto) filter (where a.empreendimento_texto is not null) as empreendimentos,
+            to_char(min(coalesce(a.data_visita, left(a.previa_contato_em, 10)::date)), 'YYYY-MM-DD') as primeira,
+            to_char(max(coalesce(a.data_visita, left(a.previa_contato_em, 10)::date)), 'YYYY-MM-DD') as ultima
+       from co_recibos_avaliador r
+       left join co_recibo_visitas v on v.recibo_id = r.id
+       left join co_avaliacoes a on a.id = v.avaliacao_id
+      where r.avaliador_id = $1
+      group by r.id
+      order by (r.assinado_em is null and r.pago_em is null) desc, r.criado_em desc`,
+    [quem.id_usuario],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    visitas: r.visitas,
+    totalCentavos: Number(r.total),
+    empreendimentos: r.empreendimentos ?? [],
+    primeiraVisita: r.primeira,
+    ultimaVisita: r.ultima,
+    assinadoEm: r.assinado_em,
+    aprovadoEm: r.aprovado_em,
+    pagoEm: r.pago_em,
+    devolvidoMotivo: r.devolvido_motivo,
+    status: r.pago_em ? "pago" : r.aprovado_em ? "aprovado" : r.assinado_em ? "aguardando_aprovacao"
+      : r.devolvido_motivo ? "devolvido" : "nao_assinado",
+  }));
+}
+
 /** Recibo que o avaliador vê ao abrir a tela: o aberto, ou o último. */
 export async function reciboAtual(quem: Quem) {
   await sincronizarRecibos(quem.id_usuario);

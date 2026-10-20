@@ -47,6 +47,7 @@ const rotas: Rota[] = [
 
   // Recibo de pagamento do Cliente Oculto
   { metodo: "GET", re: new RegExp(`^avaliacoes/${ID}/recibo$`), h: (u, m) => recibo.reciboDaAvaliacao(u, m[1]) },
+  { metodo: "GET", re: /^recibos$/, papeis: ["avaliador"], h: (u) => recibo.listarMeusRecibos(u) },
   { metodo: "GET", re: /^recibos\/atual$/, papeis: ["avaliador"], h: (u) => recibo.reciboAtual(u) },
   { metodo: "GET", re: new RegExp(`^recibos/${ID}$`), h: (u, m) => recibo.obterRecibo(u, m[1]) },
   { metodo: "PUT", re: new RegExp(`^recibos/${ID}$`), papeis: ["avaliador"], h: (u, m, c) => recibo.salvarRecibo(u, m[1], c) },

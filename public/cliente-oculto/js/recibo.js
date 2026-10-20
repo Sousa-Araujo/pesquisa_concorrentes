@@ -24,7 +24,7 @@
   const reciboParam = qs.get('recibo');
   const avaliacaoParam = qs.get('avaliacao') || qs.get('id');
   document.getElementById('voltarLink').href = authUser.papel === 'avaliador'
-    ? 'minhas.html' : (avaliacaoParam ? `coordenador.html?id=${encodeURIComponent(avaliacaoParam)}` : '/gestor/recibos');
+    ? 'recibos.html' : (avaliacaoParam ? `coordenador.html?id=${encodeURIComponent(avaliacaoParam)}` : '/gestor/recibos');
 
   let dados;
   try {
@@ -105,7 +105,8 @@
       <div class="visita-linha">
         <div><b>${ou(v.empreendimento, 'Empreendimento')}</b>
           <span>${visitaBR(v.dataVisita) || '—'}${v.horario ? ' · ' + escapeHtml(v.horario) : ''}${v.somentePrevia ? ' · só prévia' : ''} · ${escapeHtml(v.avaliacaoId)}</span></div>
-        <input type="text" inputmode="numeric" placeholder="R$ 0,00" aria-label="Valor da visita" data-visita="${i}" value="${v.valorCentavos ? centavosToDisplay(v.valorCentavos) : ''}">
+        <div class="field"><label for="valor-visita-${i}">Valor da visita <span class="required-mark">*</span></label>
+          <input type="text" id="valor-visita-${i}" inputmode="numeric" placeholder="R$ 0,00" data-visita="${i}" value="${v.valorCentavos ? centavosToDisplay(v.valorCentavos) : ''}"></div>
       </div>`).join('');
     host.querySelectorAll('[data-visita]').forEach(inp => {
       inp.addEventListener('input', () => {

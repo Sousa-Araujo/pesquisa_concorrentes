@@ -92,6 +92,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
       itens.push(
         { nome: "Nova avaliação", href: "/cliente-oculto/cliente-oculto.html", icone: "plus" },
         { nome: "Minhas avaliações", href: "/cliente-oculto/minhas.html", icone: "list" },
+        { nome: "Meus recibos", href: "/cliente-oculto/recibos.html", icone: "receipt" },
       );
     } else {
       const n = await aguardandoCalibragem();

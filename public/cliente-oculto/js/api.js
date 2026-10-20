@@ -42,6 +42,7 @@
     removerFoto: (id, fotoId) => request('DELETE', `/avaliacoes/${encodeURIComponent(id)}/fotos/${Number(fotoId)}`),
 
     // Recibo de pagamento do Cliente Oculto (um por avaliador, com todas as visitas)
+    meusRecibos: () => request('GET', '/recibos'),
     reciboAtual: () => request('GET', '/recibos/atual'),
     reciboDaAvaliacao: (avaliacaoId) => request('GET', `/avaliacoes/${encodeURIComponent(avaliacaoId)}/recibo`),
     obterRecibo: (id) => request('GET', `/recibos/${encodeURIComponent(id)}`),
