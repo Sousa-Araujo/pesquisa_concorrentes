@@ -9,20 +9,22 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Plus } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Leitura } from "@/lib/data/tabelas";
 import { resumirUnidades, type Unidade } from "@/lib/domain/tabelas";
 import { STATUS_LEITURA } from "../ListaLeituras";
 import LendoComIA, { type EtapaLeitura } from "../LendoComIA";
 import ResumoUnidades from "./ResumoUnidades";
 import EditarUnidade from "./EditarUnidade";
-import { aprovar, lerDeNovo, recusar, salvar } from "./actions";
+import { aprovar, excluir, lerDeNovo, recusar, salvar } from "./actions";
 
 const brl = (c: number | null) => (c === null ? "—" : (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }));
 const paraCentavos = (txt: string) => { const d = txt.replace(/\D/g, ""); return d ? Number(d) * 100 : null; };
 const mesBR = (m: string) => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
 
-export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurada }: { leitura: Leitura; podeConferir: boolean; iaConfigurada: boolean }) {
+export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurada, podeExcluir }: {
+  leitura: Leitura; podeConferir: boolean; iaConfigurada: boolean; podeExcluir: boolean;
+}) {
   const router = useRouter();
   const [unidades, setUnidades] = useState<Unidade[]>(leitura.unidades);
   const [vendasManual, setVendasManual] = useState<string>(leitura.resumo.vendasMetodo === null && leitura.resumo.vendasMes !== null ? String(leitura.resumo.vendasMes) : "");
@@ -95,6 +97,17 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
       window.location.reload();
     });
   }
+  function fazerExcluir() {
+    const msg = leitura.status === "aprovada"
+      ? "Excluir esta leitura? Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto."
+      : "Excluir esta leitura? O arquivo enviado também é apagado.";
+    if (!confirm(msg)) return;
+    setErro(null);
+    iniciar(async () => {
+      const r = await excluir(leitura.id);
+      if (!r.ok) setErro(r.erro); else router.push("/gestor/tabelas");
+    });
+  }
   function fazerRecusar() {
     if (!motivo.trim()) { setErro("Escreva o motivo da recusa (ex.: documento de outro empreendimento, ilegível)."); return; }
     iniciar(async () => { await recusar(leitura.id, motivo); router.push(podeConferir ? "/gestor/tabelas/conferir" : "/gestor/tabelas"); });
@@ -115,8 +128,16 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
           <h1 className="text-2xl font-bold text-ink">{leitura.concorrente}</h1>
           <p className="text-sm text-ink/60">{leitura.empreendimento} · {leitura.regional} · referência {mesBR(leitura.mesAno)}</p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${st.cor}`}>{st.rotulo}</span>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${st.cor}`}>{st.rotulo}</span>
+          {podeExcluir && (
+            <button className="btn-acao btn-acao--perigo" onClick={fazerExcluir} disabled={pendente}>
+              <Trash2 size={13} aria-hidden="true" />Excluir leitura
+            </button>
+          )}
+        </div>
       </div>
+      {erro && !podeConferir && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
 
       {lendo && <LendoComIA etapa={lendo} />}
       {!lendo && leitura.erroIa && leitura.status === "para_conferir" && (

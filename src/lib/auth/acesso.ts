@@ -35,6 +35,8 @@ import { enviarEmail, enviarSms } from "@/lib/notificacoes/envio";
 import { emailCodigo, emailConvite } from "@/lib/notificacoes/modelos";
 
 export const COOKIE_SESSAO = "hub_sessao";
+/** "Ver o sistema como": o administrador escolhe um dos perfis cadastrados dele. */
+export const COOKIE_VISAO = "hub_visao";
 
 function diasSessao(): number {
   const n = Number(process.env.SESSAO_DIAS ?? "7");
@@ -45,7 +47,12 @@ export interface UsuarioAtual {
   id_usuario: string;
   nome: string;
   email: string;
+  /** Perfis em uso (com a "visão" escolhida pelo administrador, só ela). */
   perfis: string[];
+  /** Todos os perfis cadastrados da pessoa. */
+  perfisCadastrados: string[];
+  /** Perfil escolhido em "Ver o sistema como" (só administrador), ou null. */
+  visao: string | null;
 }
 
 export interface AgenteAtual {
@@ -107,9 +114,16 @@ const lerSessao = cache(async (): Promise<Sessao | null> => {
   const r = rows[0];
   if (!r) return null;
   if (r.id_usuario && r.u_valido) {
+    const cadastrados = r.u_perfis ?? [];
+    // A visão só restringe: vale só para administrador e só para um perfil que ele tem.
+    const pedida = (await cookies()).get(COOKIE_VISAO)?.value ?? null;
+    const visao = pedida && cadastrados.includes("admin") && cadastrados.includes(pedida) && pedida !== "admin" ? pedida : null;
     return {
       tipo: "usuario",
-      usuario: { id_usuario: r.id_usuario, nome: r.u_nome!, email: r.u_email!, perfis: r.u_perfis ?? [] },
+      usuario: {
+        id_usuario: r.id_usuario, nome: r.u_nome!, email: r.u_email!,
+        perfis: visao ? [visao] : cadastrados, perfisCadastrados: cadastrados, visao,
+      },
     };
   }
   if (r.id_agente && r.a_ativo) {

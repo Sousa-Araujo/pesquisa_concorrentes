@@ -114,7 +114,7 @@
 .ms-rail button:focus-visible { outline: 2px solid var(--on-brand); outline-offset: 2px; }
 /* Menu padrão: trilho + painel ocupando a altura da tela */
 .ms-shell > .ms-dual { min-height: 100%; border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; }
-.ms-dual .ms-panel { width: 236px; flex: none; box-sizing: border-box; overflow: hidden; white-space: nowrap; transition: width 0.22s ease, padding 0.22s ease, opacity 0.18s ease; }
+.ms-dual .ms-panel { width: 236px; flex: none; box-sizing: border-box; overflow: hidden; white-space: nowrap; transition: width 0.34s cubic-bezier(0.22, 1, 0.36, 1), padding 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.26s ease; }
 .ms-panel-group { margin: var(--space-3) var(--space-3) var(--space-1); font: 700 11px/14px var(--font-sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
 /* Recolhido: some o painel, fica o trilho (64px) */
 .ms-dual.is-collapsed .ms-panel { width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
@@ -146,6 +146,20 @@
 .ms-rail .ms-rail-menu { margin-bottom: var(--space-1); }
 .ms-rail i[data-lucide], .ms-rail svg.lucide { width: 18px; height: 18px; }
 @media (prefers-reduced-motion: reduce) { .ms-dual .ms-panel { transition: none; } }
+
+/* Troca de tela suave: crossfade do navegador entre páginas (o cabeçalho e o
+   trilho ficam parados) e o conteúdo novo entra com um fade curto. */
+@view-transition { navigation: auto; }
+.ms-topbar { view-transition-name: ms-topbar; }
+.ms-rail { view-transition-name: ms-rail; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.22s; animation-timing-function: ease; }
+@keyframes ms-entrar { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* backwards: depois da animação o elemento volta ao próprio estilo (o toast escondido continua escondido). */
+.ms-main > :not(.toast) { animation: ms-entrar 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  .ms-main > :not(.toast) { animation: none; }
+}
 .ms-dual:not([data-pronto]) .ms-panel { transition: none; }
 
 /* Calendário (Flatpickr) nas cores do design system. */
@@ -211,6 +225,9 @@
 .ms-user-item:hover { background: var(--surface-2); }
 .ms-user-item svg { width: 16px; height: 16px; flex: none; color: var(--text-2); }
 .ms-user-item--sair, .ms-user-item--sair svg { color: var(--critical); }
+.ms-user-grupo { padding: var(--space-2) var(--space-3) var(--space-1); color: var(--text-2); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.ms-user-item[aria-checked="true"] { color: var(--brand-text); }
+.ms-user-item .ms-user-check { margin-left: auto; color: var(--brand-text); }
 .ms-switch { position: relative; flex: none; width: 34px; height: 20px; margin-left: auto; border-radius: var(--radius-pill); background: var(--line-strong); transition: background 0.2s ease; }
 .ms-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s ease; }
 .ms-switch[data-on="true"] { background: var(--brand); }

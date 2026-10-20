@@ -9,7 +9,7 @@ import ListaLeituras from "../ListaLeituras";
 export const dynamic = "force-dynamic";
 
 export default async function ParaConferirPage() {
-  await exigirPagina("tabelasConferir");
+  const u = await exigirPagina("tabelasConferir");
   const leituras = await listarLeituras({ status: "para_conferir" });
   return (
     <div className="grid gap-6">
@@ -19,7 +19,7 @@ export default async function ParaConferirPage() {
           Leituras de tabelas e espelhos aguardando conferência. Abra cada uma, confira com o documento e aprove ou recuse.
         </p>
       </div>
-      <ListaLeituras leituras={leituras} filtro={null} titulo={`${leituras.length} ${leituras.length === 1 ? "leitura" : "leituras"} para conferir`} />
+      <ListaLeituras leituras={leituras} filtro={null} podeExcluir={u.perfis.includes("admin")} titulo={`${leituras.length} ${leituras.length === 1 ? "leitura" : "leituras"} para conferir`} />
     </div>
   );
 }

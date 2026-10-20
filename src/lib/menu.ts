@@ -32,7 +32,12 @@ export interface ModuloMenu {
   grupos: GrupoMenu[];
 }
 export interface Menu {
-  usuario: { nome: string; email: string; iniciais: string; perfil: string; foto: string | null };
+  usuario: {
+    nome: string; email: string; iniciais: string; perfil: string; foto: string | null;
+    /** Administrador com mais de um perfil: opções de "Ver o sistema como" ("" = todos os perfis). */
+    visoes: { valor: string; rotulo: string }[] | null;
+    visao: string;
+  };
   modulos: ModuloMenu[];
 }
 
@@ -139,10 +144,16 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   const { rows: [foto] } = await db().query<{ foto: string | null }>(
     `select foto from usuarios where id_usuario = $1`, [u.id_usuario],
   );
+  const cadastrados = u.perfisCadastrados.filter(ehPerfil);
+  const visoes = cadastrados.includes("admin") && cadastrados.length > 1
+    ? [{ valor: "", rotulo: "Administrador (todos os perfis)" },
+       ...cadastrados.filter((x) => x !== "admin").map((x) => ({ valor: x, rotulo: ROTULO_PERFIL[x] }))]
+    : null;
   return {
     usuario: {
       nome: u.nome, email: u.email, iniciais: iniciais(u.nome),
-      perfil: principal ? ROTULO_PERFIL[principal] : "", foto: foto?.foto ?? null,
+      perfil: principal ? ROTULO_PERFIL[principal] + (u.visao ? " (visualização)" : "") : "", foto: foto?.foto ?? null,
+      visoes, visao: u.visao ?? "",
     },
     modulos,
   };

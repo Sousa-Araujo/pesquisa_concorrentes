@@ -275,3 +275,29 @@ export async function recusarLeitura(id: string, idUsuario: string, motivo: stri
     [id, idUsuario, motivo.trim().slice(0, 500) || null],
   );
 }
+
+/**
+ * Exclusão de uma leitura (só administrador). Se ela já tinha sido aprovada,
+ * sai junto o que ela gravou: a coleta do mês na Pesquisa (origem "tabela")
+ * e os preços do mês. A coleta do agente que ela substituiu não volta.
+ */
+export async function excluirLeitura(id: string): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const l = await obterLeitura(id);
+  if (!l) return { ok: false, erro: "Leitura não encontrada." };
+  const cliente = await db().connect();
+  try {
+    await cliente.query("begin");
+    await cliente.query(`delete from coletas_mensais where id_leitura = $1 and origem = 'tabela'`, [id]);
+    await cliente.query(`update coletas_mensais set id_leitura = null where id_leitura = $1`, [id]);
+    await cliente.query(`delete from precos_mensais where id_leitura = $1`, [id]);
+    await cliente.query(`delete from leituras_tabela where id = $1`, [id]);
+    await cliente.query("commit");
+    return { ok: true };
+  } catch (e) {
+    await cliente.query("rollback");
+    console.error("[tabelas] excluir:", e);
+    return { ok: false, erro: "Não foi possível excluir a leitura." };
+  } finally {
+    cliente.release();
+  }
+}

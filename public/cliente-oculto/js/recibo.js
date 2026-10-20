@@ -10,7 +10,8 @@
 
   const { escapeHtml, moneyMaskFromDigits, centavosToDisplay, formatarDataHora } = window.COConfig;
   const api = window.CoworkApi;
-  const ehAvaliador = authUser.papel === 'avaliador' || authUser.papel === 'admin';
+  // Só o próprio avaliador preenche; coordenador e administrador veem só o documento.
+  const ehAvaliador = authUser.papel === 'avaliador';
   const ehCoordenador = authUser.papel === 'coordenador' || authUser.papel === 'admin';
 
   function toast(msg) {
@@ -266,7 +267,7 @@
         : r.assinadoEm
           ? `<span class="status-badge tone-abaixo">Assinado em ${dataBR(r.assinadoEm)} · aguardando aprovação</span>`
           : r.devolvidoMotivo
-            ? `<span class="status-badge tone-critico">Devolvido para correção</span><span class="field-help">Motivo: ${escapeHtml(r.devolvidoMotivo)} — corrija e assine de novo.</span>`
+            ? `<span class="status-badge tone-critico">Devolvido para correção</span><span class="field-help">Motivo: ${escapeHtml(r.devolvidoMotivo)}${ehAvaliador ? " — corrija e assine de novo." : ""}</span>`
             : `<span class="status-badge tone-muted">Ainda não assinado</span>`;
     const pagoBtn = document.getElementById('pagoBtn');
     pagoBtn.style.display = ehCoordenador && (r.aprovadoEm || r.pagoEm) ? '' : 'none';

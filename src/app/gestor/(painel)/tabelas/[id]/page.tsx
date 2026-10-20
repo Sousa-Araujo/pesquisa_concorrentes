@@ -13,5 +13,5 @@ export default async function LeituraPage({ params }: { params: Promise<{ id: st
   const leitura = await obterLeitura(id);
   if (!leitura) notFound();
   const podeConferir = temPermissao(u.perfis, "tabelasConferir") && leitura.status === "para_conferir";
-  return <ConferenciaLeitura leitura={leitura} podeConferir={podeConferir} iaConfigurada={iaConfigurada()} />;
+  return <ConferenciaLeitura leitura={leitura} podeConferir={podeConferir} iaConfigurada={iaConfigurada()} podeExcluir={u.perfis.includes("admin")} />;
 }

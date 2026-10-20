@@ -19,6 +19,15 @@
   }
   document.documentElement.setAttribute('data-theme', lerTema());
 
+  // Esconde o layout antigo da página (cabeçalho do Cliente Oculto) até o menu
+  // novo estar montado, para ele não aparecer por um instante ao trocar de tela.
+  var esconde = document.createElement('style');
+  esconde.textContent = 'body > *:not(.ms-app) { visibility: hidden; }';
+  document.head.appendChild(esconde);
+  function mostrar() { if (esconde.parentNode) esconde.parentNode.removeChild(esconde); }
+  // Se o menu não carregar, a página aparece do jeito que está.
+  setTimeout(mostrar, 3000);
+
   // Ícones do Lucide (public/design/vendor/lucide.min.js), os mesmos das telas em React.
   var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', receipt: 'receipt', plus: 'circle-plus', list: 'list-checks', menu: 'menu', logout: 'log-out' };
   function icone(nome) {
@@ -122,6 +131,24 @@
     });
 
     caixa.appendChild(btFoto); caixa.appendChild(arquivo); caixa.appendChild(btTema);
+    // "Ver o sistema como" (administrador com mais de um perfil).
+    if (u.visoes && u.visoes.length) {
+      caixa.appendChild(el('div', { 'class': 'ms-user-sep' }));
+      caixa.appendChild(el('div', { 'class': 'ms-user-grupo' })).textContent = 'Ver o sistema como';
+      u.visoes.forEach(function (v) {
+        var atual = (u.visao || '') === v.valor;
+        var b = el('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(atual), 'class': 'ms-user-item' },
+          '<i data-lucide="user-round" aria-hidden="true"></i>' + (atual ? '<i data-lucide="check" class="ms-user-check" aria-hidden="true"></i>' : ''));
+        b.insertBefore(document.createTextNode(v.rotulo), b.childNodes[1] || null);
+        b.addEventListener('click', function () {
+          if (atual) return;
+          fetch('/api/perfil/visao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ perfil: v.valor }) })
+            .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error); location.href = j.destino; }); })
+            .catch(function (e) { alert(e.message || 'Não foi possível trocar a visualização.'); });
+        });
+        caixa.appendChild(b);
+      });
+    }
     caixa.appendChild(el('div', { 'class': 'ms-user-sep' }));
     caixa.appendChild(btSair);
 
@@ -309,12 +336,13 @@
     app.appendChild(barraInferior(menu, atual));
     document.body.appendChild(app);
     if (window.lucide) window.lucide.createIcons({ attrs: { width: 18, height: 18, 'stroke-width': 1.75 } });
+    mostrar();
   }
 
   function iniciar() {
     fetch('/api/menu').then(function (r) { return r.ok ? r.json() : null; }).then(function (menu) {
-      if (menu) montar(menu);
-    }).catch(function () { /* sem menu: a página segue como está */ });
+      if (menu) montar(menu); else mostrar();
+    }).catch(function () { mostrar(); /* sem menu: a página segue como está */ });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
   else iniciar();

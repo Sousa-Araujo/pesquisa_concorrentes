@@ -1,7 +1,10 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import type { Leitura, StatusLeitura } from "@/lib/data/tabelas";
+import { excluir } from "./[id]/actions";
 
 export const STATUS_LEITURA: Record<StatusLeitura, { rotulo: string; cor: string }> = {
   lendo: { rotulo: "Lendo", cor: "bg-[var(--surface-2)] text-ink/60" },
@@ -10,12 +13,31 @@ export const STATUS_LEITURA: Record<StatusLeitura, { rotulo: string; cor: string
   recusada: { rotulo: "Recusada", cor: "bg-[var(--critical-tint)] text-[var(--critical-ink)]" },
 };
 
+const confirmarExclusao = (l: Leitura) => confirm(
+  l.status === "aprovada"
+    ? `Excluir a leitura de ${l.concorrente}? Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto.`
+    : `Excluir a leitura de ${l.concorrente}? O arquivo enviado também é apagado.`,
+);
+
 const mesBR = (m: string) => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
 const dataBR = (d: string) => new Date(d).toLocaleDateString("pt-BR");
 
 /** filtro null = sem o seletor de status (tela Para conferir). */
-export default function ListaLeituras({ leituras, filtro, titulo = "Leituras enviadas" }: { leituras: Leitura[]; filtro: string | null; titulo?: string }) {
+export default function ListaLeituras({ leituras, filtro, titulo = "Leituras enviadas", podeExcluir = false }: {
+  leituras: Leitura[]; filtro: string | null; titulo?: string; podeExcluir?: boolean;
+}) {
   const router = useRouter();
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  function fazerExcluir(l: Leitura) {
+    if (!confirmarExclusao(l)) return;
+    setErro(null);
+    iniciar(async () => {
+      const r = await excluir(l.id);
+      if (!r.ok) setErro(r.erro);
+      router.refresh();
+    });
+  }
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -27,6 +49,7 @@ export default function ListaLeituras({ leituras, filtro, titulo = "Leituras env
           <option value="recusada">Recusadas</option>
         </select>}
       </div>
+      {erro && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
@@ -56,7 +79,15 @@ export default function ListaLeituras({ leituras, filtro, titulo = "Leituras env
                   {l.erroIa && l.status === "para_conferir" && <span className="mt-1 block text-xs text-[var(--warning-ink)]">Sem leitura da IA</span>}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <a className="btn-acao" href={`/gestor/tabelas/${l.id}`}>{l.status === "para_conferir" ? "Conferir" : "Abrir"}</a>
+                  <div className="acoes-linha justify-end">
+                    <a className="btn-acao" href={`/gestor/tabelas/${l.id}`}>{l.status === "para_conferir" ? "Conferir" : "Abrir"}</a>
+                    {podeExcluir && (
+                      <button className="btn-acao btn-acao--perigo !px-2" title="Excluir leitura" aria-label={`Excluir leitura de ${l.concorrente}`}
+                        disabled={pendente} onClick={() => fazerExcluir(l)}>
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -8,9 +8,19 @@
  */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, LogOut, Moon, Settings } from "lucide-react";
+import { Camera, Check, LogOut, Moon, Settings, UserRound } from "lucide-react";
 import type { Menu } from "@/lib/menu";
 import { aplicarTema, enviarFoto, reduzirFoto, temaAtual } from "@/lib/cliente/perfil";
+
+/** "Ver o sistema como" (administrador): troca o perfil em uso e vai para a tela inicial dele. */
+async function trocarVisao(perfil: string) {
+  const r = await fetch("/api/perfil/visao", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ perfil }),
+  }).catch(() => null);
+  const j = await r?.json().catch(() => null);
+  if (!r?.ok) { alert(j?.error ?? "Não foi possível trocar a visualização."); return; }
+  window.location.href = j.destino;
+}
 
 async function sair() {
   await fetch("/api/co/auth/logout", { method: "POST" }).catch(() => {});
@@ -99,6 +109,20 @@ export default function Navbar({ usuario }: { usuario: Menu["usuario"] }) {
             Tema escuro
             <span className="ms-switch" data-on={escuro} />
           </button>
+          {usuario.visoes && (
+            <>
+              <div className="ms-user-sep" />
+              <div className="ms-user-grupo">Ver o sistema como</div>
+              {usuario.visoes.map((v) => (
+                <button key={v.valor} type="button" role="menuitemradio" aria-checked={usuario.visao === v.valor}
+                  className="ms-user-item" onClick={() => usuario.visao !== v.valor && trocarVisao(v.valor)}>
+                  <UserRound aria-hidden="true" />
+                  {v.rotulo}
+                  {usuario.visao === v.valor && <Check className="ms-user-check" aria-hidden="true" />}
+                </button>
+              ))}
+            </>
+          )}
           <div className="ms-user-sep" />
           <button type="button" role="menuitem" className="ms-user-item ms-user-item--sair" onClick={sair}>
             <LogOut aria-hidden="true" />

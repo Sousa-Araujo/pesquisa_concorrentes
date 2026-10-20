@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { exigirPermissao, usuarioAtual } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
-import { aprovarLeitura, obterLeitura, processarLeitura, recusarLeitura, salvarConferencia, type Conferencia, type Leitura } from "@/lib/data/tabelas";
+import { aprovarLeitura, excluirLeitura, obterLeitura, processarLeitura, recusarLeitura, salvarConferencia, type Conferencia, type Leitura } from "@/lib/data/tabelas";
 
 export async function salvar(id: string, c: Conferencia): Promise<Leitura | null> {
   await exigirPermissao("tabelasConferir");
@@ -36,4 +36,14 @@ export async function recusar(id: string, motivo: string): Promise<{ ok: true }>
   await recusarLeitura(id, eu.id_usuario, motivo);
   revalidatePath("/gestor/tabelas");
   return { ok: true };
+}
+
+/** Exclui a leitura (só administrador), com o que ela gravou na Pesquisa se já aprovada. */
+export async function excluir(id: string): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const eu = await usuarioAtual();
+  if (!eu || !eu.perfis.includes("admin")) throw new Error("Não autorizado");
+  const r = await excluirLeitura(id);
+  revalidatePath("/gestor/tabelas");
+  revalidatePath("/gestor/tabelas/conferir");
+  return r;
 }
