@@ -56,27 +56,27 @@ export default function ResumoUnidades({ unidades, editadas, temDesconto }: { un
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--line)] text-left text-ink/50">
-              <th className="px-3 py-2 font-medium">{porTorre ? "Torre" : ""}</th>
-              <th className="px-3 py-2 text-right font-medium">Unidades</th>
-              <th className="px-3 py-2 text-right font-medium">Disponíveis</th>
-              <th className="px-3 py-2 text-right font-medium">Reservadas</th>
-              <th className="px-3 py-2 text-right font-medium">Vendidas</th>
-              {temOutro && <th className="px-3 py-2 text-right font-medium">Outras</th>}
-              <th className="px-3 py-2 text-right font-medium">Ticket (tabela)</th>
-              {temDesconto && <th className="px-3 py-2 text-right font-medium">Ticket c/ desconto</th>}
+              <th className="px-2 py-2 font-medium">{porTorre ? "Torre" : ""}</th>
+              <th className="px-2 py-2 text-right font-medium">Total</th>
+              <th className="px-2 py-2 text-right font-medium">Disp.</th>
+              <th className="px-2 py-2 text-right font-medium">Reserv.</th>
+              <th className="px-2 py-2 text-right font-medium">Vend.</th>
+              {temOutro && <th className="px-2 py-2 text-right font-medium">Outras</th>}
+              <th className="px-2 py-2 text-right font-medium">Ticket tabela</th>
+              {temDesconto && <th className="px-2 py-2 text-right font-medium">Ticket c/ desc.</th>}
             </tr>
           </thead>
           <tbody>
             {[...linhas, total].map((l) => (
               <tr key={l.nome} className={`border-b border-[var(--line)] ${l.nome === "Total" ? "font-bold text-ink" : ""}`}>
-                <td className="px-3 py-2">{l.nome}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.total}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.disp}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.res}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.vend}</td>
-                {temOutro && <td className="px-3 py-2 text-right tabular-nums">{l.outro}</td>}
-                <td className="px-3 py-2 text-right tabular-nums">{brl(l.ticket)}</td>
-                {temDesconto && <td className="px-3 py-2 text-right tabular-nums">{brl(l.ticketDesc)}</td>}
+                <td className="px-2 py-2">{l.nome}</td>
+                <td className="px-2 py-2 text-right tabular-nums">{l.total}</td>
+                <td className="px-2 py-2 text-right tabular-nums">{l.disp}</td>
+                <td className="px-2 py-2 text-right tabular-nums">{l.res}</td>
+                <td className="px-2 py-2 text-right tabular-nums">{l.vend}</td>
+                {temOutro && <td className="px-2 py-2 text-right tabular-nums">{l.outro}</td>}
+                <td className="px-2 py-2 text-right tabular-nums">{brl(l.ticket)}</td>
+                {temDesconto && <td className="px-2 py-2 text-right tabular-nums">{brl(l.ticketDesc)}</td>}
               </tr>
             ))}
           </tbody>

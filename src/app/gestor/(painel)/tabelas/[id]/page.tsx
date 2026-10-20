@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { exigirPagina } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
 import { obterLeitura } from "@/lib/data/tabelas";
-import { iaConfigurada } from "@/lib/ia/gemini";
+import { iaConfigurada } from "@/lib/ia/leitura";
 import ConferenciaLeitura from "./ConferenciaLeitura";
 
 export const dynamic = "force-dynamic";

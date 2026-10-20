@@ -1,6 +1,6 @@
 /**
  * Envio da tabela/espelho (PDF ou imagem) de um concorrente: guarda o
- * arquivo, pede a leitura ao Gemini e devolve o id da leitura, já pronta
+ * arquivo, pede a leitura à IA (Claude, com Gemini de reserva) e devolve o id da leitura, já pronta
  * para conferir. A leitura leva alguns segundos.
  */
 import { NextResponse, type NextRequest } from "next/server";

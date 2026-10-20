@@ -6,7 +6,7 @@ import { exigirPagina } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
 import { listarRegionais } from "@/lib/data/hierarquia";
 import { listarLeituras } from "@/lib/data/tabelas";
-import { iaConfigurada } from "@/lib/ia/gemini";
+import { iaConfigurada } from "@/lib/ia/leitura";
 import { competenciaVigente } from "@/lib/domain/competencia";
 import EnvioTabela from "./EnvioTabela";
 import ListaLeituras from "./ListaLeituras";

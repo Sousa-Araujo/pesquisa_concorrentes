@@ -7,7 +7,7 @@
 import "server-only";
 import { db } from "@/lib/db/pool";
 import { normalizarUnidades, resumirUnidades, type Resumo, type Unidade } from "@/lib/domain/tabelas";
-import { ErroIA, lerTabelaComGemini } from "@/lib/ia/gemini";
+import { ErroIA, lerTabela } from "@/lib/ia/leitura";
 
 export type StatusLeitura = "lendo" | "para_conferir" | "aprovada" | "recusada";
 
@@ -161,7 +161,7 @@ export async function processarLeitura(id: string): Promise<void> {
   const { rows: [l] } = await q(`select id_concorrente, mes_ano, arquivo, arquivo_mime from leituras_tabela where id = $1`, [id]);
   if (!l) return;
   try {
-    const ia = await lerTabelaComGemini(l.arquivo as Buffer, String(l.arquivo_mime));
+    const ia = await lerTabela(l.arquivo as Buffer, String(l.arquivo_mime));
     const unidades = normalizarUnidades(ia.unidades);
     const ref = await referencias(Number(l.id_concorrente), new Date(l.mes_ano).toISOString().slice(0, 10));
     await gravarResumo(id, unidades, resumirUnidades(unidades, ref.anterior, ref.estoqueMesAnterior), {

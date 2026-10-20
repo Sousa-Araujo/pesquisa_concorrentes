@@ -1,5 +1,6 @@
 /**
- * Leitura de tabela de preços / espelho de vendas pelo Google Gemini.
+ * Leitura de tabela de preços / espelho de vendas pelo Google Gemini
+ * (reserva do Claude; ver ./leitura.ts).
  * Manda o arquivo (PDF ou imagem) junto com as instruções e pede a lista de
  * unidades em JSON (valor de tabela e status de cada uma). A IA só lê o
  * documento: os totais são calculados pelo sistema (src/lib/domain/tabelas.ts)
@@ -9,22 +10,11 @@
  * abaixo). Para trocar de modelo ou de conta basta trocar as variáveis.
  */
 import "server-only";
+import { ErroIA, INSTRUCOES } from "./comum";
 
 const MODELO_PADRAO = "gemini-3.8-flash";
 /** Usados, em ordem, quando o principal está sobrecarregado ou demorando. */
 const MODELOS_RESERVA = ["gemini-3.6-flash", "gemini-3.5-flash"];
-
-const INSTRUCOES = `Você vai ler a tabela de preços ou o espelho de vendas de um empreendimento imobiliário (apartamentos).
-Extraia TODAS as unidades (apartamentos/casas) que aparecem no documento, uma por item, sem pular nenhuma.
-Para cada unidade informe:
-- "unidade": a identificação como aparece (ex.: "121 NYC", "Apto 32 Torre B");
-- "valor_tabela": o valor de tabela (preço cheio) da unidade em reais, como número (ex.: 374400.00). Se o documento só tiver um valor por unidade, use esse valor aqui. Se não houver valor, use null;
-- "valor_desconto": o valor com desconto (ex.: "Valor de Venda com Desconto", "com desconto bom pagador", "valor promocional"), em reais, como número. Se o documento não trouxer valor com desconto, use null. Não calcule: só copie o que está escrito;
-Atenção ao formato dos números no documento (pode estar com vírgula ou ponto de milhar). Se a mesma unidade aparecer em mais de uma página (ex.: condições SBPE e MCMV), liste-a só uma vez;
-- "status": "disponivel", "reservada", "vendida" ou "outro" (permuta, bloqueada, fora de venda etc.);
-- "status_original": o texto do status como está no documento (ex.: "Reservada Roger", "VENDIDO").
-Se o documento não mostrar status, considere as unidades listadas com preço como "disponivel".
-Não invente unidades nem valores. Em "observacoes", anote em português o que for útil para quem vai conferir (torres, condições, unidades ilegíveis).`;
 
 const ESQUEMA = {
   type: "OBJECT",
@@ -48,9 +38,7 @@ const ESQUEMA = {
   required: ["unidades"],
 };
 
-export class ErroIA extends Error {}
-
-export function iaConfigurada(): boolean {
+export function geminiConfigurado(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
@@ -70,13 +58,13 @@ const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * no Google; no plano gratuito, 20 leituras por dia). Modelo sem cota não é tentado de novo. Tudo dentro de ~165 s
  * (a rota aceita 180 s).
  */
-export async function lerTabelaComGemini(arquivo: Buffer, mime: string) {
+export async function lerTabelaComGemini(arquivo: Buffer, mime: string, prazoMs = 165_000) {
   const chave = process.env.GEMINI_API_KEY;
   if (!chave) throw new ErroIA("A leitura por IA ainda não está configurada (GEMINI_API_KEY). Preencha os números na conferência.");
   const principal = process.env.GEMINI_MODELO || MODELO_PADRAO;
   // Uma volta só: no plano gratuito, até as recusas por sobrecarga contam na cota do dia.
   const modelos = [principal, ...MODELOS_RESERVA.filter((m) => m !== principal)];
-  const limite = Date.now() + 165_000;
+  const limite = Date.now() + prazoMs;
   const falhas: ErroPassageiro[] = [];
   const semCota = new Set<string>();
   for (let i = 0; i < modelos.length; i++) {
