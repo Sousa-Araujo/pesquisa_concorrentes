@@ -246,6 +246,10 @@
           if (i.href) {
             a = el('a', { href: i.href });
             if (i.href === atual.href) a.setAttribute('aria-current', 'page');
+            // Escolher a tela recolhe o menu (e a tela seguinte já abre recolhida).
+            a.addEventListener('click', function () {
+              if (!dual.classList.contains('is-collapsed')) alternar();
+            });
           } else {
             a = el('span', { 'class': 'ms-panel-off' });
           }

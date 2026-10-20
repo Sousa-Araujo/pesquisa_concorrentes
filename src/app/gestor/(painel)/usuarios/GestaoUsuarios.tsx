@@ -202,7 +202,7 @@ function FormUsuario({
           <input id="u-email" className="campo !text-base !py-2" type="email" autoComplete="off" value={email}
             onChange={(e) => setEmail(e.target.value)} />
           <p className="mt-1 text-xs text-ink/40">
-            Use o e-mail @{DOMINIO_EMAIL_EMPRESA}. Só avaliadores externos podem ter outro e-mail.
+            Qualquer e-mail; o administrador precisa ser @{DOMINIO_EMAIL_EMPRESA}.
             {!usuario && " O convite de acesso será enviado para este endereço."}
           </p>
         </div>

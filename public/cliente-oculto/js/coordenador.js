@@ -1007,7 +1007,7 @@
     `;
     document.getElementById('reportContent').innerHTML = html;
     const reciboBtn = document.getElementById('reciboBtn');
-    if (reciboBtn) reciboBtn.href = `recibo.html?id=${encodeURIComponent(av.id)}`;
+    if (reciboBtn) reciboBtn.href = `recibo.html?avaliacao=${encodeURIComponent(av.id)}`;
     wireExport(av, notaGeral, bandGeral, counts, gaps, synth);
     document.querySelectorAll('#reportContent [data-open-report]').forEach(el => {
       el.addEventListener('click', (e) => { e.preventDefault(); openLinkedReport(el.getAttribute('data-open-report')); });

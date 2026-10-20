@@ -41,11 +41,13 @@
     legendaFoto: (id, fotoId, legenda) => request('PUT', `/avaliacoes/${encodeURIComponent(id)}/fotos/${Number(fotoId)}`, { legenda }),
     removerFoto: (id, fotoId) => request('DELETE', `/avaliacoes/${encodeURIComponent(id)}/fotos/${Number(fotoId)}`),
 
-    // Recibo de pagamento do Cliente Oculto
-    obterRecibo: (id) => request('GET', `/avaliacoes/${encodeURIComponent(id)}/recibo`),
-    salvarRecibo: (id, dados) => request('PUT', `/avaliacoes/${encodeURIComponent(id)}/recibo`, dados),
-    assinarRecibo: (id, assinatura) => request('POST', `/avaliacoes/${encodeURIComponent(id)}/recibo/assinar`, { assinatura }),
-    marcarReciboPago: (id, pago) => request('POST', `/avaliacoes/${encodeURIComponent(id)}/recibo/pago`, { pago }),
+    // Recibo de pagamento do Cliente Oculto (um por avaliador, com todas as visitas)
+    reciboAtual: () => request('GET', '/recibos/atual'),
+    reciboDaAvaliacao: (avaliacaoId) => request('GET', `/avaliacoes/${encodeURIComponent(avaliacaoId)}/recibo`),
+    obterRecibo: (id) => request('GET', `/recibos/${encodeURIComponent(id)}`),
+    salvarRecibo: (id, dados) => request('PUT', `/recibos/${encodeURIComponent(id)}`, dados),
+    assinarRecibo: (id, assinatura) => request('POST', `/recibos/${encodeURIComponent(id)}/assinar`, { assinatura }),
+    marcarReciboPago: (id, pago) => request('POST', `/recibos/${encodeURIComponent(id)}/pago`, { pago }),
 
     // Cadastro da Pesquisa de Concorrentes
     cadastroEmpreendimentos: () => request('GET', '/cadastro/empreendimentos'),

@@ -50,8 +50,8 @@ async function aguardandoCalibragem(): Promise<number> {
 
 async function recibosAPagar(): Promise<number> {
   const { rows } = await db().query<{ n: number }>(
-    `select count(*)::int as n from co_recibos r join co_avaliacoes a on a.id = r.avaliacao_id
-      where r.assinado_em is not null and r.pago_em is null and not a.excluida`,
+    `select count(*)::int as n from co_recibos_avaliador r
+      where r.assinado_em is not null and r.pago_em is null`, // a aprovar ou a pagar
   );
   return rows[0].n;
 }
@@ -109,7 +109,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   if (temPermissao(p, "tabelasEnviar") || temPermissao(p, "tabelasConferir")) {
     const { rows: [pc] } = await db().query<{ n: number }>(`select count(*)::int as n from leituras_tabela where status = 'para_conferir'`);
     const itens: ItemMenu[] = [{ nome: "Enviar e acompanhar", href: "/gestor/tabelas" }];
-    if (temPermissao(p, "tabelasConferir")) itens.push({ nome: "Para conferir", href: "/gestor/tabelas?status=para_conferir", contador: pc.n || undefined });
+    if (temPermissao(p, "tabelasConferir")) itens.push({ nome: "Para conferir", href: "/gestor/tabelas/conferir", contador: pc.n || undefined });
     modulos.push({
       id: "tabelas", nome: "Tabelas e espelhos", curto: "Tabelas", icone: "doc",
       resumo: pc.n ? `${pc.n} leitura(s) para conferir` : "Leitura de tabelas por IA",
@@ -117,12 +117,12 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     });
   }
 
-  // Recibos de pagamento do Cliente Oculto: módulo próprio, só do administrador.
+  // Recibos de pagamento do Cliente Oculto: módulo próprio (Coordenador de Market Share e administrador).
   if (temPermissao(p, "recibos")) {
     const n = await recibosAPagar();
     modulos.push({
       id: "recibos", nome: "Recibos", curto: "Recibos", icone: "receipt",
-      resumo: n ? `${n} aguardando pagamento` : "Nenhum recibo a pagar",
+      resumo: n ? `${n} a aprovar ou pagar` : "Nenhum recibo pendente",
       grupos: [{ nome: "Pagamentos", itens: [{ nome: "Recibos do Cliente Oculto", href: "/gestor/recibos", contador: n || undefined }] }],
     });
   }

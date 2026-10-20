@@ -106,13 +106,15 @@ describe("Cadastro de usuário", () => {
     expect(usuarioSchema.safeParse({ ...valido, perfis: ["gestor"] }).success).toBe(false);
   });
 
-  it("exige e-mail da empresa, exceto para avaliador externo", () => {
-    const interno = { ...valido, perfis: ["coordenador_produto"] };
-    expect(usuarioSchema.safeParse({ ...interno, email: "fulano@gmail.com" }).success).toBe(false);
-    expect(usuarioSchema.safeParse({ ...interno, email: "Fulano@SousaAraujo.com.br" }).success).toBe(true);
-    expect(usuarioSchema.safeParse({ ...interno, email: "fulano@sousaaraujo.com.br.fake.com" }).success).toBe(false);
+  it("só o administrador precisa de e-mail da empresa", () => {
+    const admin = { ...valido, perfis: ["admin"] };
+    expect(usuarioSchema.safeParse({ ...admin, email: "fulano@gmail.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...admin, email: "Fulano@SousaAraujo.com.br" }).success).toBe(true);
+    expect(usuarioSchema.safeParse({ ...admin, email: "fulano@sousaaraujo.com.br.fake.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...valido, perfis: ["admin", "diretoria"], email: "x@gmail.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...valido, perfis: ["coordenador_produto"], email: "fulano@gmail.com" }).success).toBe(true);
+    expect(usuarioSchema.safeParse({ ...valido, perfis: ["avaliador", "diretoria"], email: "x@gmail.com" }).success).toBe(true);
     expect(usuarioSchema.safeParse({ ...valido, email: "avaliador@gmail.com" }).success).toBe(true);
-    expect(usuarioSchema.safeParse({ ...valido, perfis: ["avaliador", "diretoria"], email: "x@gmail.com" }).success).toBe(false);
   });
 
   it("remove perfis repetidos e valida a data do acesso temporário", () => {

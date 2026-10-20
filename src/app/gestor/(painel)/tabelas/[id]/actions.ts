@@ -16,6 +16,7 @@ export async function aprovar(id: string, c: Conferencia): Promise<{ ok: true } 
   await salvarConferencia(id, c);
   const r = await aprovarLeitura(id, eu.id_usuario);
   revalidatePath("/gestor/tabelas");
+  revalidatePath("/gestor/tabelas/conferir");
   return r;
 }
 

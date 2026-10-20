@@ -63,7 +63,7 @@
   function showLocked() {
     document.getElementById('lockedState').style.display = 'block';
     document.getElementById('lockedIdText').textContent = avaliacao.id;
-    document.getElementById('reciboLink').href = `recibo.html?id=${encodeURIComponent(avaliacao.id)}`;
+    document.getElementById('reciboLink').href = 'recibo.html';
     const badge = document.getElementById('lockedStatusBadge');
     badge.textContent = avaliacao.status;
     badge.className = 'status-badge ' + (window.COConfig.STATUS_AVALIACAO[avaliacao.status] || {}).tone;
@@ -109,7 +109,7 @@
   }
 
   function renderFormBanner() {
-    const host = document.getElementById('panel-identificacao');
+    const host = document.getElementById('panel-previa');
     const old = document.getElementById('coFormBanner');
     if (old) old.remove();
     if (avaliacao.status === 'Em Preenchimento') return;
@@ -199,9 +199,14 @@
     if (nome) nome.value = idz.empreendimento || '';
   }
 
+  // Empreendimento, regional e avaliador ficam na Prévia (primeira etapa);
+  // o resto da antiga Identificação fica em Condições.
   function buildIdFields() {
     const el = document.getElementById('idFields');
+    const elPrevia = document.getElementById('previaIdFields');
+    const raiz = document.getElementById('formState');
     el.innerHTML = '';
+    elPrevia.innerHTML = '';
 
     const tipoDiv = document.createElement('div');
     tipoDiv.className = 'field';
@@ -213,19 +218,19 @@
         <button type="button" data-val="concorrente">Concorrente</button>
       </div>
       <p class="field-help" style="margin-top:6px;">Se for um concorrente, escolha o empreendimento Sousa Araujo de referência e o concorrente. O comparativo no relatório é ligado automaticamente.</p>`;
-    el.appendChild(tipoDiv);
+    elPrevia.appendChild(tipoDiv);
 
     const regDiv = document.createElement('div');
     regDiv.className = 'field';
     regDiv.innerHTML = `<label>Regional <span class="required-mark">*</span></label><select data-idfield="regional">${regionalOptionsHtml('')}</select>`;
-    el.appendChild(regDiv);
+    elPrevia.appendChild(regDiv);
 
     const cadEmpDiv = document.createElement('div');
     cadEmpDiv.className = 'field';
     cadEmpDiv.id = 'cadEmpField';
     cadEmpDiv.innerHTML = `<label><span data-cad-emp-label>Empreendimento</span> <span class="required-mark">*</span></label>
       <select data-cad-emp></select><p class="field-help" data-cad-emp-help></p>`;
-    el.appendChild(cadEmpDiv);
+    elPrevia.appendChild(cadEmpDiv);
 
     const cadConcDiv = document.createElement('div');
     cadConcDiv.className = 'field';
@@ -234,23 +239,25 @@
     cadConcDiv.innerHTML = `<label>Concorrente <span class="required-mark">*</span></label>
       <select data-cad-conc></select>
       <p class="field-help">Não achou na lista? Escolha "Outro" e digite o nome. O Coordenador de Market Share liga ao cadastro na calibragem.</p>`;
-    el.appendChild(cadConcDiv);
+    elPrevia.appendChild(cadConcDiv);
 
     const empField = makeSimpleField(ID_FIELDS_SIMPLE.find(f => f.key === 'empreendimento'));
     empField.id = 'empreendimentoField';
     empField.style.display = 'none';
-    el.appendChild(empField);
+    elPrevia.appendChild(empField);
 
     const construtoraDiv = document.createElement('div');
     construtoraDiv.className = 'field';
     construtoraDiv.id = 'construtoraField';
     construtoraDiv.style.display = 'none';
     construtoraDiv.innerHTML = `<label>Construtora responsável pelo concorrente</label><input type="text" placeholder="Ex.: COEVO" data-idfield="construtora">`;
-    el.appendChild(construtoraDiv);
+    elPrevia.appendChild(construtoraDiv);
+
+    elPrevia.appendChild(makeSimpleField(ID_FIELDS_SIMPLE.find(f => f.key === 'clienteOculto')));
 
     ID_FIELDS_SIMPLE.slice(1, 3).forEach(f => el.appendChild(makeSimpleField(f)));
 
-    ID_FIELDS_SIMPLE.slice(3, 6).forEach(f => el.appendChild(makeSimpleField(f)));
+    ID_FIELDS_SIMPLE.slice(4, 6).forEach(f => el.appendChild(makeSimpleField(f)));
 
     const areaDiv = document.createElement('div');
     areaDiv.className = 'field';
@@ -306,26 +313,26 @@
     });
 
     // Empreendimento e concorrente do cadastro
-    el.querySelector('[data-idfield="regional"]').addEventListener('change', async () => {
+    raiz.querySelector('[data-idfield="regional"]').addEventListener('change', async () => {
       await preencherCadEmp();
-      const sel = el.querySelector('[data-cad-emp]');
+      const sel = raiz.querySelector('[data-cad-emp]');
       if (avaliacao.identificacao.idEmpreendimento && !sel.value) {
         await salvarCadastro({ idEmpreendimento: null, idConcorrente: null });
         await preencherCadEmp();
       }
     });
-    el.querySelector('[data-cad-emp]').addEventListener('change', async (e) => {
+    raiz.querySelector('[data-cad-emp]').addEventListener('change', async (e) => {
       concorrenteOutro = false;
       await salvarCadastro({ idEmpreendimento: e.target.value || null, idConcorrente: null });
       applyTipoEmpreendimentoUI(tipoEmpreendimento);
       await preencherCadEmp();
     });
-    el.querySelector('[data-cad-conc]').addEventListener('change', async (e) => {
+    raiz.querySelector('[data-cad-conc]').addEventListener('change', async (e) => {
       if (e.target.value === 'outro') {
         concorrenteOutro = true;
         await salvarCadastro({ idConcorrente: null, empreendimento: '' });
         applyTipoEmpreendimentoUI(tipoEmpreendimento);
-        const nome = el.querySelector('[data-idfield="empreendimento"]');
+        const nome = raiz.querySelector('[data-idfield="empreendimento"]');
         if (nome) nome.focus();
         return;
       }
@@ -335,7 +342,7 @@
     });
 
     // wire simple text/date/time fields
-    el.querySelectorAll('[data-idfield]').forEach(input => {
+    raiz.querySelectorAll('[data-idfield]').forEach(input => {
       input.addEventListener('blur', onIdFieldCommit);
       input.addEventListener('change', onIdFieldCommit);
     });
@@ -437,7 +444,7 @@
       </div>
       ${PREVIA_DATAS.map(f => `
       <div class="field">
-        <label>${f.label}</label>
+        <label>${f.label}${f.key === 'previaPrimeiroRetornoEm' ? ' <span class="required-mark">*</span>' : ''}</label>
         <input type="datetime-local" data-previa="${f.key}">
         <p class="field-help">${f.help}</p>
         ${f.key === 'previaPrimeiroRetornoEm' ? `

@@ -1,31 +1,40 @@
 "use client";
 
 /**
- * Aviso enquanto a IA lê o arquivo: spinner, tempo decorrido e o que esperar.
- * A leitura pode levar até ~2 min (com as tentativas nos modelos reserva),
- * então o contador mostra que a tela não travou.
+ * Aviso enquanto a IA lê o arquivo, em etapas: "Arquivo recebido…",
+ * "IA lendo o arquivo…", "Quase lá…" (quando a leitura passa de alguns
+ * segundos) e "Concluído", logo antes de a tela atualizar com o resultado.
  */
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
-export default function LendoComIA() {
-  const [segundos, setSegundos] = useState(0);
+export type EtapaLeitura = "recebido" | "lendo" | "concluido";
+
+const ETAPAS = ["Arquivo recebido…", "IA lendo o arquivo…", "Quase lá…", "Concluído!"];
+
+export default function LendoComIA({ etapa }: { etapa: EtapaLeitura }) {
+  const [quaseLa, setQuaseLa] = useState(false);
   useEffect(() => {
-    const t = setInterval(() => setSegundos((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const tempo = segundos < 60 ? `${segundos} s` : `${Math.floor(segundos / 60)} min ${String(segundos % 60).padStart(2, "0")} s`;
+    if (etapa !== "lendo") return;
+    const t = setTimeout(() => setQuaseLa(true), 15_000);
+    return () => clearTimeout(t);
+  }, [etapa]);
+  const atual = etapa === "recebido" ? 0 : etapa === "concluido" ? 3 : quaseLa ? 2 : 1;
   return (
-    <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-lg bg-[var(--surface-2)] px-4 py-3">
-      <Loader2 size={22} className="shrink-0 text-[var(--brand-text)] motion-safe:animate-spin" aria-hidden="true" />
-      <div className="min-w-0 text-sm">
-        <p className="font-semibold text-ink">Lendo o arquivo com IA… <span className="font-normal tabular-nums text-ink/60">{tempo}</span></p>
-        <p className="text-ink/60">
-          {segundos < 60
-            ? "Costuma levar menos de um minuto. Não feche esta tela."
-            : "O Google está lento; estamos tentando outro modelo. Pode levar até 3 minutos."}
-        </p>
-      </div>
+    <div role="status" aria-live="polite" className="rounded-lg bg-[var(--surface-2)] px-4 py-3">
+      <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+        {atual < 3
+          ? <Loader2 size={18} className="shrink-0 text-[var(--brand-text)] motion-safe:animate-spin" aria-hidden="true" />
+          : <Check size={18} className="shrink-0 text-[var(--good-ink)]" aria-hidden="true" />}
+        {ETAPAS[atual]}
+      </p>
+      <ol className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {ETAPAS.map((e, i) => (
+          <li key={e} className={i < atual ? "text-[var(--good-ink)]" : i === atual ? "font-semibold text-ink" : "text-ink/40"}>
+            {i < atual ? "✓ " : ""}{e.replace("…", "").replace("!", "")}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

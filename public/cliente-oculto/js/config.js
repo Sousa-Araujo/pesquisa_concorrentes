@@ -110,12 +110,14 @@
   const CAMPOS_OBRIGATORIOS_LABELS = {
     empreendimento: 'Empreendimento', dataVisita: 'Data da visita',
     clienteOculto: 'Cliente oculto (avaliador)', corretor: 'Corretor', regional: 'Regional',
+    previaPrimeiroRetornoEm: 'Primeiro retorno (prévia online)',
   };
   // Só prévia (a visita ao decorado não aconteceu): não há data da visita nem
   // corretor do PDV, mas a prévia precisa ter pelo menos o primeiro contato.
   const CAMPOS_OBRIGATORIOS_SO_PREVIA = {
     empreendimento: 'Empreendimento', clienteOculto: 'Cliente oculto (avaliador)', regional: 'Regional',
     previaContatoEm: 'Data e horário do contato (prévia online)',
+    previaPrimeiroRetornoEm: 'Primeiro retorno (prévia online)',
   };
   function validarCamposObrigatorios(identificacao) {
     const faltando = [];

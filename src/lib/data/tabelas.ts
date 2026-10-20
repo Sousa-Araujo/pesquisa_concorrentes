@@ -219,7 +219,6 @@ export async function aprovarLeitura(id: string, idUsuario: string): Promise<{ o
   const l = await obterLeitura(id);
   if (!l) return { ok: false, erro: "Leitura não encontrada." };
   if (l.status !== "para_conferir") return { ok: false, erro: "Esta leitura não está aguardando conferência." };
-  if (l.resumo.vendasMes === null) return { ok: false, erro: "Informe as vendas do mês antes de aprovar (não há leitura nem estoque do mês anterior para calcular)." };
   const cliente = await db().connect();
   try {
     await cliente.query("begin");
@@ -237,7 +236,8 @@ export async function aprovarLeitura(id: string, idUsuario: string): Promise<{ o
        on conflict (id_concorrente, mes_ano) do update set
          id_agente = null, estoque = excluded.estoque, vendas = excluded.vendas, origem = 'tabela',
          id_leitura = excluded.id_leitura, atualizado_em = now()`,
-      [l.idConcorrente, l.mesAno, l.resumo.estoque, l.resumo.vendasMes, l.id],
+      // Sem mês anterior para comparar, as vendas do mês entram como 0.
+      [l.idConcorrente, l.mesAno, l.resumo.estoque, l.resumo.vendasMes ?? 0, l.id],
     );
     await cliente.query(
       `insert into precos_mensais (id_concorrente, mes_ano, valor_min_centavos, valor_max_centavos, ticket_medio_centavos, unidade_min, unidade_max, id_leitura,

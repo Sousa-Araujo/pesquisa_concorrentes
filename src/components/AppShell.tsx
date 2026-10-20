@@ -125,7 +125,12 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
                 <div className="ms-panel-group">{g.nome}</div>
                 {g.itens.map((i) =>
                   i.href ? (
-                    <a key={i.nome} href={i.href} aria-current={i.href === atual.href ? "page" : undefined} tabIndex={recolhido ? -1 : undefined}>
+                    <a key={i.nome} href={i.href} aria-current={i.href === atual.href ? "page" : undefined} tabIndex={recolhido ? -1 : undefined}
+                      onClick={() => {
+                        // Escolher a tela recolhe o menu (e a tela seguinte já abre recolhida).
+                        if (!ehCelular()) try { localStorage.setItem(CHAVE_RECOLHIDO, "1"); } catch { /* sem armazenamento */ }
+                        setRecolhido(true);
+                      }}>
                       {i.nome}
                       {i.contador ? <span className="ms-count">{i.contador}</span> : null}
                     </a>

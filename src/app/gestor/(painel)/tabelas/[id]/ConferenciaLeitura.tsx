@@ -13,7 +13,7 @@ import { Loader2, Pencil, Plus } from "lucide-react";
 import type { Leitura } from "@/lib/data/tabelas";
 import { resumirUnidades, type Unidade } from "@/lib/domain/tabelas";
 import { STATUS_LEITURA } from "../ListaLeituras";
-import LendoComIA from "../LendoComIA";
+import LendoComIA, { type EtapaLeitura } from "../LendoComIA";
 import ResumoUnidades from "./ResumoUnidades";
 import EditarUnidade from "./EditarUnidade";
 import { aprovar, lerDeNovo, recusar, salvar } from "./actions";
@@ -41,7 +41,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
-  const [lendo, setLendo] = useState(false);
+  const [lendo, setLendo] = useState<EtapaLeitura | null>(null);
 
   // Recalcula na hora (as vendas usam a referência que veio do servidor).
   const resumo = useMemo(() => {
@@ -80,22 +80,24 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
     setErro(null); setAviso(null);
     iniciar(async () => {
       const r = await aprovar(leitura.id, conferencia());
-      if (!r.ok) setErro(r.erro); else router.push("/gestor/tabelas?status=para_conferir");
+      if (!r.ok) setErro(r.erro); else router.push("/gestor/tabelas/conferir");
     });
   }
   function fazerLerDeNovo() {
     setErro(null); setAviso(null);
-    setLendo(true);
+    setLendo("lendo");
     iniciar(async () => {
       const r = await lerDeNovo(leitura.id);
-      if (!r.ok) { setErro(r.erro); setLendo(false); }
+      if (!r.ok) { setErro(r.erro); setLendo(null); return; }
+      setLendo("concluido");
+      await new Promise((ok) => setTimeout(ok, 900));
       // Remonta a tela com o resultado novo (lista de unidades e cartões).
-      else window.location.reload();
+      window.location.reload();
     });
   }
   function fazerRecusar() {
     if (!motivo.trim()) { setErro("Escreva o motivo da recusa (ex.: documento de outro empreendimento, ilegível)."); return; }
-    iniciar(async () => { await recusar(leitura.id, motivo); router.push("/gestor/tabelas"); });
+    iniciar(async () => { await recusar(leitura.id, motivo); router.push(podeConferir ? "/gestor/tabelas/conferir" : "/gestor/tabelas"); });
   }
 
   const r = resumo ?? leitura.resumo;
@@ -116,7 +118,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${st.cor}`}>{st.rotulo}</span>
       </div>
 
-      {lendo && <LendoComIA />}
+      {lendo && <LendoComIA etapa={lendo} />}
       {!lendo && leitura.erroIa && leitura.status === "para_conferir" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-ink)]">
           <span className="min-w-0 flex-1">{leitura.erroIa}</span>
@@ -133,7 +135,8 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
       )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="card p-0">
+        {/* self-start: o cartão do documento não estica até a altura da coluna da direita. */}
+        <div className="card self-start p-0 xl:sticky xl:top-4">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2 text-sm">
             <span className="truncate text-ink/70">{leitura.arquivoNome}</span>
             <a className="btn-acao" href={urlArquivo} target="_blank" rel="noopener">Abrir em outra aba</a>
@@ -150,8 +153,8 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
               semUnidades
                 ? ["Estoque", numeros.estoque ? `${numeros.estoque} UHs` : "—", `${numeros.reservadas || 0} reservadas`]
                 : ["Estoque", `${r.estoque} UHs`, `${r.disponiveis} disponíveis + ${r.reservadas} reservadas`],
-              ["Vendas do mês", r.vendasMes !== null ? `${r.vendasMes} UHs` : "—",
-                r.vendasMetodo === "unidades" ? "comparado com a leitura anterior" : r.vendasMetodo === "estoque" ? "pelo estoque do mês anterior" : r.vendasMes !== null ? "informado na conferência" : "sem base: informe abaixo"],
+              ["Vendas do mês", `${r.vendasMes ?? 0} UHs`,
+                r.vendasMetodo === "unidades" ? "comparado com a leitura anterior" : r.vendasMetodo === "estoque" ? "pelo estoque do mês anterior" : r.vendasMes !== null ? "informado na conferência" : "sem mês anterior para comparar"],
               ["Vendidas (total)", semUnidades ? null : `${r.vendidasTotal} de ${r.totalUnidades}`, ""],
               ["Maior valor", brl(r.valorMax), [temDesconto ? "de tabela" : "", r.unidadeMax].filter(Boolean).join(" · ")],
               ["Menor valor", brl(r.valorMin), [temDesconto ? "de tabela" : "", r.unidadeMin].filter(Boolean).join(" · ")],
@@ -243,8 +246,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
                 setEdicao(null);
               }} />
           )}
-          {leitura.modeloIa && <p className="text-xs text-ink/40">Lido por {leitura.modeloIa}.</p>}
-        </div>
+            </div>
       </div>
     </div>
   );

@@ -28,6 +28,7 @@
   // Nome resumido de cada etapa no fluxo (o nome completo fica no título).
   var CURTOS = {
     'identificação da visita': 'Identificação',
+    'condições': 'Condições',
     'atendimento prévio online': 'Prévia',
     'atendimento da recepção': 'Recepção',
     'atendimento do corretor': 'Corretor',

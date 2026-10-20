@@ -32,7 +32,7 @@
       <div class="info">${escapeHtml(a.id)}${a.dataVisita ? ` · visita de ${dataBR(a.dataVisita)}` : ''}${a.somentePrevia ? ' · só prévia' : ''}</div>
       <div class="acoes">
         <a class="btn ${emPreenchimento ? 'btn-primary' : 'btn-ghost'} btn-sm" href="${escapeAttr(url)}">${editavel ? (emPreenchimento ? 'Continuar' : 'Revisar') : 'Ver'}</a>
-        ${emPreenchimento ? '' : `<a class="btn btn-ghost btn-sm" href="recibo.html?id=${encodeURIComponent(a.id)}">Recibo de pagamento</a>`}
+        ${emPreenchimento ? '' : `<a class="btn btn-ghost btn-sm" href="recibo.html?avaliacao=${encodeURIComponent(a.id)}">Recibo de pagamento</a>`}
       </div>
     </div>`;
   }).join('');

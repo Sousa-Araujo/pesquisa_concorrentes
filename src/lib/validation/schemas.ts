@@ -74,8 +74,8 @@ export const empreendimentoEdicaoSchema = z.object({
  * Cadastro/edição de usuário (todos os perfis, exceto agente de campo).
  * Não há senha: a pessoa recebe um convite por e-mail e entra com código.
  * `acesso_expira_em` (YYYY-MM-DD, opcional) = último dia de acesso — usado
- * para avaliadores contratados para uma visita. E-mail precisa ser da
- * empresa, exceto para quem é só avaliador (ver emailPermitidoPara).
+ * para avaliadores contratados para uma visita. Qualquer e-mail, exceto
+ * o administrador, que precisa ser da empresa (ver emailPermitidoPara).
  */
 export const usuarioSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
@@ -96,7 +96,7 @@ export const usuarioSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["email"],
-      message: `Use um e-mail @${DOMINIO_EMAIL_EMPRESA}. Só avaliadores externos podem ter outro e-mail.`,
+      message: `O administrador precisa de um e-mail @${DOMINIO_EMAIL_EMPRESA}.`,
     });
   }
 });

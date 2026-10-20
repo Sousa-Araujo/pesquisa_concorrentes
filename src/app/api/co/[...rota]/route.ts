@@ -46,10 +46,14 @@ const rotas: Rota[] = [
   { metodo: "DELETE", re: new RegExp(`^avaliacoes/${ID}/fotos/(\\d+)$`), papeis: ["avaliador"], h: (u, m) => fotos.removerFoto(u, m[1], Number(m[2])) },
 
   // Recibo de pagamento do Cliente Oculto
-  { metodo: "GET", re: new RegExp(`^avaliacoes/${ID}/recibo$`), h: (u, m) => recibo.obterRecibo(u, m[1]) },
-  { metodo: "PUT", re: new RegExp(`^avaliacoes/${ID}/recibo$`), papeis: ["avaliador"], h: (u, m, c) => recibo.salvarRecibo(u, m[1], c) },
-  { metodo: "POST", re: new RegExp(`^avaliacoes/${ID}/recibo/assinar$`), papeis: ["avaliador"], h: (u, m, c) => recibo.assinarRecibo(u, m[1], c) },
-  { metodo: "POST", re: new RegExp(`^avaliacoes/${ID}/recibo/pago$`), papeis: ["coordenador"], h: (u, m, c) => recibo.marcarReciboPago(u, m[1], c.pago !== false) },
+  { metodo: "GET", re: new RegExp(`^avaliacoes/${ID}/recibo$`), h: (u, m) => recibo.reciboDaAvaliacao(u, m[1]) },
+  { metodo: "GET", re: /^recibos\/atual$/, papeis: ["avaliador"], h: (u) => recibo.reciboAtual(u) },
+  { metodo: "GET", re: new RegExp(`^recibos/${ID}$`), h: (u, m) => recibo.obterRecibo(u, m[1]) },
+  { metodo: "PUT", re: new RegExp(`^recibos/${ID}$`), papeis: ["avaliador"], h: (u, m, c) => recibo.salvarRecibo(u, m[1], c) },
+  { metodo: "POST", re: new RegExp(`^recibos/${ID}/assinar$`), papeis: ["avaliador"], h: (u, m, c) => recibo.assinarRecibo(u, m[1], c) },
+  { metodo: "POST", re: new RegExp(`^recibos/${ID}/aprovar$`), papeis: ["coordenador"], h: (u, m, c) => recibo.aprovarRecibo(u, m[1], c.aprovado !== false) },
+  { metodo: "POST", re: new RegExp(`^recibos/${ID}/devolver$`), papeis: ["coordenador"], h: (u, m, c) => recibo.devolverRecibo(u, m[1], c.motivo) },
+  { metodo: "POST", re: new RegExp(`^recibos/${ID}/pago$`), papeis: ["coordenador"], h: (u, m, c) => recibo.marcarReciboPago(u, m[1], c.pago !== false) },
 
   // Vínculo Sousa x Concorrente
   { metodo: "GET", re: new RegExp(`^avaliacoes/${ID}/opcoes-vinculo$`), h: (u, m) => co.opcoesVinculo(u, m[1]) },

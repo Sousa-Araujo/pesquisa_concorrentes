@@ -1,16 +1,16 @@
 /**
  * Envio da tabela/espelho (PDF ou imagem) de um concorrente: guarda o
- * arquivo, pede a leitura à IA (Claude, com Gemini de reserva) e devolve o id da leitura, já pronta
- * para conferir. A leitura leva alguns segundos.
+ * arquivo e devolve o id. A leitura pela IA é o segundo passo
+ * (POST /api/tabelas/[id]/ler), para a tela mostrar as etapas.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { usuarioAtual } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
-import { criarLeitura, processarLeitura } from "@/lib/data/tabelas";
+import { criarLeitura } from "@/lib/data/tabelas";
 import { db } from "@/lib/db/pool";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 180;
+export const maxDuration = 60;
 
 const TIPOS = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 const TAMANHO_MAXIMO = 10 * 1024 * 1024;
@@ -37,6 +37,5 @@ export async function POST(req: NextRequest) {
     idConcorrente, mesAno: `${mes}-01`, nome: arquivo.name || "documento", mime: arquivo.type,
     bytes: Buffer.from(await arquivo.arrayBuffer()), idUsuario: u.id_usuario,
   });
-  await processarLeitura(id);
   return NextResponse.json({ id }, { status: 201 });
 }

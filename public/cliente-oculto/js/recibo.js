@@ -1,7 +1,8 @@
 // Recibo de pagamento do Cliente Oculto (avaliador), no modelo oficial da Sousa Araujo.
-// O avaliador preenche os dados pessoais e do PIX, a quantidade de pesquisas e o valor
-// unitário (o total é calculado), assina no quadro e envia; o Coordenador de Market
-// Share vê o mesmo recibo e marca como pago. Empreendimento, data e hora vêm da avaliação.
+// Um recibo por avaliador com todas as visitas enviadas que ainda não estão em recibo
+// assinado: o avaliador informa o valor de cada visita (o total é a soma), os dados do
+// PIX, assina no quadro e envia; o administrador vê o mesmo recibo e marca como pago.
+// Endereço: recibo.html (recibo aberto do avaliador), ?recibo=<id> ou ?avaliacao=<id>.
 (async function () {
   'use strict';
   const authUser = await COAuth.requireLogin(['avaliador', 'coordenador']);
@@ -19,14 +20,18 @@
     clearTimeout(toast._h); toast._h = setTimeout(() => t.classList.remove('show'), 3800);
   }
 
-  const id = new URLSearchParams(location.search).get('id');
-  if (!id) { document.getElementById('reciboCarregando').textContent = 'Avaliação não informada.'; return; }
-  document.getElementById('reciboId').textContent = id;
+  const qs = new URLSearchParams(location.search);
+  const reciboParam = qs.get('recibo');
+  const avaliacaoParam = qs.get('avaliacao') || qs.get('id');
   document.getElementById('voltarLink').href = authUser.papel === 'avaliador'
-    ? `cliente-oculto.html?id=${encodeURIComponent(id)}` : `coordenador.html?id=${encodeURIComponent(id)}`;
+    ? 'minhas.html' : (avaliacaoParam ? `coordenador.html?id=${encodeURIComponent(avaliacaoParam)}` : '/gestor/recibos');
 
   let dados;
-  try { dados = await api.obterRecibo(id); }
+  try {
+    dados = reciboParam ? await api.obterRecibo(reciboParam)
+      : avaliacaoParam ? await api.reciboDaAvaliacao(avaliacaoParam)
+      : await api.reciboAtual();
+  }
   catch (err) { document.getElementById('reciboCarregando').textContent = `Não foi possível abrir o recibo (${err.message}).`; return; }
   document.getElementById('reciboCarregando').style.display = 'none';
   document.getElementById('reciboConteudo').style.display = '';
@@ -86,54 +91,57 @@
   const visitaBR = (d) => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
   const ou = (v, alt) => v ? escapeHtml(String(v)) : `<span style="color:#8f8d85">${alt}</span>`;
 
-  // Empreendimento, data e hora da visita vêm da avaliação (na "só prévia", a data do contato).
-  function visita() {
-    const a = dados.avaliacao;
-    const previa = a.somentePrevia && a.previaContatoEm ? formatarDataHora(a.previaContatoEm).split(' ') : null;
-    return {
-      empreendimento: a.empreendimento || '',
-      data: previa ? previa[0] : visitaBR(a.dataVisita),
-      hora: previa ? previa[1] : (a.horario || ''),
-    };
-  }
-
   // ---------------------------------------------------------------------
   // Formulário
   // ---------------------------------------------------------------------
-  let valorUnitario = null;
-  const quantidade = () => { const n = parseInt(campo('quantidadePesquisas').value, 10); return n > 0 ? n : null; };
-  const total = () => (quantidade() && valorUnitario ? quantidade() * valorUnitario : null);
+  const reciboId = () => dados.recibo.id;
+  const total = () => dados.visitas.reduce((s, v) => s + (v.valorCentavos || 0), 0) || null;
   function atualizarTotal() { document.getElementById('valorTotal').value = total() ? centavosToDisplay(total()) : ''; }
+
+  function desenharVisitas() {
+    const host = document.getElementById('visitasRecibo');
+    if (!dados.visitas.length) { host.innerHTML = '<p class="field-help">Nenhuma visita neste recibo.</p>'; return; }
+    host.innerHTML = dados.visitas.map((v, i) => `
+      <div class="visita-linha">
+        <div><b>${ou(v.empreendimento, 'Empreendimento')}</b>
+          <span>${visitaBR(v.dataVisita) || '—'}${v.horario ? ' · ' + escapeHtml(v.horario) : ''}${v.somentePrevia ? ' · só prévia' : ''} · ${escapeHtml(v.avaliacaoId)}</span></div>
+        <input type="text" inputmode="numeric" placeholder="R$ 0,00" aria-label="Valor da visita" data-visita="${i}" value="${v.valorCentavos ? centavosToDisplay(v.valorCentavos) : ''}">
+      </div>`).join('');
+    host.querySelectorAll('[data-visita]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const { centavos, display } = moneyMaskFromDigits(inp.value);
+        inp.value = display;
+        dados.visitas[Number(inp.getAttribute('data-visita'))].valorCentavos = centavos || null;
+        atualizarTotal(); desenharDoc();
+      });
+      inp.addEventListener('change', salvar);
+    });
+  }
 
   function preencher() {
     const r = dados.recibo;
-    campo('nomeCompleto').value = r.nomeCompleto || dados.avaliacao.clienteOculto || '';
+    document.getElementById('reciboId').textContent = r.id.slice(0, 8).toUpperCase();
+    campo('nomeCompleto').value = r.nomeCompleto || '';
     campo('telefone').value = telMascara(r.telefone);
     campo('cpf').value = cpfMascara(r.cpf);
     campo('chavePixTipo').value = r.chavePixTipo || '';
     campo('chavePix').value = r.chavePix || '';
-    campo('quantidadePesquisas').value = r.quantidadePesquisas || 1;
-    valorUnitario = r.valorUnitarioCentavos;
-    campo('valorUnitario').value = centavosToDisplay(valorUnitario);
+    desenharVisitas();
     atualizarTotal();
-    const v = visita();
-    document.getElementById('dadosVisita').innerHTML =
-      `<div><dt>Empreendimento visitado</dt><dd>${ou(v.empreendimento, '—')}</dd></div>` +
-      `<div><dt>Data da visita</dt><dd>${ou(v.data, '—')}</dd></div>` +
-      `<div><dt>Hora da visita</dt><dd>${ou(v.hora, '—')}</dd></div>`;
     document.getElementById('reciboForm').style.display = ehAvaliador ? '' : 'none';
     if (!ehAvaliador) document.querySelector('.recibo-layout').style.gridTemplateColumns = 'minmax(0, 1fr)';
   }
 
   function payload() {
+    const valores = {};
+    dados.visitas.forEach(v => { valores[v.avaliacaoId] = v.valorCentavos || null; });
     return {
       nomeCompleto: campo('nomeCompleto').value,
       telefone: campo('telefone').value.replace(/\D/g, ''),
       cpf: campo('cpf').value.replace(/\D/g, ''),
       chavePixTipo: campo('chavePixTipo').value,
       chavePix: campo('chavePix').value,
-      quantidadePesquisas: quantidade(),
-      valorUnitarioCentavos: valorUnitario,
+      valores,
     };
   }
 
@@ -143,7 +151,7 @@
     document.getElementById('reciboSalvo').textContent = 'Salvando…';
     timer = setTimeout(async () => {
       try {
-        dados = await api.salvarRecibo(id, payload());
+        dados = await api.salvarRecibo(reciboId(), payload());
         document.getElementById('reciboSalvo').textContent = 'Salvo ✓';
         desenharDoc();
       } catch (err) {
@@ -159,12 +167,7 @@
     document.getElementById('cpfAviso').textContent = d.length === 11 && !cpfValido(d) ? 'CPF inválido — confira os números.' : '';
   });
   campo('telefone').addEventListener('input', (e) => { e.target.value = telMascara(e.target.value); });
-  campo('valorUnitario').addEventListener('input', (e) => {
-    const { centavos, display } = moneyMaskFromDigits(e.target.value);
-    valorUnitario = centavos; e.target.value = display; atualizarTotal();
-  });
-  campo('quantidadePesquisas').addEventListener('input', atualizarTotal);
-  ['nomeCompleto', 'telefone', 'cpf', 'chavePixTipo', 'chavePix', 'quantidadePesquisas', 'valorUnitario'].forEach(k => {
+  ['nomeCompleto', 'telefone', 'cpf', 'chavePixTipo', 'chavePix'].forEach(k => {
     campo(k).addEventListener('change', salvar);
   });
 
@@ -200,8 +203,8 @@
     if (!desenhou) { toast('Assine no quadro antes de enviar.'); return; }
     clearTimeout(timer);
     try {
-      dados = await api.salvarRecibo(id, payload());
-      dados = await api.assinarRecibo(id, canvas.toDataURL('image/png'));
+      dados = await api.salvarRecibo(reciboId(), payload());
+      dados = await api.assinarRecibo(reciboId(), canvas.toDataURL('image/png'));
       toast('Recibo assinado e enviado ✓');
       ajustarCanvas();
       desenharDoc();
@@ -212,15 +215,15 @@
   document.getElementById('pagoBtn').addEventListener('click', async () => {
     const pago = !dados.recibo.pagoEm;
     if (pago && !confirm('Marcar este recibo como pago?')) return;
-    try { dados = await api.marcarReciboPago(id, pago); desenharDoc(); } catch (err) { toast(err.message); }
+    try { dados = await api.marcarReciboPago(reciboId(), pago); desenharDoc(); } catch (err) { toast(err.message); }
   });
 
   // ---------------------------------------------------------------------
   // Documento (o que sai na impressão / PDF)
   // ---------------------------------------------------------------------
   function desenharDoc() {
-    const r = dados.recibo, a = dados.avaliacao, v = visita();
-    const tot = r.valorCentavos;
+    const r = dados.recibo;
+    const tot = total();
     const linha = (rot, val) => `<tr><th>${rot}</th><td>${val}</td></tr>`;
     document.getElementById('reciboDoc').innerHTML = `
       <img class="logo" src="/design/logo-sousa-araujo.svg" alt="Construtora Sousa Araujo">
@@ -228,7 +231,7 @@
       <p class="valor">${tot ? centavosToDisplay(tot) : 'R$ [valor total]'}</p>
       <p>Recebi da <b>Construtora Sousa Araujo</b> a importância de <b>${tot ? centavosToDisplay(tot) : 'R$ [valor total]'}</b>
         (${tot ? valorPorExtenso(tot) : '[valor por extenso]'}), referente à prestação de serviço de cliente oculto
-        — avaliação <b>${escapeHtml(a.id)}</b>, conforme os dados abaixo.</p>
+        — ${dados.visitas.length} ${dados.visitas.length === 1 ? 'visita' : 'visitas'}, conforme os dados abaixo.</p>
       <h3>Dados do prestador</h3>
       <table>
         ${linha('Nome completo', ou(r.nomeCompleto, '[nome completo]'))}
@@ -237,16 +240,14 @@
         ${linha('Tipo de chave PIX', r.chavePixTipo ? TIPO_PIX[r.chavePixTipo] : ou('', '[tipo]'))}
         ${linha('Chave PIX', ou(r.chavePix, '[chave PIX]'))}
       </table>
-      <h3>Visita</h3>
+      <h3>Visitas</h3>
       <table>
-        ${linha('Empreendimento visitado', ou(v.empreendimento, '[empreendimento]'))}
-        ${linha('Data da visita', ou(v.data, '[data]'))}
-        ${linha('Hora da visita', ou(v.hora, '[hora]'))}
+        <tr><th style="width:auto">Empreendimento visitado</th><th style="width:auto">Data da visita</th><th style="width:auto">Valor da visita</th></tr>
+        ${dados.visitas.map(v => `<tr><td>${ou(v.empreendimento, '[empreendimento]')}</td><td>${visitaBR(v.dataVisita) || '—'}${v.horario ? ' ' + escapeHtml(v.horario) : ''}</td><td>${v.valorCentavos ? centavosToDisplay(v.valorCentavos) : ou('', '[valor]')}</td></tr>`).join('')}
       </table>
       <h3>Pagamento</h3>
       <table>
-        ${linha('Quantidade de pesquisas realizadas', ou(r.quantidadePesquisas, '[quantidade]'))}
-        ${linha('Valor unitário por pesquisa', r.valorUnitarioCentavos ? centavosToDisplay(r.valorUnitarioCentavos) : ou('', '[valor unitário]'))}
+        ${linha('Quantidade de visitas', dados.visitas.length)}
         ${linha('Valor total', tot ? `<b>${centavosToDisplay(tot)}</b>` : ou('', '[valor total]'))}
       </table>
       <p>Para clareza, firmo o presente recibo, dando plena e geral quitação do valor acima.</p>
@@ -259,15 +260,30 @@
     const st = document.getElementById('reciboStatus');
     st.innerHTML = r.pagoEm
       ? `<span class="status-badge tone-bom">✔ Pago em ${dataBR(r.pagoEm)}</span>`
-      : r.assinadoEm
-        ? `<span class="status-badge tone-abaixo">Assinado em ${dataBR(r.assinadoEm)} · aguardando pagamento</span>`
-        : `<span class="status-badge tone-muted">Ainda não assinado</span>`;
+      : r.aprovadoEm
+        ? `<span class="status-badge tone-bom">Aprovado em ${dataBR(r.aprovadoEm)} · aguardando pagamento</span>`
+        : r.assinadoEm
+          ? `<span class="status-badge tone-abaixo">Assinado em ${dataBR(r.assinadoEm)} · aguardando aprovação</span>`
+          : r.devolvidoMotivo
+            ? `<span class="status-badge tone-critico">Devolvido para correção</span><span class="field-help">Motivo: ${escapeHtml(r.devolvidoMotivo)} — corrija e assine de novo.</span>`
+            : `<span class="status-badge tone-muted">Ainda não assinado</span>`;
     const pagoBtn = document.getElementById('pagoBtn');
-    pagoBtn.style.display = ehCoordenador && r.assinadoEm ? '' : 'none';
+    pagoBtn.style.display = ehCoordenador && (r.aprovadoEm || r.pagoEm) ? '' : 'none';
     pagoBtn.textContent = r.pagoEm ? 'Desfazer pagamento' : 'Marcar como pago';
     const bloqueado = !ehAvaliador || !!r.pagoEm;
     document.querySelectorAll('#reciboForm input, #reciboForm select, #reciboForm button').forEach(e => { e.disabled = bloqueado; });
     document.getElementById('valorTotal').disabled = false;
+    desenharHistorico();
+  }
+
+  // Outros recibos do mesmo avaliador (assinados, pagos).
+  function desenharHistorico() {
+    const outros = (dados.historico || []).filter(h => h.id !== dados.recibo.id);
+    const host = document.getElementById('reciboHistorico');
+    if (!outros.length) { host.innerHTML = ''; return; }
+    const st = (h) => h.pagoEm ? `pago em ${dataBR(h.pagoEm)}` : h.assinadoEm ? 'aguardando pagamento' : 'aberto';
+    host.innerHTML = '<b>Outros recibos</b><ul>' + outros.map(h =>
+      `<li><a href="recibo.html?recibo=${encodeURIComponent(h.id)}">${h.id.slice(0, 8).toUpperCase()}</a> · ${h.visitas} ${h.visitas === 1 ? 'visita' : 'visitas'} · ${centavosToDisplay(h.totalCentavos) || 'R$ 0,00'} · ${st(h)}</li>`).join('') + '</ul>';
   }
 
   preencher();

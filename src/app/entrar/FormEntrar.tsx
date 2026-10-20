@@ -79,7 +79,7 @@ export default function FormEntrar({
                 type="email"
                 className="campo"
                 autoComplete="email"
-                placeholder="nome@sousaaraujo.com.br"
+                placeholder="seu@email.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && email && enviarCodigo()}

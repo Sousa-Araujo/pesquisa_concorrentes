@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Upload } from "lucide-react";
 import CampoData from "@/components/CampoData";
-import LendoComIA from "./LendoComIA";
+import LendoComIA, { type EtapaLeitura } from "./LendoComIA";
 import { actCidades, actConcorrentes, actEmpreendimentos } from "@/app/agente/actions";
 
 type Item = { id: number; nome: string };
@@ -20,7 +20,8 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
   const [concs, setConcs] = useState<Item[]>([]);
   const [mes, setMes] = useState(mesInicial);
   const [arquivo, setArquivo] = useState<File | null>(null);
-  const [enviando, setEnviando] = useState(false);
+  const [etapa, setEtapa] = useState<EtapaLeitura | null>(null);
+  const enviando = etapa !== null;
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => { if (regional) actCidades(regional).then((cs) => setCidades(cs.map((c) => ({ id: c.id_cidade, nome: c.cidade })))); else setCidades([]); }, [regional]);
@@ -35,17 +36,21 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
     dados.set("arquivo", arquivo);
     dados.set("idConcorrente", idConc);
     dados.set("mes", mes);
-    setEnviando(true);
+    setEtapa("recebido");
     try {
       const r = await fetch("/api/tabelas", { method: "POST", body: dados });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setErro(j.error ?? "Não foi possível enviar."); return; }
+      if (!r.ok) { setErro(j.error ?? "Não foi possível enviar."); setEtapa(null); return; }
+      setEtapa("lendo");
+      // Se a leitura falhar, o arquivo já está guardado: a conferência mostra o aviso e o "Ler de novo".
+      await fetch(`/api/tabelas/${j.id}/ler`, { method: "POST" }).catch(() => null);
+      setEtapa("concluido");
+      await new Promise((ok) => setTimeout(ok, 900));
       if (podeConferir) router.push(`/gestor/tabelas/${j.id}`);
-      else { setArquivo(null); router.refresh(); }
+      else { setArquivo(null); setEtapa(null); router.refresh(); }
     } catch {
       setErro("Falha de conexão. Tente de novo.");
-    } finally {
-      setEnviando(false);
+      setEtapa(null);
     }
   }
 
@@ -93,10 +98,10 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
             onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
         </div>
         <button className="btn-primary btn-cabecalho" onClick={enviar} disabled={enviando}>
-          {enviando ? <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload size={14} aria-hidden="true" />}{enviando ? "Lendo com IA…" : "Enviar e ler"}
+          {enviando ? <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload size={14} aria-hidden="true" />}{enviando ? "Enviando…" : "Enviar e ler"}
         </button>
       </div>
-      {enviando && <LendoComIA />}
+      {etapa && <LendoComIA etapa={etapa} />}
       {erro && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
     </div>
   );

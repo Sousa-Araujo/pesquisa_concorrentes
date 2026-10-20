@@ -35,7 +35,8 @@ export const PERMISSOES = {
   /** Tela de usuários. O Coordenador de Market Share só gere avaliadores. */
   gerirUsuarios: ["coordenador_market_share"],
   /** Tela de recibos de pagamento do Cliente Oculto: só o administrador. */
-  recibos: [],
+  // Recibos do Cliente Oculto: aprovar, devolver e marcar como pago.
+  recibos: ["coordenador_market_share"],
   /** Tabelas e espelhos: enviar o documento para leitura pela IA. */
   tabelasEnviar: ["supervisor_parcerias", "coordenador_market_share"],
   /** Tabelas e espelhos: conferir a leitura e aprovar (vai para a Pesquisa). */
@@ -53,17 +54,16 @@ export function temPermissao(perfis: readonly string[], permissao: Permissao): b
   return PERMISSOES[permissao].some((p) => perfis.includes(p));
 }
 
-/** Domínio de e-mail obrigatório para quem é da empresa. */
+/** Domínio de e-mail obrigatório para o administrador. */
 export const DOMINIO_EMAIL_EMPRESA = "sousaaraujo.com.br";
 
 /**
- * Usuários internos precisam de e-mail @sousaaraujo.com.br. A exceção é
- * quem é só Avaliador (Cliente Oculto): são pessoas contratadas de fora,
- * normalmente para uma visita, sem e-mail da empresa.
+ * Só o administrador precisa de e-mail @sousaaraujo.com.br. Os demais
+ * perfis podem usar qualquer e-mail: são cadastrados no sistema, recebem o
+ * convite por e-mail e entram com o código enviado para esse endereço.
  */
 export function emailPermitidoPara(email: string, perfis: readonly string[]): boolean {
-  const soAvaliador = perfis.length > 0 && perfis.every((p) => p === "avaliador");
-  if (soAvaliador) return true;
+  if (!perfis.includes("admin")) return true;
   return email.trim().toLowerCase().endsWith(`@${DOMINIO_EMAIL_EMPRESA}`);
 }
 
