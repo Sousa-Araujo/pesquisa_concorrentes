@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Camera, Check, LogOut, Moon, Settings, UserRound } from "lucide-react";
 import type { Menu } from "@/lib/menu";
 import { aplicarTema, enviarFoto, reduzirFoto, temaAtual } from "@/lib/cliente/perfil";
+import { avisar } from "@/lib/cliente/dialogo";
 
 /** "Ver o sistema como" (administrador): troca o perfil em uso e vai para a tela inicial dele. */
 async function trocarVisao(perfil: string) {
@@ -18,11 +19,18 @@ async function trocarVisao(perfil: string) {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ perfil }),
   }).catch(() => null);
   const j = await r?.json().catch(() => null);
-  if (!r?.ok) { alert(j?.error ?? "Não foi possível trocar a visualização."); return; }
+  if (!r?.ok) { await avisar(j?.error ?? "Não foi possível trocar a visualização."); return; }
+  limparMenuGuardado();
   window.location.href = j.destino;
 }
 
+/** Menu guardado pelas telas do Cliente Oculto (public/design/shell.js). */
+function limparMenuGuardado() {
+  try { sessionStorage.removeItem("ms-menu-cache"); } catch { /* sem armazenamento */ }
+}
+
 async function sair() {
+  limparMenuGuardado();
   await fetch("/api/co/auth/logout", { method: "POST" }).catch(() => {});
   window.location.href = "/entrar";
 }
@@ -54,7 +62,7 @@ export default function Navbar({ usuario }: { usuario: Menu["usuario"] }) {
       await enviarFoto(nova);
       setFoto(nova);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Não foi possível salvar a foto.");
+      await avisar(e instanceof Error ? e.message : "Não foi possível salvar a foto.");
     }
   }
 

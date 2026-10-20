@@ -32,7 +32,7 @@ export default async function TabelasPage({ searchParams: sp }: { searchParams: 
         <p className="ms-alert ms-alert--info">A leitura por IA ainda não está configurada neste ambiente. O envio funciona e os números podem ser preenchidos na conferência.</p>
       )}
       {podeEnviar && <EnvioTabela regionais={regionais.map((r) => r.regional)} mesInicial={competenciaVigente().slice(0, 7)} podeConferir={podeConferir} />}
-      <ListaLeituras leituras={leituras} filtro={filtro} podeExcluir={u.perfis.includes("admin")} />
+      <ListaLeituras leituras={leituras} filtro={filtro} podeExcluir={u.perfis.includes("admin")} podeConferir={podeConferir} />
     </div>
   );
 }

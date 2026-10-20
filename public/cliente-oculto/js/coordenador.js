@@ -74,15 +74,15 @@
     }
     return false;
   }
-  function confirmLeaveCalibragem() {
+  async function confirmLeaveCalibragem() {
     const cur = views.find(v => document.getElementById(v).style.display !== 'none');
     if (cur !== 'view-calibragem') return true;
     if (!hasUnsavedGapDraft('gapsList')) return true;
-    return confirm('Há um gap preenchido mas não salvo nesta calibragem. Deseja sair mesmo assim e perder esse rascunho?');
+    return coConfirmar('Há um gap preenchido mas não salvo nesta calibragem. Deseja sair mesmo assim e perder esse rascunho?', { titulo: 'Sair sem salvar o gap?', textoConfirmar: 'Sair', perigo: true });
   }
 
-  document.getElementById('backToListBtn').addEventListener('click', () => {
-    if (!confirmLeaveCalibragem()) return;
+  document.getElementById('backToListBtn').addEventListener('click', async () => {
+    if (!(await confirmLeaveCalibragem())) return;
     const cur = views.find(v => document.getElementById(v).style.display !== 'none');
     if (cur === 'view-report' && reportStack.length) {
       const prevId = reportStack.pop();
@@ -94,8 +94,10 @@
     history.pushState(null, '', 'coordenador.html');
     router();
   });
-  document.querySelector('.brand').addEventListener('click', (e) => {
-    if (!confirmLeaveCalibragem()) { e.preventDefault(); }
+  document.querySelector('.brand').addEventListener('click', async (e) => {
+    const destino = e.currentTarget.href;
+    e.preventDefault();
+    if (await confirmLeaveCalibragem()) location.href = destino;
   });
 
   // ---------------------------------------------------------------------
@@ -656,10 +658,10 @@
 
   async function onConcluir(avId) {
     if (hasUnsavedGapDraft('gapsList')) {
-      alert('Existe um gap preenchido que ainda não foi salvo. Clique em "✓ Salvar gap" antes de concluir o diagnóstico, ou apague o rascunho.');
+      coAvisar('Existe um gap preenchido que ainda não foi salvo. Clique em "✓ Salvar gap" antes de concluir o diagnóstico, ou apague o rascunho.', 'Gap não salvo');
       return;
     }
-    if (!confirm('Concluir o diagnóstico? Após concluída, a avaliação não poderá mais ser editada nesta versão.')) return;
+    if (!(await coConfirmar('Após concluída, a avaliação não poderá mais ser editada nesta versão.', { titulo: 'Concluir o diagnóstico?', textoConfirmar: 'Concluir' }))) return;
     try {
       await api.concluir(avId);
       router();

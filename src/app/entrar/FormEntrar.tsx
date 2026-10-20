@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirmarCodigo, solicitarCodigo } from "./actions";
 
@@ -18,6 +18,8 @@ export default function FormEntrar({
   const [aviso, setAviso] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  // Quem chega na tela de entrada não pode ver o menu guardado de outra pessoa (public/design/shell.js).
+  useEffect(() => { try { sessionStorage.removeItem("ms-menu-cache"); } catch { /* sem armazenamento */ } }, []);
 
   async function enviarCodigo() {
     setErro(null); setAviso(null);

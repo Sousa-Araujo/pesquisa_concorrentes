@@ -3,15 +3,13 @@
 /**
  * Recibos do Cliente Oculto (Coordenador de Market Share e administrador):
  * um recibo por avaliador com as visitas. Fluxo: não assinado → aguardando
- * aprovação → aprovado (a pagar) → pago. Dá para devolver para correção.
+ * aprovação → aprovado (a pagar) → pago. Aprovar, devolver e pagar ficam
+ * dentro do recibo (public/cliente-oculto/recibo.html); aqui só a lista.
  */
-import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import CampoData from "@/components/CampoData";
-import Modal from "@/components/Modal";
 import type { LinhaRecibo, StatusRecibo } from "@/lib/cliente-oculto/recibo";
-import { definirAprovacao, definirPagamento, devolver } from "./actions";
 
 const STATUS: Record<StatusRecibo, { rotulo: string; cor: string }> = {
   nao_assinado: { rotulo: "Não assinado", cor: "bg-[var(--surface-2)] text-ink/60" },
@@ -28,11 +26,6 @@ export default function GestaoRecibos({
   itens, todosDoMes, status, mes,
 }: { itens: LinhaRecibo[]; todosDoMes: LinhaRecibo[]; status: string; mes: string }) {
   const router = useRouter();
-  const [erro, setErro] = useState<string | null>(null);
-  const [pendente, iniciar] = useTransition();
-  const [devolvendo, setDevolvendo] = useState<LinhaRecibo | null>(null);
-  const [motivo, setMotivo] = useState("");
-
   const ir = (next: { status?: string; mes?: string }) => {
     const p = new URLSearchParams();
     const s = next.status ?? status, m = next.mes ?? mes;
@@ -43,32 +36,6 @@ export default function GestaoRecibos({
 
   const doStatus = (st: StatusRecibo) => todosDoMes.filter((r) => r.status === st);
   const soma = (st: StatusRecibo) => doStatus(st).reduce((a, r) => a + (r.valorCentavos ?? 0), 0);
-
-  function executar(acao: () => Promise<{ ok: true } | { ok: false; erro: string }>) {
-    setErro(null);
-    iniciar(async () => {
-      const res = await acao();
-      if (!res.ok) setErro(res.erro);
-      router.refresh();
-    });
-  }
-  const nome = (r: LinhaRecibo) => `${r.avaliador ?? "avaliador"} (${brl(r.valorCentavos)})`;
-  const aprovar = (r: LinhaRecibo, sim: boolean) => {
-    if (sim && !confirm(`Aprovar o recibo de ${nome(r)}?`)) return;
-    executar(() => definirAprovacao(r.reciboId, sim));
-  };
-  const pagar = (r: LinhaRecibo, sim: boolean) => {
-    if (sim && !confirm(`Marcar o recibo de ${nome(r)} como pago?`)) return;
-    executar(() => definirPagamento(r.reciboId, sim));
-  };
-  function confirmarDevolucao() {
-    if (!devolvendo) return;
-    if (!motivo.trim()) { setErro("Escreva o motivo da devolução."); return; }
-    const r = devolvendo;
-    setDevolvendo(null);
-    executar(() => devolver(r.reciboId, motivo));
-    setMotivo("");
-  }
 
   const cartoes: { st: StatusRecibo; titulo: string; sub: (n: number) => string; valor: boolean }[] = [
     { st: "aguardando_aprovacao", titulo: "A aprovar", sub: (n) => `${n} recibo(s) assinado(s)`, valor: true },
@@ -118,8 +85,6 @@ export default function GestaoRecibos({
       </div>
       <p className="-mt-3 text-xs text-ink/50">{mes ? "Totais do mês escolhido." : "Totais de todos os meses."}</p>
 
-      {erro && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
-
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
@@ -158,21 +123,6 @@ export default function GestaoRecibos({
                     <a className="btn-acao" href={`/cliente-oculto/recibo.html?recibo=${encodeURIComponent(r.reciboId)}`}>
                       <FileText size={13} aria-hidden="true" />Abrir
                     </a>
-                    {r.status === "aguardando_aprovacao" && (
-                      <>
-                        <button className="btn-acao" disabled={pendente} onClick={() => aprovar(r, true)}>Aprovar</button>
-                        <button className="btn-acao btn-acao--perigo" disabled={pendente} onClick={() => { setMotivo(""); setDevolvendo(r); }}>Devolver</button>
-                      </>
-                    )}
-                    {r.status === "aprovado" && (
-                      <>
-                        <button className="btn-acao" disabled={pendente} onClick={() => pagar(r, true)}>Marcar como pago</button>
-                        <button className="btn-acao btn-acao--neutro" disabled={pendente} onClick={() => aprovar(r, false)}>Desfazer aprovação</button>
-                      </>
-                    )}
-                    {r.status === "pago" && (
-                      <button className="btn-acao btn-acao--neutro" disabled={pendente} onClick={() => pagar(r, false)}>Desfazer pagamento</button>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -181,21 +131,6 @@ export default function GestaoRecibos({
         </table>
       </div>
 
-      {devolvendo && (
-        <Modal titulo="Devolver recibo para correção" largura="estreita" onFechar={() => setDevolvendo(null)}>
-          <h2 className="mb-2 text-lg font-bold text-ink">Devolver recibo para correção</h2>
-          <p className="mb-3 text-sm text-ink/60">
-            A assinatura de {devolvendo.avaliador ?? "avaliador"} é apagada e o motivo aparece no recibo para ele corrigir e assinar de novo.
-          </p>
-          <label className="rotulo" htmlFor="dev-motivo">Motivo</label>
-          <textarea id="dev-motivo" className="campo" rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ex.: valor da visita do dia 10/10 está diferente do combinado; chave PIX incompleta." />
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" className="btn-secundario" onClick={() => setDevolvendo(null)}>Cancelar</button>
-            <button type="button" className="btn-primary" onClick={confirmarDevolucao}>Devolver</button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

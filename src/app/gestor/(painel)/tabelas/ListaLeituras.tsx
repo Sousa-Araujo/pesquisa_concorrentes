@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { Leitura, StatusLeitura } from "@/lib/data/tabelas";
+import { confirmar } from "@/lib/cliente/dialogo";
 import { excluir } from "./[id]/actions";
 
 export const STATUS_LEITURA: Record<StatusLeitura, { rotulo: string; cor: string }> = {
@@ -13,24 +14,27 @@ export const STATUS_LEITURA: Record<StatusLeitura, { rotulo: string; cor: string
   recusada: { rotulo: "Recusada", cor: "bg-[var(--critical-tint)] text-[var(--critical-ink)]" },
 };
 
-const confirmarExclusao = (l: Leitura) => confirm(
-  l.status === "aprovada"
-    ? `Excluir a leitura de ${l.concorrente}? Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto.`
-    : `Excluir a leitura de ${l.concorrente}? O arquivo enviado também é apagado.`,
-);
+const confirmarExclusao = (l: Leitura) => confirmar({
+  titulo: `Excluir a leitura de ${l.concorrente}?`,
+  mensagem: l.status === "aprovada"
+    ? "Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto. O arquivo enviado também é apagado."
+    : "O arquivo enviado também é apagado.",
+  textoConfirmar: "Excluir",
+  perigo: true,
+});
 
 const mesBR = (m: string) => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
 const dataBR = (d: string) => new Date(d).toLocaleDateString("pt-BR");
 
 /** filtro null = sem o seletor de status (tela Para conferir). */
-export default function ListaLeituras({ leituras, filtro, titulo = "Leituras enviadas", podeExcluir = false }: {
-  leituras: Leitura[]; filtro: string | null; titulo?: string; podeExcluir?: boolean;
+export default function ListaLeituras({ leituras, filtro, titulo = "Leituras enviadas", podeExcluir = false, podeConferir = true }: {
+  leituras: Leitura[]; filtro: string | null; titulo?: string; podeExcluir?: boolean; podeConferir?: boolean;
 }) {
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
-  function fazerExcluir(l: Leitura) {
-    if (!confirmarExclusao(l)) return;
+  async function fazerExcluir(l: Leitura) {
+    if (!(await confirmarExclusao(l))) return;
     setErro(null);
     iniciar(async () => {
       const r = await excluir(l.id);
@@ -80,7 +84,7 @@ export default function ListaLeituras({ leituras, filtro, titulo = "Leituras env
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="acoes-linha justify-end">
-                    <a className="btn-acao" href={`/gestor/tabelas/${l.id}`}>{l.status === "para_conferir" ? "Conferir" : "Abrir"}</a>
+                    <a className="btn-acao" href={`/gestor/tabelas/${l.id}`}>{l.status === "para_conferir" && podeConferir ? "Conferir" : "Abrir"}</a>
                     {podeExcluir && (
                       <button className="btn-acao btn-acao--perigo !px-2" title="Excluir leitura" aria-label={`Excluir leitura de ${l.concorrente}`}
                         disabled={pendente} onClick={() => fazerExcluir(l)}>

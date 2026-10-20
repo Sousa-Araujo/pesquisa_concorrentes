@@ -16,6 +16,7 @@ import { STATUS_LEITURA } from "../ListaLeituras";
 import LendoComIA, { type EtapaLeitura } from "../LendoComIA";
 import ResumoUnidades from "./ResumoUnidades";
 import EditarUnidade from "./EditarUnidade";
+import { confirmar } from "@/lib/cliente/dialogo";
 import { aprovar, excluir, lerDeNovo, recusar, salvar } from "./actions";
 
 const brl = (c: number | null) => (c === null ? "—" : (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }));
@@ -77,8 +78,8 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
     setErro(null); setAviso(null);
     iniciar(async () => { await salvar(leitura.id, conferencia()); setAviso("Conferência salva."); router.refresh(); });
   }
-  function fazerAprovar() {
-    if (!confirm("Aprovar? Estoque e vendas entram na Pesquisa deste mês (substituindo a coleta do agente, se houver) e os preços vão para o comparativo.")) return;
+  async function fazerAprovar() {
+    if (!(await confirmar({ titulo: "Aprovar e enviar para a Pesquisa?", mensagem: "Estoque e vendas entram na Pesquisa deste mês (substituindo a coleta do agente, se houver) e os preços vão para o comparativo.", textoConfirmar: "Aprovar" }))) return;
     setErro(null); setAviso(null);
     iniciar(async () => {
       const r = await aprovar(leitura.id, conferencia());
@@ -97,11 +98,11 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
       window.location.reload();
     });
   }
-  function fazerExcluir() {
+  async function fazerExcluir() {
     const msg = leitura.status === "aprovada"
-      ? "Excluir esta leitura? Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto."
-      : "Excluir esta leitura? O arquivo enviado também é apagado.";
-    if (!confirm(msg)) return;
+      ? "Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto. O arquivo enviado também é apagado."
+      : "O arquivo enviado também é apagado.";
+    if (!(await confirmar({ titulo: "Excluir esta leitura?", mensagem: msg, textoConfirmar: "Excluir", perigo: true }))) return;
     setErro(null);
     iniciar(async () => {
       const r = await excluir(leitura.id);

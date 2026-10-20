@@ -49,6 +49,8 @@
     salvarRecibo: (id, dados) => request('PUT', `/recibos/${encodeURIComponent(id)}`, dados),
     assinarRecibo: (id, assinatura) => request('POST', `/recibos/${encodeURIComponent(id)}/assinar`, { assinatura }),
     marcarReciboPago: (id, pago) => request('POST', `/recibos/${encodeURIComponent(id)}/pago`, { pago }),
+    aprovarRecibo: (id, aprovado) => request('POST', `/recibos/${encodeURIComponent(id)}/aprovar`, { aprovado }),
+    devolverRecibo: (id, motivo) => request('POST', `/recibos/${encodeURIComponent(id)}/devolver`, { motivo }),
 
     // Cadastro da Pesquisa de Concorrentes
     cadastroEmpreendimentos: () => request('GET', '/cadastro/empreendimentos'),

@@ -147,6 +147,27 @@
 .ms-rail i[data-lucide], .ms-rail svg.lucide { width: 18px; height: 18px; }
 @media (prefers-reduced-motion: reduce) { .ms-dual .ms-panel { transition: none; } }
 
+/* Diálogo do sistema (public/design/dialogo.js) no lugar do confirm()/alert() do navegador. */
+.ms-dialogo-fundo { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: rgb(0 0 0 / 0.45); opacity: 0; transition: opacity 0.16s ease; }
+.ms-dialogo-fundo.is-aberto { opacity: 1; }
+.ms-dialogo { width: 100%; max-width: 440px; box-sizing: border-box; padding: var(--space-6); border-radius: var(--radius-card); background: var(--surface); color: var(--text); box-shadow: var(--shadow-3, 0 18px 48px rgb(0 0 0 / 0.22)); transform: translateY(8px) scale(0.98); transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); font-family: var(--font-sans); }
+.ms-dialogo-fundo.is-aberto .ms-dialogo { transform: none; }
+.ms-dialogo-titulo { margin: 0 0 var(--space-2); color: var(--ink); font-size: 18px; font-weight: 700; line-height: 24px; }
+.ms-dialogo-texto { margin: 0; color: var(--text-2); font-size: 14px; line-height: 21px; white-space: pre-line; }
+.ms-dialogo-rotulo { display: block; margin-top: var(--space-4); margin-bottom: 4px; color: var(--text-2); font-size: 12px; font-weight: 700; }
+.ms-dialogo-campo { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface-2); color: var(--text); font: 400 14px/1.4 var(--font-sans); resize: vertical; }
+.ms-dialogo-campo:focus { outline: none; border-color: var(--brand); }
+.ms-dialogo-erro { min-height: 16px; margin: 4px 0 0; color: var(--critical); font-size: 12px; }
+.ms-dialogo-acoes { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }
+.ms-dialogo-btn { min-height: 38px; padding: 8px 16px; border-radius: var(--radius-control); border: 1px solid transparent; font: 700 12px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.ms-dialogo-btn--primario { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.ms-dialogo-btn--primario:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.ms-dialogo-btn--perigo { background: var(--critical); border-color: var(--critical); color: #fff; }
+.ms-dialogo-btn--secundario { background: var(--surface); border-color: var(--line-strong); color: var(--brand-text); }
+.ms-dialogo-btn--secundario:hover { border-color: var(--brand); }
+.ms-dialogo-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .ms-dialogo-fundo, .ms-dialogo { transition: none; } }
+
 /* Troca de tela suave: crossfade do navegador entre páginas (o cabeçalho e o
    trilho ficam parados) e o conteúdo novo entra com um fade curto. */
 @view-transition { navigation: auto; }

@@ -29,6 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Fonte Satoshi (a mesma do site sousaaraujo.com.br). */}
         <link rel="preconnect" href="https://api.fontshare.com" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" />
+        {/* Diálogo do sistema no lugar do confirm()/alert() (src/lib/cliente/dialogo.ts). */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/design/dialogo.js" />
       </head>
       <body>{children}</body>
     </html>

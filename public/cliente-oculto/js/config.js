@@ -238,3 +238,15 @@
     escapeHtml, escapeAttr,
   };
 })(window);
+
+// Diálogo do sistema (public/design/dialogo.js) no lugar do confirm()/alert()
+// do navegador; o do navegador fica de reserva se o script não carregar.
+window.coConfirmar = function (mensagem, o) {
+  o = Object.assign({}, o || {}, { mensagem: mensagem });
+  return window.MSDialogo ? window.MSDialogo.confirmar(o) : Promise.resolve(window.confirm(mensagem));
+};
+window.coAvisar = function (mensagem, titulo) {
+  if (window.MSDialogo) return window.MSDialogo.avisar({ mensagem: mensagem, titulo: titulo });
+  window.alert(mensagem);
+  return Promise.resolve();
+};

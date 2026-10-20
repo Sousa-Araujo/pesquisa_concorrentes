@@ -43,21 +43,23 @@
     }
     return false;
   }
-  function confirmLeaveEdit() {
+  async function confirmLeaveEdit() {
     const cur = views.find(v => document.getElementById(v).style.display !== 'none');
     if (cur !== 'view-edit') return true;
-    if (hasUnsavedGapDraft('adminGapsList') && !confirm('Há um gap preenchido mas não salvo nesta edição. Deseja sair mesmo assim e perder esse rascunho?')) return false;
-    if (adminDirty && !confirm('Há alterações não salvas nesta avaliação. Deseja sair mesmo assim e perdê-las?')) return false;
+    if (hasUnsavedGapDraft('adminGapsList') && !(await coConfirmar('Há um gap preenchido mas não salvo nesta edição. Deseja sair mesmo assim e perder esse rascunho?', { titulo: 'Sair sem salvar o gap?', textoConfirmar: 'Sair', perigo: true }))) return false;
+    if (adminDirty && !(await coConfirmar('Há alterações não salvas nesta avaliação. Deseja sair mesmo assim e perdê-las?', { titulo: 'Sair sem salvar?', textoConfirmar: 'Sair', perigo: true }))) return false;
     return true;
   }
 
-  document.getElementById('backToListBtn').addEventListener('click', () => {
-    if (!confirmLeaveEdit()) return;
+  document.getElementById('backToListBtn').addEventListener('click', async () => {
+    if (!(await confirmLeaveEdit())) return;
     history.pushState(null, '', 'admin.html');
     router();
   });
-  document.getElementById('brandLink').addEventListener('click', (e) => {
-    if (!confirmLeaveEdit()) { e.preventDefault(); }
+  document.getElementById('brandLink').addEventListener('click', async (e) => {
+    const destino = e.currentTarget.href;
+    e.preventDefault();
+    if (await confirmLeaveEdit()) location.href = destino;
   });
 
   // ---------------------------------------------------------------------
@@ -138,7 +140,7 @@
     tbody.querySelectorAll('[data-delete-row]').forEach(btn => btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = btn.getAttribute('data-delete-row');
-      if (!confirm(`Excluir a avaliação ${id}? Ela sai das listas e relatórios, mas o registro é mantido (exclusão lógica) e pode ser restaurado depois.`)) return;
+      if (!(await coConfirmar(`Excluir a avaliação ${id}? Ela sai das listas e relatórios, mas o registro é mantido (exclusão lógica) e pode ser restaurado depois.`, { titulo: 'Excluir avaliação', textoConfirmar: 'Excluir', perigo: true }))) return;
       try { await api.excluir(id); toast('Avaliação excluída.'); loadList(); }
       catch (err) { toast(err.message); }
     }));
@@ -218,7 +220,7 @@
       };
     } else {
       document.getElementById('adminDeleteBtn').onclick = async () => {
-        if (!confirm('Excluir esta avaliação? Ela sai das listas e relatórios, mas o registro é mantido (exclusão lógica) e pode ser restaurado depois.')) return;
+        if (!(await coConfirmar('Excluir esta avaliação? Ela sai das listas e relatórios, mas o registro é mantido (exclusão lógica) e pode ser restaurado depois.', { titulo: 'Excluir avaliação', textoConfirmar: 'Excluir', perigo: true }))) return;
         try {
           await api.excluir(av.id);
           toast('Avaliação excluída.');
@@ -468,7 +470,7 @@
 
   async function saveAllAdminChanges(avId) {
     if (hasUnsavedGapDraft('adminGapsList')) {
-      alert('Existe um gap preenchido que ainda não foi salvo. Clique em "✓ Salvar gap" antes de salvar as alterações, ou apague o rascunho — caso contrário ele não será incluído.');
+      coAvisar('Existe um gap preenchido que ainda não foi salvo. Clique em "✓ Salvar gap" antes de salvar as alterações, ou apague o rascunho — caso contrário ele não será incluído.', 'Gap não salvo');
       return;
     }
     const btns = ['adminSaveBtnTop', 'adminSaveBtnBottom'].map(id => document.getElementById(id)).filter(Boolean);

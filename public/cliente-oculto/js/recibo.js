@@ -16,7 +16,7 @@
 
   function toast(msg) {
     const t = document.getElementById('toast');
-    if (!t) return alert(msg);
+    if (!t) return coAvisar(msg);
     t.textContent = msg; t.classList.add('show');
     clearTimeout(toast._h); toast._h = setTimeout(() => t.classList.remove('show'), 3800);
   }
@@ -131,7 +131,7 @@
     desenharVisitas();
     atualizarTotal();
     document.getElementById('reciboForm').style.display = ehAvaliador ? '' : 'none';
-    if (!ehAvaliador) document.querySelector('.recibo-layout').style.gridTemplateColumns = 'minmax(0, 1fr)';
+    if (!ehAvaliador) document.querySelector('.recibo-layout').classList.add('so-documento');
   }
 
   function payload() {
@@ -214,11 +214,45 @@
   });
 
   document.getElementById('imprimirBtn').addEventListener('click', () => window.print());
-  document.getElementById('pagoBtn').addEventListener('click', async () => {
-    const pago = !dados.recibo.pagoEm;
-    if (pago && !confirm('Marcar este recibo como pago?')) return;
-    try { dados = await api.marcarReciboPago(reciboId(), pago); desenharDoc(); } catch (err) { toast(err.message); }
+  // Coordenador de Market Share / administrador: aprovar, devolver e pagar no próprio recibo.
+  async function acaoCoord(fn, sucesso) {
+    try { dados = await fn(); desenharDoc(); toast(sucesso); } catch (err) { toast(err.message); }
+  }
+  const ACOES_COORD = {
+    aprovar: async () => {
+      if (!(await coConfirmar('Depois de aprovado, o recibo fica a pagar.', { titulo: 'Aprovar recibo?', textoConfirmar: 'Aprovar' }))) return;
+      acaoCoord(() => api.aprovarRecibo(reciboId(), true), 'Recibo aprovado ✓');
+    },
+    devolver: async () => {
+      const motivo = window.MSDialogo ? await window.MSDialogo.pedirTexto({
+        titulo: 'Devolver recibo para correção',
+        mensagem: 'A assinatura é apagada e o motivo aparece no recibo para o avaliador corrigir e assinar de novo.',
+        rotulo: 'Motivo', placeholder: 'Ex.: valor da visita diferente do combinado; chave PIX incompleta.',
+        textoConfirmar: 'Devolver', perigo: true, erroVazio: 'Escreva o motivo da devolução.',
+      }) : window.prompt('Motivo da devolução');
+      if (!motivo) return;
+      acaoCoord(() => api.devolverRecibo(reciboId(), motivo), 'Recibo devolvido ao avaliador');
+    },
+    pagar: async () => {
+      if (!(await coConfirmar('Confirme que o PIX deste recibo já foi feito.', { titulo: 'Marcar como pago?', textoConfirmar: 'Marcar como pago' }))) return;
+      acaoCoord(() => api.marcarReciboPago(reciboId(), true), 'Recibo marcado como pago ✓');
+    },
+    desfazerAprovacao: () => acaoCoord(() => api.aprovarRecibo(reciboId(), false), 'Aprovação desfeita'),
+    desfazerPagamento: () => acaoCoord(() => api.marcarReciboPago(reciboId(), false), 'Pagamento desfeito'),
+  };
+  document.getElementById('acoesCoord').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-acao]');
+    if (b && ACOES_COORD[b.getAttribute('data-acao')]) ACOES_COORD[b.getAttribute('data-acao')]();
   });
+  function desenharAcoesCoord() {
+    const r = dados.recibo, host = document.getElementById('acoesCoord');
+    if (!ehCoordenador) { host.innerHTML = ''; return; }
+    const bt = (acao, rot, cls) => `<button class="btn ${cls} btn-sm" type="button" data-acao="${acao}">${rot}</button>`;
+    host.innerHTML = r.pagoEm ? bt('desfazerPagamento', 'Desfazer pagamento', 'btn-ghost')
+      : r.aprovadoEm ? bt('desfazerAprovacao', 'Desfazer aprovação', 'btn-ghost') + bt('pagar', 'Marcar como pago', 'btn-primary')
+      : r.assinadoEm ? bt('devolver', 'Devolver', 'btn-ghost') + bt('aprovar', 'Aprovar', 'btn-primary')
+      : '';
+  }
 
   // ---------------------------------------------------------------------
   // Documento (o que sai na impressão / PDF)
@@ -269,9 +303,7 @@
           : r.devolvidoMotivo
             ? `<span class="status-badge tone-critico">Devolvido para correção</span><span class="field-help">Motivo: ${escapeHtml(r.devolvidoMotivo)}${ehAvaliador ? " — corrija e assine de novo." : ""}</span>`
             : `<span class="status-badge tone-muted">Ainda não assinado</span>`;
-    const pagoBtn = document.getElementById('pagoBtn');
-    pagoBtn.style.display = ehCoordenador && (r.aprovadoEm || r.pagoEm) ? '' : 'none';
-    pagoBtn.textContent = r.pagoEm ? 'Desfazer pagamento' : 'Marcar como pago';
+    desenharAcoesCoord();
     const bloqueado = !ehAvaliador || !!r.pagoEm;
     document.querySelectorAll('#reciboForm input, #reciboForm select, #reciboForm button').forEach(e => { e.disabled = bloqueado; });
     document.getElementById('valorTotal').disabled = false;

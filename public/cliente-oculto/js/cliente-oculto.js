@@ -627,7 +627,7 @@
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest && e.target.closest('[data-remover-foto]');
     if (!btn) return;
-    if (!confirm('Remover esta foto?')) return;
+    if (!(await coConfirmar('A foto sai desta avaliação.', { titulo: 'Remover esta foto?', textoConfirmar: 'Remover', perigo: true }))) return;
     try { avaliacao.fotos = await api.removerFoto(avaliacao.id, btn.getAttribute('data-remover-foto')); desenharFotos(); }
     catch (err) { toast(err.message); }
   });
@@ -763,7 +763,7 @@
       toast(`Preencha os campos obrigatórios antes de finalizar: ${faltando.join(', ')}.`);
       return;
     }
-    if (!confirm('Finalizar e enviar esta avaliação? Depois de enviada, os dados ficam preservados como registro original e a avaliação segue para calibragem do Coordenador de Market Share.')) return;
+    if (!(await coConfirmar('Depois de enviada, os dados ficam preservados como registro original e a avaliação segue para calibragem do Coordenador de Market Share.', { titulo: 'Finalizar e enviar a avaliação?', textoConfirmar: 'Finalizar e enviar' }))) return;
     try {
       avaliacao = await api.finalizar(avaliacao.id);
       document.getElementById('formState').style.display = 'none';

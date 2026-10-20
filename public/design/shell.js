@@ -12,6 +12,10 @@
   css('/design/tokens.css');
   css('/design/ms.css');
   css('/design/legado.css');
+  // Diálogo do sistema no lugar do confirm()/alert() do navegador.
+  if (!window.MSDialogo) {
+    var dlg = document.createElement('script'); dlg.src = '/design/dialogo.js'; document.head.appendChild(dlg);
+  }
   // Tema escolhido no menu do usuário (o mesmo das telas em React: src/lib/cliente/perfil.ts).
   var CHAVE_TEMA = 'ms-tema';
   function lerTema() {
@@ -32,6 +36,9 @@
   var ICONES = { home: 'house', chart: 'chart-column', eye: 'eye', doc: 'file-text', users: 'users', receipt: 'receipt', plus: 'circle-plus', list: 'list-checks', menu: 'menu', logout: 'log-out' };
   function icone(nome) {
     return '<i data-lucide="' + (ICONES[nome] || nome) + '" aria-hidden="true"></i>';
+  }
+  function avisar(msg) {
+    if (window.MSDialogo) window.MSDialogo.avisar({ mensagem: msg }); else window.alert(msg);
   }
   function el(tag, attrs, html) {
     var e = document.createElement(tag);
@@ -106,8 +113,8 @@
       reduzirFoto(f, function (foto) {
         fetch('/api/perfil/foto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ foto: foto }) })
           .then(function (r) { if (!r.ok) throw new Error(); desenharAvatar(foto); })
-          .catch(function () { alert('Não foi possível salvar a foto.'); });
-      }, function (msg) { alert(msg); });
+          .catch(function () { avisar('Não foi possível salvar a foto.'); });
+      }, function (msg) { avisar(msg); });
     });
     var btFoto = el('button', { type: 'button', role: 'menuitem', 'class': 'ms-user-item' }, '<i data-lucide="camera" aria-hidden="true"></i>Foto do perfil');
     btFoto.addEventListener('click', function () { arquivo.click(); });
@@ -127,6 +134,7 @@
 
     var btSair = el('button', { type: 'button', role: 'menuitem', 'class': 'ms-user-item ms-user-item--sair' }, '<i data-lucide="log-out" aria-hidden="true"></i>Sair');
     btSair.addEventListener('click', function () {
+      try { sessionStorage.removeItem('ms-menu-cache'); } catch (e) { /* sem armazenamento */ }
       fetch('/api/co/auth/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/entrar'; });
     });
 
@@ -143,8 +151,12 @@
         b.addEventListener('click', function () {
           if (atual) return;
           fetch('/api/perfil/visao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ perfil: v.valor }) })
-            .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error); location.href = j.destino; }); })
-            .catch(function (e) { alert(e.message || 'Não foi possível trocar a visualização.'); });
+            .then(function (r) { return r.json().then(function (j) {
+              if (!r.ok) throw new Error(j.error);
+              try { sessionStorage.removeItem('ms-menu-cache'); } catch (e) { /* sem armazenamento */ }
+              location.href = j.destino;
+            }); })
+            .catch(function (e) { avisar(e.message || 'Não foi possível trocar a visualização.'); });
         });
         caixa.appendChild(b);
       });
@@ -325,23 +337,45 @@
     dual.appendChild(painel);
     desenharPainel();
 
-    var app = el('div', { 'class': 'ms-app ms-legado' });
-    var shell = el('div', { 'class': 'ms-shell' });
-    var main = el('div', { 'class': 'ms-main' });
-    while (document.body.firstChild) main.appendChild(document.body.firstChild);
-    shell.appendChild(dual);
-    shell.appendChild(main);
-    app.appendChild(navbar(menu.usuario));
-    app.appendChild(shell);
-    app.appendChild(barraInferior(menu, atual));
-    document.body.appendChild(app);
+    var topo = navbar(menu.usuario);
+    var baixo = barraInferior(menu, atual);
+    var nosBaixo = Array.prototype.slice.call(baixo.childNodes);
+    if (!montado) {
+      var app = el('div', { 'class': 'ms-app ms-legado' });
+      var shell = el('div', { 'class': 'ms-shell' });
+      var main = el('div', { 'class': 'ms-main' });
+      while (document.body.firstChild) main.appendChild(document.body.firstChild);
+      shell.appendChild(dual);
+      shell.appendChild(main);
+      app.appendChild(topo);
+      app.appendChild(shell);
+      app.appendChild(baixo);
+      document.body.appendChild(app);
+    } else {
+      // Menu atualizado pelo servidor: troca só a moldura; o conteúdo da página fica.
+      montado.topo.parentNode.replaceChild(topo, montado.topo);
+      montado.dual.parentNode.replaceChild(dual, montado.dual);
+      montado.baixo.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+      document.querySelector('.ms-app').appendChild(baixo);
+    }
+    montado = { topo: topo, dual: dual, baixo: nosBaixo };
     if (window.lucide) window.lucide.createIcons({ attrs: { width: 18, height: 18, 'stroke-width': 1.75 } });
     mostrar();
   }
+  var montado = null;
 
+  // O menu da tela anterior fica guardado na aba para a moldura aparecer na hora
+  // (a transição entre telas fica igual à das telas em React); o do servidor
+  // chega em seguida e substitui se mudou. Apagado ao entrar, sair e trocar de perfil.
+  var CHAVE_MENU = 'ms-menu-cache';
+  function lerCache() { try { return sessionStorage.getItem(CHAVE_MENU); } catch (e) { return null; } }
   function iniciar() {
-    fetch('/api/menu').then(function (r) { return r.ok ? r.json() : null; }).then(function (menu) {
-      if (menu) montar(menu); else mostrar();
+    var guardado = lerCache();
+    if (guardado) { try { montar(JSON.parse(guardado)); } catch (e) { guardado = null; } }
+    fetch('/api/menu').then(function (r) { return r.ok ? r.text() : null; }).then(function (texto) {
+      if (!texto) { mostrar(); return; }
+      try { sessionStorage.setItem(CHAVE_MENU, texto); } catch (e) { /* sem armazenamento */ }
+      if (texto !== guardado) montar(JSON.parse(texto));
     }).catch(function () { mostrar(); /* sem menu: a página segue como está */ });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
