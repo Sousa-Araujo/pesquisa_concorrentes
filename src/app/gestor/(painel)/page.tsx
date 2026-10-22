@@ -1,4 +1,5 @@
 import { exigirPagina } from "@/lib/auth/acesso";
+import { sincronizarSeAntigo } from "@/lib/data/sousaCV";
 import Link from "next/link";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import { formatarPercentual } from "@/lib/domain/dashboard";
@@ -16,6 +17,8 @@ export default async function DashboardPage({
   searchParams: Promise<{ mes?: string; regional?: string; cidade?: string; emp?: string }>;
 }) {
   await exigirPagina("painelPesquisa");
+  // Dados Sousa do BI do CV: atualiza em segundo plano se a última sincronização for antiga.
+  void sincronizarSeAntigo().catch(() => {});
   const searchParams = await searchParamsPromise;
   const mesAno = searchParams.mes ?? competenciaVigente();
   const regional = searchParams.regional ?? "";

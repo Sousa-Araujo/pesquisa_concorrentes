@@ -4,6 +4,7 @@
  * estoque), estoque e velocidade de vendas, e o atendimento do Cliente Oculto.
  */
 import { exigirPagina } from "@/lib/auth/acesso";
+import { sincronizarSeAntigo } from "@/lib/data/sousaCV";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import { listarEmpreendimentosResumo } from "@/lib/data/hierarquia";
 import { montarComparativo, type ColunaComparativo } from "@/lib/data/comparativo";
@@ -84,6 +85,8 @@ export default async function ComparativoPage({
   searchParams: sp,
 }: { searchParams: Promise<{ mes?: string; emp?: string }> }) {
   await exigirPagina("painelPesquisa");
+  // Dados Sousa do BI do CV: atualiza em segundo plano se a última sincronização for antiga.
+  void sincronizarSeAntigo().catch(() => {});
   const searchParams = await sp;
   const mes = /^\d{4}-\d{2}-01$/.test(searchParams.mes ?? "") ? searchParams.mes! : competenciaVigente();
   const emps = (await listarEmpreendimentosResumo()).map((e) => ({ id: e.id_empreendimento, nome: e.empreendimento, cidade: e.cidade, regional: e.regional }));

@@ -136,7 +136,10 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
   if (temPermissao(p, "gerirUsuarios")) {
     modulos.push({
       id: "admin", nome: "Administração", curto: "Admin", icone: "users", resumo: ehAdmin ? "Pessoas, perfis e convites" : "Avaliadores e acessos",
-      grupos: [{ nome: "Acesso", itens: [{ nome: ehAdmin ? "Usuários" : "Avaliadores", href: "/gestor/usuarios" }] }],
+      grupos: [
+        { nome: "Acesso", itens: [{ nome: ehAdmin ? "Usuários" : "Avaliadores", href: "/gestor/usuarios" }] },
+        ...(ehAdmin ? [{ nome: "Integrações", itens: [{ nome: "Dados do CV", href: "/gestor/dados-cv" }] }] : []),
+      ],
     });
   }
 

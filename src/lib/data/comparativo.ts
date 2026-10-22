@@ -3,7 +3,10 @@
  * um empreendimento Sousa e uma competência:
  *  - preço, entrada, fluxo, área e entrega: da visita do Cliente Oculto
  *    concluída mais recente até o fim da competência;
- *  - estoque e vendas: dados próprios e coletas da Pesquisa no mês;
+ *  - estoque e vendas: dados próprios (vindos do BI do CV ou digitados) e
+ *    coletas da Pesquisa no mês;
+ *  - Sousa com dados do CV: ticket de tabela do estoque e ticket com desconto
+ *    (valor de contrato) das vendas do mês substituem os preços da visita;
  *  - atendimento: nota geral calibrada da mesma visita.
  * Visitas antigas, de antes da ligação com o cadastro, são reconhecidas pelo
  * nome do empreendimento/concorrente.
@@ -52,8 +55,9 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
     pool.query<{ id_concorrente: number; concorrente: string }>(
       `select id_concorrente, concorrente from concorrentes
         where id_empreendimento = $1 and ativo order by concorrente`, [idEmpreendimento]),
-    pool.query<{ estoque: number; vendas: number }>(
-      `select estoque, vendas from dados_proprios_mensais where id_empreendimento = $1 and mes_ano = $2`,
+    pool.query<{ estoque: number; vendas: number; ticket_tabela_centavos: string | null; ticket_desconto_centavos: string | null }>(
+      `select estoque, vendas, ticket_tabela_centavos, ticket_desconto_centavos
+         from dados_proprios_mensais where id_empreendimento = $1 and mes_ano = $2`,
       [idEmpreendimento, mesAno]),
     pool.query<{ id_concorrente: number; estoque: number; vendas: number }>(
       `select cm.id_concorrente, cm.estoque, cm.vendas from coletas_mensais cm
@@ -85,8 +89,11 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
     ? await pool.query(`select avaliacao_id, gap, gravidade from co_gaps where avaliacao_id = any($1)`, [usadas])
     : { rows: [] as Record<string, unknown>[] };
 
-  function coluna(nome: string, proprio: boolean, v: Record<string, unknown> | undefined, estoque: number | null, vendas: number | null): ColunaComparativo {
-    const preco = calcularPreco({
+  function coluna(
+    nome: string, proprio: boolean, v: Record<string, unknown> | undefined, estoque: number | null, vendas: number | null,
+    precoCV?: { tabela: number | null; desconto: number | null },
+  ): ColunaComparativo {
+    let preco = calcularPreco({
       valorTabelaCentavos: v?.valor_unidade_centavos ? Number(v.valor_unidade_centavos) : null,
       descontoTipo: (v?.desconto_tipo as "valor" | "percentual" | null) ?? null,
       descontoValorCentavos: v?.desconto_valor_centavos ? Number(v.desconto_valor_centavos) : null,
@@ -94,6 +101,22 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
       valorAtoCentavos: v?.valor_ato_centavos ? Number(v.valor_ato_centavos) : null,
       areaM2: v?.area_unidade_m2 ? Number(v.area_unidade_m2) : null,
     });
+    if (precoCV && (precoCV.tabela || precoCV.desconto)) {
+      // Preços do CV (em reais): tabela do estoque e ticket líquido das vendas do mês.
+      const tabela = precoCV.tabela ?? preco.valorTabela;
+      const liquido = precoCV.desconto ?? tabela;
+      const area = v?.area_unidade_m2 ? Number(v.area_unidade_m2) : null;
+      const desconto = tabela !== null && liquido !== null && tabela > liquido ? tabela - liquido : null;
+      preco = {
+        ...preco,
+        valorTabela: tabela,
+        ticketLiquido: liquido,
+        porM2: liquido !== null && area ? liquido / area : null,
+        descontoReais: desconto,
+        descontoPct: desconto !== null && tabela ? desconto / tabela : null,
+        atoPct: preco.ato !== null && liquido ? preco.ato / liquido : preco.atoPct,
+      };
+    }
     const entrega = lerEntrega(v?.previsao_entrega as string | null);
     const giro = calcularGiro(estoque, vendas);
     const meus = v ? pilares.filter((p) => p.avaliacao_id === v.id && p.avaliado) : [];
@@ -126,7 +149,10 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
   }
 
   const colunas = [
-    coluna(emp.empreendimento, true, visitaSousa, proprio?.estoque ?? null, proprio?.vendas ?? null),
+    coluna(emp.empreendimento, true, visitaSousa, proprio?.estoque ?? null, proprio?.vendas ?? null, {
+      tabela: proprio?.ticket_tabela_centavos ? Number(proprio.ticket_tabela_centavos) / 100 : null,
+      desconto: proprio?.ticket_desconto_centavos ? Number(proprio.ticket_desconto_centavos) / 100 : null,
+    }),
     ...concorrentes.map((c) => {
       const col = coletas.find((x) => x.id_concorrente === c.id_concorrente);
       return coluna(c.concorrente, false, visitaDe(c), col?.estoque ?? null, col?.vendas ?? null);
