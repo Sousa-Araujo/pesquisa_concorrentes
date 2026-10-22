@@ -98,6 +98,11 @@
     buildPillarPanels();
     buildJourneyFields();
     fillFormFromState();
+    if (porCriterios()) {
+      document.getElementById('panel-observacoes').classList.toggle('ms-step-fora', !!avaliacao.identificacao.somentePrevia);
+      montarObservacoes();
+      montarInstrucoes();
+    }
 
     // Trava final avaliada acima em bootstrap(); aqui só decidimos se o Finalizar
     // aparece (só "Em Preenchimento") e se mostramos o aviso de "aguardando, mas
@@ -483,12 +488,220 @@
   // Só prévia: pilares e jornada saem do fluxo de etapas (e da validação).
   function aplicarSomentePrevia(sim) {
     document.querySelectorAll('#pillarPanels > .panel, #panel-jornada').forEach(p => p.classList.toggle('ms-step-fora', sim));
+    if (avaliacao && porCriterios()) document.getElementById('panel-observacoes').classList.toggle('ms-step-fora', sim);
   }
 
   // ---------------------------------------------------------------------
-  // Pilares — apenas Nota Informada + Evidências (sem calibragem/gaps)
+  // Pilares — modelo 2: 4 critérios por pilar, nota 0–10 + evidência
+  // ---------------------------------------------------------------------
+  const porCriterios = () => (avaliacao.modeloCriterios || 1) >= 2;
+  const respostas = {}; // pilarKey → { '1.1': { nota, na, evidencia } }
+
+  function botoesNota(c) {
+    if (c.simNao) {
+      return `<button type="button" data-nota="10">Sim</button><button type="button" data-nota="0">Não</button>`;
+    }
+    let h = '';
+    for (let i = 0; i <= 10; i++) h += `<button type="button" data-nota="${i}">${i}</button>`;
+    return h;
+  }
+
+  function criterioCardHtml(p, c) {
+    return `
+      <div class="crit-card" data-crit-pilar="${p.key}" data-crit="${c.key}">
+        <div class="crit-head">
+          <span class="crit-num">${c.key}</span>
+          <div><b>${escapeHtml(c.nome)}</b><p class="crit-desc">${escapeHtml(c.desc)}</p></div>
+        </div>
+        <div class="crit-notas${c.simNao ? ' crit-notas-simnao' : ''}" role="group" aria-label="Nota do item ${c.key}">
+          ${botoesNota(c)}
+          <button type="button" class="crit-na" data-na="1">Não se aplica</button>
+        </div>
+        <textarea rows="2" class="crit-evid" placeholder="Evidência / observação — o que você viu ou ouviu (obrigatório)"></textarea>
+      </div>`;
+  }
+
+  function pintarCriterio(pilarKey, key) {
+    const card = document.querySelector(`[data-crit-pilar="${pilarKey}"][data-crit="${key}"]`);
+    const r = (respostas[pilarKey] || {})[key] || {};
+    card.querySelectorAll('[data-nota]').forEach(b => b.classList.toggle('active', !r.na && r.nota !== null && r.nota !== undefined && Number(b.getAttribute('data-nota')) === Number(r.nota)));
+    card.querySelector('[data-na]').classList.toggle('active', !!r.na);
+    card.classList.toggle('is-na', !!r.na);
+    const evid = card.querySelector('.crit-evid');
+    if (document.activeElement !== evid) evid.value = r.evidencia || '';
+  }
+
+  function pintarMedia(pilarKey) {
+    const media = COConfig.mediaCriterios(respostas[pilarKey]);
+    const badge = document.querySelector(`[data-media="${pilarKey}"]`);
+    const b = bandFor(media);
+    badge.textContent = media === null ? 'Média —' : `Média ${String(media).replace('.', ',')} · ${b.label}`;
+    badge.style.color = toneColorVar(b.tone);
+  }
+
+  function buildPillarPanelsCriterios() {
+    const wrap = document.getElementById('pillarPanels');
+    wrap.innerHTML = '';
+    PILARES.forEach(p => {
+      const crits = COConfig.CRITERIOS[p.key] || [];
+      const panel = document.createElement('div');
+      panel.className = 'panel';
+      panel.innerHTML = `
+        <div class="panel-head">
+          <h2><span class="panel-num">${p.n}</span>${p.nome}</h2>
+          <span class="nota-badge" data-media="${p.key}">Média —</span>
+        </div>
+        <p class="panel-hint">Dê uma nota de 0 a 10 para cada item e registre a evidência. A nota do pilar é a média dos itens; "Não se aplica" fica fora da média.</p>
+        <div class="crit-lista">${crits.map(c => criterioCardHtml(p, c)).join('')}</div>
+        <div class="fotos-pilar">
+          <div class="fotos-head">
+            <label>Fotos de comprovação <span class="field-help" style="display:inline;">(opcional — cada foto recebe a identificação da avaliação e da etapa)</span></label>
+            <label class="btn btn-ghost btn-sm fotos-add">+ Adicionar foto<input type="file" accept="image/*" multiple hidden data-foto-input="${p.key}"></label>
+          </div>
+          <div class="fotos-grid" data-fotos-grid="${p.key}"></div>
+        </div>`;
+      wrap.appendChild(panel);
+      if (p.key === 'recepcao') inserirPerguntaOrigem(panel, panel.querySelector('.crit-lista'));
+
+      panel.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-nota], [data-na]');
+        if (!btn) return;
+        const card = btn.closest('[data-crit]');
+        const key = card.getAttribute('data-crit');
+        const r = respostas[p.key][key] = respostas[p.key][key] || { nota: null, na: false, evidencia: '' };
+        if (btn.hasAttribute('data-na')) { r.na = !r.na; if (r.na) r.nota = null; }
+        else { r.na = false; r.nota = Number(btn.getAttribute('data-nota')); }
+        pintarCriterio(p.key, key);
+        pintarMedia(p.key);
+        savePilarCriterios(p.key);
+      });
+      panel.addEventListener('input', (e) => {
+        if (!e.target.classList.contains('crit-evid')) return;
+        const key = e.target.closest('[data-crit]').getAttribute('data-crit');
+        const r = respostas[p.key][key] = respostas[p.key][key] || { nota: null, na: false, evidencia: '' };
+        r.evidencia = e.target.value;
+      });
+      panel.addEventListener('focusout', (e) => {
+        if (e.target.classList.contains('crit-evid')) savePilarCriterios(p.key);
+      });
+      panel.querySelector(`[data-foto-input="${p.key}"]`).addEventListener('change', (e) => {
+        enviarFotos(p.key, [...e.target.files]);
+        e.target.value = '';
+      });
+    });
+  }
+
+  function fillCriteriosFromState() {
+    PILARES.forEach(p => {
+      const salvo = (avaliacao.pilares[p.key] || {}).criterios || {};
+      respostas[p.key] = JSON.parse(JSON.stringify(salvo));
+      (COConfig.CRITERIOS[p.key] || []).forEach(c => pintarCriterio(p.key, c.key));
+      pintarMedia(p.key);
+    });
+  }
+
+  function savePilarCriterios(key) {
+    saving('Salvando…');
+    clearTimeout(pilarSaveTimers[key]);
+    pilarSaveTimers[key] = setTimeout(async () => {
+      try {
+        avaliacao = await api.atualizarPilarInformada(avaliacao.id, key, { criterios: respostas[key] });
+        saving('Salvo ✓');
+      } catch (err) {
+        saving('Erro ao salvar');
+        toast(err.message);
+      }
+    }, 300);
+  }
+
+  // Itens sem nota (ou "Não se aplica") ou sem evidência — impedem finalizar.
+  function pendenciasCriterios() {
+    const falta = [];
+    PILARES.forEach(p => (COConfig.CRITERIOS[p.key] || []).forEach(c => {
+      const r = (respostas[p.key] || {})[c.key];
+      if (!r || (!r.na && (r.nota === null || r.nota === undefined)) || !String(r.evidencia || '').trim()) falta.push(c.key);
+    }));
+    return falta;
+  }
+
+  // ---------------------------------------------------------------------
+  // Instruções de preenchimento (popup ao abrir o formulário)
+  // ---------------------------------------------------------------------
+  const CHAVE_INSTRUCOES = () => `co-instrucoes-ocultas-${avaliacao.id}`;
+  function instrucoesOcultas() {
+    try { return localStorage.getItem(CHAVE_INSTRUCOES()) === '1'; } catch (e) { return false; }
+  }
+  function abrirInstrucoes() {
+    const fundo = document.createElement('div');
+    fundo.className = 'ms-dialogo-fundo';
+    fundo.innerHTML = `
+      <div class="ms-dialogo instr-dialogo" role="dialog" aria-modal="true" aria-labelledby="instrTitulo">
+        <h2 class="ms-dialogo-titulo" id="instrTitulo">Como preencher a avaliação</h2>
+        <ul class="instr-lista">
+          <li><b>Nota de 0 a 10 em cada item</b>, com uma evidência ou observação breve que justifique a nota.</li>
+          <li><b>A nota do pilar é a média simples</b> dos quatro itens (soma das notas dividida por 4).</li>
+          <li><b>No item 4.4, marque Sim ou Não.</b> Sim vale 10 e Não vale 0 na média.</li>
+          <li><b>Considere apenas o que foi observado</b> na visita ou confirmado por informação disponível. Se um item não puder ser observado, marque <b>Não se aplica</b> e explique na evidência — ele fica fora da média.</li>
+        </ul>
+        <label class="instr-check"><input type="checkbox" id="instrOcultar"${instrucoesOcultas() ? ' checked' : ''}> Não mostrar de novo nesta avaliação</label>
+        <div class="ms-dialogo-acoes"><button type="button" class="ms-dialogo-btn ms-dialogo-btn--primario" id="instrOk">Entendi, começar</button></div>
+      </div>`;
+    document.body.appendChild(fundo);
+    requestAnimationFrame(() => fundo.classList.add('is-aberto'));
+    const fechar = () => {
+      try { localStorage.setItem(CHAVE_INSTRUCOES(), fundo.querySelector('#instrOcultar').checked ? '1' : '0'); } catch (e) { /* sem armazenamento: só não lembra */ }
+      fundo.classList.remove('is-aberto');
+      document.removeEventListener('keydown', tecla);
+      setTimeout(() => fundo.remove(), 160);
+    };
+    const tecla = (e) => { if (e.key === 'Escape') fechar(); };
+    document.addEventListener('keydown', tecla);
+    fundo.querySelector('#instrOk').addEventListener('click', fechar);
+    fundo.addEventListener('mousedown', (e) => { if (e.target === fundo) fechar(); });
+    fundo.querySelector('#instrOk').focus();
+  }
+  function montarInstrucoes() {
+    const host = document.getElementById('panel-previa');
+    if (!document.getElementById('instrBar')) {
+      const bar = document.createElement('div');
+      bar.id = 'instrBar';
+      bar.className = 'instr-bar';
+      bar.innerHTML = `<button type="button" class="btn btn-ghost btn-sm" id="instrBtn">ⓘ Instruções de preenchimento</button>`;
+      host.parentNode.insertBefore(bar, host);
+      bar.querySelector('#instrBtn').addEventListener('click', abrirInstrucoes);
+    }
+    if (!instrucoesOcultas()) abrirInstrucoes();
+  }
+
+  // Observações gerais da visita (modelo 2)
+  function montarObservacoes() {
+    const ta = document.getElementById('observacoesGerais');
+    ta.value = avaliacao.identificacao.observacoesGerais || '';
+    ta.addEventListener('blur', () => saveIdentificacao({ observacoesGerais: ta.value }));
+  }
+
+  // Antes da avaliação da recepção: ela seguiu o protocolo de perguntar a origem do cliente?
+  function inserirPerguntaOrigem(panel, antes) {
+    const perg = document.createElement('div');
+    perg.className = 'field';
+    perg.style.marginBottom = '12px';
+    perg.innerHTML = `<label>A recepção perguntou como você ficou sabendo do empreendimento?</label>
+      <div class="segmented" id="perguntaOrigem">${Object.entries(PERGUNTA_ORIGEM).map(([k, v]) => `<button type="button" data-val="${k}">${v.label}</button>`).join('')}</div>
+      <p class="field-help">Protocolo da recepção: perguntar a origem do cliente para registrar na ferramenta.</p>`;
+    panel.insertBefore(perg, antes);
+    const segPerg = perg.querySelector('#perguntaOrigem');
+    segPerg.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      segPerg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+      saveIdentificacao({ recepcaoPerguntouOrigem: btn.getAttribute('data-val') });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Pilares — modelo 1 (avaliações antigas): Nota Informada + Evidências
   // ---------------------------------------------------------------------
   function buildPillarPanels() {
+    if (porCriterios()) return buildPillarPanelsCriterios();
     const wrap = document.getElementById('pillarPanels');
     wrap.innerHTML = '';
     PILARES.forEach(p => {
@@ -529,22 +742,7 @@
       `;
       wrap.appendChild(panel);
 
-      // Antes da avaliação da recepção: ela seguiu o protocolo de perguntar a origem do cliente?
-      if (p.key === 'recepcao') {
-        const perg = document.createElement('div');
-        perg.className = 'field';
-        perg.style.marginBottom = '12px';
-        perg.innerHTML = `<label>A recepção perguntou como você ficou sabendo do empreendimento?</label>
-          <div class="segmented" id="perguntaOrigem">${Object.entries(PERGUNTA_ORIGEM).map(([k, v]) => `<button type="button" data-val="${k}">${v.label}</button>`).join('')}</div>
-          <p class="field-help">Protocolo da recepção: perguntar a origem do cliente para registrar na ferramenta.</p>`;
-        panel.insertBefore(perg, panel.querySelector('.criteria-label'));
-        const segPerg = perg.querySelector('#perguntaOrigem');
-        segPerg.addEventListener('click', (e) => {
-          const btn = e.target.closest('button'); if (!btn) return;
-          segPerg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-          saveIdentificacao({ recepcaoPerguntouOrigem: btn.getAttribute('data-val') });
-        });
-      }
+      if (p.key === 'recepcao') inserirPerguntaOrigem(panel, panel.querySelector('.criteria-label'));
 
       const seg = panel.querySelector(`[data-avaliado="${p.key}"]`);
       const body = panel.querySelector(`[data-body="${p.key}"]`);
@@ -574,7 +772,21 @@
   // ---------------------------------------------------------------------
   // Fotos de comprovação por pilar: reduzidas no aparelho antes de enviar
   // ---------------------------------------------------------------------
-  function reduzirFoto(arquivo, lado, qualidade) {
+  // Faixa de identificação gravada na própria foto: avaliação, etapa e data/hora do envio.
+  function carimbarFoto(ctx, w, h, linhas) {
+    const fonte = Math.max(12, Math.round(Math.min(w, h) * 0.028));
+    const pad = Math.round(fonte * 0.6);
+    const alt = linhas.length * fonte * 1.3 + pad * 2;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, h - alt, w, alt);
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'top';
+    linhas.forEach((t, i) => {
+      ctx.font = `${i === 0 ? '600 ' : ''}${fonte}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+      ctx.fillText(t, pad, h - alt + pad + i * fonte * 1.3, w - pad * 2);
+    });
+  }
+  function reduzirFoto(arquivo, lado, qualidade, carimbo) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(arquivo);
       const img = new Image();
@@ -582,7 +794,9 @@
         const escala = Math.min(1, lado / Math.max(img.width, img.height));
         const c = document.createElement('canvas');
         c.width = Math.round(img.width * escala); c.height = Math.round(img.height * escala);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        if (carimbo) carimbarFoto(ctx, c.width, c.height, carimbo);
         URL.revokeObjectURL(url);
         resolve(c.toDataURL('image/jpeg', qualidade));
       };
@@ -591,11 +805,18 @@
     });
   }
   async function enviarFotos(pilarKey, arquivos) {
+    const pilar = PILARES.find(p => p.key === pilarKey);
     for (const arq of arquivos) {
       saving('Enviando foto…');
       try {
-        let imagem = await reduzirFoto(arq, 1600, 0.8);
-        if (imagem.length > 900000) imagem = await reduzirFoto(arq, 1280, 0.65);
+        const agora = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const emp = (avaliacao.identificacao && avaliacao.identificacao.empreendimento) || '';
+        const carimbo = [
+          `${avaliacao.id} · ${pilar ? `${pilar.n}. ${pilar.nome}` : pilarKey}`,
+          `${emp ? emp + ' · ' : ''}${agora.replace(',', '')}`,
+        ];
+        let imagem = await reduzirFoto(arq, 1600, 0.8, carimbo);
+        if (imagem.length > 900000) imagem = await reduzirFoto(arq, 1280, 0.65, carimbo);
         avaliacao.fotos = await api.adicionarFoto(avaliacao.id, { pilarKey, imagem });
         saving('Foto enviada ✓');
       } catch (err) {
@@ -721,7 +942,8 @@
     }
     document.querySelector('[data-mask="desconto"]').value = idz.descontoDisplay || '';
 
-    PILARES.forEach(p => {
+    if (porCriterios()) fillCriteriosFromState();
+    else PILARES.forEach(p => {
       const st = avaliacao.pilares[p.key];
       const seg = document.querySelector(`[data-avaliado="${p.key}"]`);
       seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', (b.getAttribute('data-val') === 'sim') === !!st.avaliado));
@@ -762,6 +984,13 @@
     if (faltando.length) {
       toast(`Preencha os campos obrigatórios antes de finalizar: ${faltando.join(', ')}.`);
       return;
+    }
+    if (porCriterios() && !avaliacao.identificacao.somentePrevia) {
+      const itens = pendenciasCriterios();
+      if (itens.length) {
+        await coAvisar(`Cada item precisa de nota (ou "Não se aplica") e evidência. Faltam: ${itens.join(', ')}.`, 'Itens da avaliação incompletos');
+        return;
+      }
     }
     if (!(await coConfirmar('Depois de enviada, os dados ficam preservados como registro original e a avaliação segue para calibragem do Coordenador de Market Share.', { titulo: 'Finalizar e enviar a avaliação?', textoConfirmar: 'Finalizar e enviar' }))) return;
     try {

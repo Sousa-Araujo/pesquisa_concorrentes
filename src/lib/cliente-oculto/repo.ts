@@ -14,6 +14,10 @@
  */
 import "server-only";
 import { db } from "@/lib/db/pool";
+import {
+  MODELO_CRITERIOS, normalizarRespostas, mediaPilar, pilarAvaliado, evidenciaPilar, pendenciasCriterios,
+  type RespostasPilar,
+} from "./criterios";
 
 export const PILAR_KEYS = ["recepcao", "corretorAtend", "pdv", "materiais", "negociacao", "conhecimento"] as const;
 export const JORNADA_KEYS = [
@@ -77,6 +81,7 @@ const IDENTIFICACAO: Record<string, string> = {
   previaPrimeiroRetornoEm: "previa_primeiro_retorno_em", previaPrimeiroRetornoPor: "previa_primeiro_retorno_por",
   previaSegundoContatoEm: "previa_segundo_contato_em", previaAgendamentoEm: "previa_agendamento_em",
   previaObservacoes: "previa_observacoes",
+  observacoesGerais: "observacoes_gerais",
 };
 
 /** Normaliza o valor vindo da tela antes de gravar (string vazia em data/número vira null). */
@@ -110,6 +115,8 @@ function linhaParaAvaliacao(r: Linha) {
     excluidaEm: r.excluida_em,
     vinculoSousaId: r.vinculo_sousa_id,
     vinculoSousaLabel: r.vinculo_sousa_label,
+    /** 1 = nota única por pilar (avaliações antigas); 2 = 4 critérios por pilar. */
+    modeloCriterios: Number(r.modelo_criterios ?? 1),
     identificacao: {
       empreendimento: r.empreendimento_texto,
       regional: r.regional,
@@ -148,6 +155,7 @@ function linhaParaAvaliacao(r: Linha) {
       previaSegundoContatoEm: r.previa_segundo_contato_em ?? null,
       previaAgendamentoEm: r.previa_agendamento_em ?? null,
       previaObservacoes: r.previa_observacoes ?? null,
+      observacoesGerais: r.observacoes_gerais ?? null,
     },
   };
 }
@@ -179,8 +187,9 @@ async function carregarAvaliacao(id: string): Promise<Avaliacao | null> {
       ? {
           avaliado: !!p.avaliado, notaInformada: num(p.nota_informada), evidencia: p.evidencia,
           notaCalibrada: num(p.nota_calibrada), justificativaCalibragem: p.justificativa_calibragem,
+          criterios: p.criterios ?? null,
         }
-      : { avaliado: true, notaInformada: null, evidencia: "", notaCalibrada: null, justificativaCalibragem: "" };
+      : { avaliado: true, notaInformada: null, evidencia: "", notaCalibrada: null, justificativaCalibragem: "", criterios: null };
   }
 
   const { rows: jornada } = await q(`select * from co_jornada where avaliacao_id = $1`, [id]);
@@ -210,8 +219,8 @@ async function carregarAvaliacao(id: string): Promise<Avaliacao | null> {
 function visaoAvaliador(av: Avaliacao): Avaliacao {
   const pilares: Record<string, unknown> = {};
   for (const [k, p] of Object.entries(av.pilares)) {
-    const { avaliado, notaInformada, evidencia } = p as Record<string, unknown>;
-    pilares[k] = { avaliado, notaInformada, evidencia, notaCalibrada: null, justificativaCalibragem: "" };
+    const { avaliado, notaInformada, evidencia, criterios } = p as Record<string, unknown>;
+    pilares[k] = { avaliado, notaInformada, evidencia, criterios, notaCalibrada: null, justificativaCalibragem: "" };
   }
   const jornada: Record<string, unknown> = {};
   for (const [k, j] of Object.entries(av.jornada)) {
@@ -480,6 +489,18 @@ function exigirStatusJornada(s: unknown, permiteVazio = false) {
 export async function atualizarPilarInformada(quem: Quem, id: string, pilar: string, c: Campos) {
   await exigirEditavelPeloAvaliador(quem, id);
   exigirPilar(pilar);
+  if (await modeloDe(id) >= MODELO_CRITERIOS) {
+    // Modelo por critérios: nota, "avaliado" e evidência do pilar saem dos critérios.
+    let resp: RespostasPilar;
+    try { resp = normalizarRespostas(pilar, c.criterios); } catch (e) { throw new ErroCO(400, (e as Error).message); }
+    await q(
+      `update co_pilares set criterios = $1, avaliado = $2, nota_informada = $3, evidencia = $4
+        where avaliacao_id = $5 and pilar_key = $6`,
+      [JSON.stringify(resp), pilarAvaliado(resp), mediaPilar(resp), evidenciaPilar(pilar, resp), id, pilar],
+    );
+    await q(`update co_avaliacoes set atualizada_em = now() where id = $1`, [id]);
+    return obterAvaliacao(quem, id);
+  }
   await q(
     `update co_pilares set avaliado = $1, nota_informada = $2, evidencia = $3 where avaliacao_id = $4 and pilar_key = $5`,
     [!!c.avaliado, nota(c.notaInformada), c.evidencia ?? "", id, pilar],
@@ -497,9 +518,22 @@ export async function atualizarJornada(quem: Quem, id: string, etapa: string, st
   return obterAvaliacao(quem, id);
 }
 
+async function modeloDe(id: string): Promise<number> {
+  const { rows } = await q(`select modelo_criterios from co_avaliacoes where id = $1`, [id]);
+  return Number(rows[0]?.modelo_criterios ?? 1);
+}
+
 export async function finalizar(quem: Quem, id: string) {
   await exigirAcesso(quem, id);
   await exigirStatus(id, [STATUS.PREENCHIMENTO]);
+  const { rows: cab } = await q(`select modelo_criterios, somente_previa from co_avaliacoes where id = $1`, [id]);
+  if (Number(cab[0]?.modelo_criterios ?? 1) >= MODELO_CRITERIOS && !cab[0]?.somente_previa) {
+    const { rows: pil } = await q(`select pilar_key, criterios from co_pilares where avaliacao_id = $1`, [id]);
+    const falta = pendenciasCriterios(Object.fromEntries(pil.map((p) => [p.pilar_key, p.criterios])));
+    if (falta.length) {
+      throw new ErroCO(400, `Faltam nota (ou "Não se aplica") e evidência nos itens: ${falta.join(", ")}.`);
+    }
+  }
   await q(`update co_avaliacoes set status = $1, finalizada_em = now() where id = $2`, [STATUS.AGUARDANDO, id]);
   return obterAvaliacao(quem, id);
 }

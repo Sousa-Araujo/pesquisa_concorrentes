@@ -78,6 +78,10 @@ function faixa(n: number) {
 const NI = <span className="italic text-ink/40">n/i</span>;
 
 /** Destaque da coluna do empreendimento Sousa ("Nosso produto"), como no modelo da Diretoria. */
+const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+/** "2026-09-01" → "set/26". */
+const mesCurto = (m: string) => `${MESES_CURTOS[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
+
 const FUNDO_SOUSA = "color-mix(in srgb, var(--brand) 9%, var(--surface))";
 const FUNDO_SOUSA_TOPO = "color-mix(in srgb, var(--brand) 16%, var(--surface))";
 
@@ -144,6 +148,9 @@ export default async function ComparativoPage({
                               <td key={c.nome} style={c.proprio ? { background: FUNDO_SOUSA } : undefined}
                                 className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${top.has(i) ? "font-bold text-[var(--good-ink)]" : "text-ink"}`}>
                                 {txt ?? NI}
+                                {s.nome === "Estoque" && c.mesDados && txt !== null && (
+                                  <span className="block text-[11px] font-normal text-ink/50">dado de {mesCurto(c.mesDados)}</span>
+                                )}
                               </td>
                             );
                           })}
@@ -156,7 +163,7 @@ export default async function ComparativoPage({
             </div>
             <p className="text-xs text-ink/50">
               Preço, entrada, fluxo, área e entrega: última visita do Cliente Oculto concluída até a competência.
-              Estoque e VSO: dados próprios e coletas da Pesquisa no mês. n/i = não informado.
+              Estoque e VSO: dados próprios (CV) e coletas da Pesquisa no mês; sem dado no mês, o último mês disponível, indicado abaixo do valor. n/i = não informado.
             </p>
           </section>
 
@@ -168,6 +175,7 @@ export default async function ComparativoPage({
                   style={c.proprio ? { background: FUNDO_SOUSA } : undefined}>
                   <div className={`font-bold ${c.proprio ? "text-[var(--brand-text)]" : "text-ink"}`}>{c.nome}</div>
                   <span className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold ${GIRO[c.giro].cor}`}>{GIRO[c.giro].rotulo}</span>
+                  {c.mesDados && <span className="text-xs text-ink/50">Sem dado no mês escolhido: último dado de {mesCurto(c.mesDados)}</span>}
                   <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
                     <dt className="text-ink/60">Estoque</dt><dd className="text-right font-semibold tabular-nums">{c.estoque !== null ? `${c.estoque} UHs` : NI}</dd>
                     <dt className="text-ink/60">Vendas no mês</dt><dd className="text-right font-semibold tabular-nums">{c.vendas !== null ? `${c.vendas} UHs` : NI}</dd>

@@ -43,9 +43,9 @@ export default function AgenteFluxo({
 
 /* ------------------------------- Login ------------------------------- */
 function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
-  const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
   const [codigo, setCodigo] = useState("");
-  const [etapa, setEtapa] = useState<"telefone" | "codigo">("telefone");
+  const [etapa, setEtapa] = useState<"email" | "codigo">("email");
   const [aviso, setAviso] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -53,19 +53,17 @@ function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
   async function pedirCodigo() {
     setErro(null); setAviso(null);
     setCarregando(true);
-    const r = await solicitarCodigoAgente(telefone);
+    const r = await solicitarCodigoAgente(email);
     setCarregando(false);
     if (!r.ok) { setErro(r.erro); return; }
     setEtapa("codigo");
-    setAviso(r.data.canal === "email"
-      ? "Enviamos um código de 6 números para o seu e-mail cadastrado."
-      : "Enviamos um código de 6 números por SMS.");
+    setAviso("Enviamos um código de 6 números para o seu e-mail. Confira também a caixa de spam.");
   }
 
   async function entrar() {
     setErro(null);
     setCarregando(true);
-    const r = await entrarAgente(telefone, codigo);
+    const r = await entrarAgente(email, codigo);
     setCarregando(false);
     if (r.ok) onOk(r.data);
     else setErro(r.erro);
@@ -78,21 +76,22 @@ function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
           Identificação do agente
         </p>
         <h1 className="mt-2 text-2xl font-bold text-ink">
-          {etapa === "telefone" ? "Informe seu telefone" : "Digite o código"}
+          {etapa === "email" ? "Informe seu e-mail" : "Digite o código"}
         </h1>
       </div>
-      {etapa === "telefone" ? (
+      {etapa === "email" ? (
         <div>
-          <label className="rotulo" htmlFor="tel">Telefone</label>
+          <label className="rotulo" htmlFor="email">E-mail</label>
           <input
-            id="tel"
+            id="email"
+            type="email"
             className="campo"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="(00) 00000-0000"
-            value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && telefone && pedirCodigo()}
+            inputMode="email"
+            autoComplete="email"
+            placeholder="seu@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && email && pedirCodigo()}
           />
         </div>
       ) : (
@@ -112,8 +111,8 @@ function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
       )}
       {aviso && <p className="rounded-lg bg-brand/5 px-4 py-3 text-sm text-ink/80">{aviso}</p>}
       {erro && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
-      {etapa === "telefone" ? (
-        <button className="btn-primary" onClick={pedirCodigo} disabled={carregando || !telefone}>
+      {etapa === "email" ? (
+        <button className="btn-primary" onClick={pedirCodigo} disabled={carregando || !email}>
           {carregando ? "Enviando…" : "Receber código"}
         </button>
       ) : (
@@ -124,13 +123,13 @@ function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
           <button className="btn-ghost" onClick={pedirCodigo} disabled={carregando}>
             Reenviar código
           </button>
-          <button className="btn-ghost" onClick={() => { setEtapa("telefone"); setCodigo(""); setAviso(null); setErro(null); }}>
-            Trocar telefone
+          <button className="btn-ghost" onClick={() => { setEtapa("email"); setCodigo(""); setAviso(null); setErro(null); }}>
+            Trocar e-mail
           </button>
         </>
       )}
       <p className="text-center text-xs text-ink/40">
-        O acesso é liberado apenas para telefones cadastrados pela coordenação.
+        O acesso é liberado apenas para e-mails cadastrados pela coordenação.
       </p>
     </main>
   );

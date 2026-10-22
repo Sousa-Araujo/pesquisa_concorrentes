@@ -285,33 +285,31 @@ export async function entrarComCodigoUsuario(email: string, codigo: string): Pro
   return { ok: true };
 }
 
-const MSG_TELEFONE_NAO_LOCALIZADO =
-  "Telefone não localizado. Verifique o número informado ou entre em contato com o responsável.";
+const MSG_EMAIL_NAO_LOCALIZADO =
+  "E-mail não localizado. Verifique o e-mail informado ou entre em contato com o responsável.";
 
-/** Agente: pede código pelo telefone (seção 4 — mesma mensagem para inexistente e inativo). */
-export async function pedirCodigoAgente(telefone: string): Promise<Resultado & { canal?: "email" | "sms" }> {
-  const { rows } = await db().query<{ id_agente: string; nome: string; email: string | null }>(
-    `select id_agente, nome, email from agentes_campo where telefone = $1 and ativo`,
-    [telefone],
+/** Agente: pede código pelo e-mail cadastrado (mesma mensagem para inexistente e inativo). */
+export async function pedirCodigoAgente(email: string): Promise<Resultado> {
+  const { rows } = await db().query<{ id_agente: string; nome: string; email: string }>(
+    `select id_agente, nome, email from agentes_campo where lower(email) = lower($1) and ativo`,
+    [email.trim()],
   );
   const a = rows[0];
-  if (!a) return { ok: false, erro: MSG_TELEFONE_NAO_LOCALIZADO };
-  const canal = a.email ? "email" : "sms";
-  const r = await criarEEnviarCodigo({ coluna: "id_agente", id: a.id_agente }, canal, a.email ?? telefone, a.nome);
-  return r.ok ? { ok: true, canal } : r;
+  if (!a) return { ok: false, erro: MSG_EMAIL_NAO_LOCALIZADO };
+  return criarEEnviarCodigo({ coluna: "id_agente", id: a.id_agente }, "email", a.email, a.nome);
 }
 
-export async function entrarComCodigoAgente(telefone: string, codigo: string): Promise<Resultado> {
+export async function entrarComCodigoAgente(email: string, codigo: string): Promise<Resultado & { idAgente?: string }> {
   const { rows } = await db().query<{ id_agente: string }>(
-    `select id_agente from agentes_campo where telefone = $1 and ativo`,
-    [telefone],
+    `select id_agente from agentes_campo where lower(email) = lower($1) and ativo`,
+    [email.trim()],
   );
   const a = rows[0];
-  if (!a) return { ok: false, erro: MSG_TELEFONE_NAO_LOCALIZADO };
+  if (!a) return { ok: false, erro: MSG_EMAIL_NAO_LOCALIZADO };
   const r = await conferirCodigo({ coluna: "id_agente", id: a.id_agente }, codigo);
   if (!r.ok) return r;
   await abrirSessao({ id_agente: a.id_agente });
-  return { ok: true };
+  return { ok: true, idAgente: a.id_agente };
 }
 
 // ---------------------------------------------------------------------------

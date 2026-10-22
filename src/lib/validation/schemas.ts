@@ -16,21 +16,20 @@ export const telefoneSchema = z
 
 /** Login do agente (seção 4): telefone; o código chega por e-mail ou SMS. */
 export const loginAgenteSchema = z.object({
-  telefone: telefoneSchema,
+  email: z.string().trim().email("E-mail inválido").transform((v) => v.toLowerCase()),
 });
 
 /** Cadastro/edição de agente pelo gestor (seção 6). */
 export const agenteSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
   telefone: telefoneSchema,
-  /** Opcional: para onde vai o código de acesso enquanto não há SMS. */
+  /** Obrigatório: o agente entra com este e-mail e recebe nele o código de acesso. */
   email: z
-    .string()
+    .string({ required_error: "E-mail é obrigatório" })
     .trim()
+    .min(1, "E-mail é obrigatório")
     .email("E-mail inválido")
-    .or(z.literal(""))
-    .optional()
-    .transform((v) => (v ? v.toLowerCase() : null)),
+    .transform((v) => v.toLowerCase()),
   ativo: z.boolean().default(true),
 });
 

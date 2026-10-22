@@ -37,6 +37,7 @@
     'capacidade de negociação do corretor': 'Negociação',
     'conhecimento técnico do empreendimento e políticas de venda': 'Conhecimento',
     'jornada comercial': 'Jornada',
+    'observações gerais da visita': 'Observações',
     'mapa de gaps': 'Gaps'
   };
   function curto(t) {

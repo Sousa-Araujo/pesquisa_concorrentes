@@ -488,3 +488,33 @@ tr.row-concorrente-child td:first-child::before{
   .comparativo-table{table-layout:fixed; font-size:10.5px;}
   .comparativo-table th, .comparativo-table td{white-space:normal; padding:6px 8px;}
 }
+
+/* Formulário por critérios (modelo 2) */
+.crit-lista{display:flex; flex-direction:column; gap:12px; margin-top:4px;}
+.crit-card{border:1px solid var(--border-strong); border-radius:12px; padding:14px; background:var(--surface-2);}
+.crit-card.is-na{background:var(--muted-tint);}
+.crit-head{display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;}
+.crit-head b{font-size:14px; color:var(--text-primary);}
+.crit-num{flex:none; font-size:12px; font-weight:700; color:var(--accent-ink); background:var(--excep-tint); border-radius:7px; padding:3px 7px; font-variant-numeric:tabular-nums;}
+.crit-desc{margin:3px 0 0; font-size:12.5px; line-height:1.45; color:var(--text-secondary);}
+.crit-notas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+.crit-notas button{min-width:36px; height:36px; padding:0 8px; border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-3); color:var(--text-primary); font:inherit; font-size:13px; font-weight:650; cursor:pointer; font-variant-numeric:tabular-nums;}
+.crit-notas button:hover{border-color:var(--accent);}
+.crit-notas button.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+.crit-notas-simnao button[data-nota]{min-width:72px;}
+.crit-notas .crit-na{margin-left:auto; color:var(--text-secondary); font-weight:600;}
+.crit-notas .crit-na.active{background:var(--neutral-band); border-color:var(--neutral-band); color:#fff;}
+@media (max-width:600px){.crit-notas button{min-width:0; flex:1 0 calc(16.66% - 6px);} .crit-notas .crit-na{flex-basis:100%; margin-left:0;}}
+.crit-evid{width:100%; box-sizing:border-box; font-family:inherit; font-size:13.5px; color:var(--text-primary); background:var(--surface-3); border:1px solid var(--border-strong); border-radius:9px; padding:9px 11px; resize:vertical; min-height:56px; line-height:1.4;}
+.crit-evid:focus{outline:none; border-color:var(--accent);}
+.instr-bar{display:flex; justify-content:flex-end; margin-bottom:10px;}
+.instr-dialogo{max-width:520px;}
+.instr-lista{margin:12px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:9px; font-size:14px; line-height:1.5; color:var(--text);}
+.instr-check{display:flex; align-items:center; gap:8px; margin-top:16px; font-size:13px; color:var(--text);}
+/* Critérios só leitura (calibragem e relatório) */
+.crit-leitura{display:flex; flex-direction:column; gap:8px; margin:8px 0 12px;}
+.crit-leitura-item{border:1px solid var(--border-strong); border-radius:10px; padding:9px 11px; background:var(--surface-2);}
+.crit-leitura-top{display:flex; justify-content:space-between; gap:10px; font-size:13px;}
+.crit-leitura-nota{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.crit-leitura-nota.na{color:var(--text-muted); font-weight:600;}
+.crit-leitura-item p{margin:5px 0 0; font-size:12.5px; color:var(--text-secondary); line-height:1.45;}

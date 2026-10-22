@@ -6,7 +6,7 @@
   const CFG = window.COConfig;
   const { PILARES, JORNADA, STATUS_JORNADA, GRAVIDADES, STATUS_AVALIACAO,
           bandFor, toneColorVar, toneTintVar, pilarLabel, tipoTagHtml, mesReferencia,
-          escapeHtml, escapeAttr, PERGUNTA_ORIGEM, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml } = CFG;
+          escapeHtml, escapeAttr, PERGUNTA_ORIGEM, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml, criteriosHtml } = CFG;
 
   // Atendimento prévio online: tempos a partir do contato do cliente oculto.
   function previaHtml(idz) {
@@ -450,21 +450,22 @@
       const card = document.createElement('div');
       card.className = 'panel';
       if (!st.avaliado) {
-        card.innerHTML = `<div class="panel-head"><h2><span class="panel-num">${p.n}</span>${p.nome}</h2><span class="band-chip tone-muted">Não avaliado pelo Cliente Oculto</span></div>`;
+        card.innerHTML = `<div class="panel-head"><h2><span class="panel-num">${p.n}</span>${p.nome}</h2><span class="band-chip tone-muted">Não avaliado pelo Cliente Oculto</span></div>${st.criterios ? criteriosHtml(p.key, st.criterios) : ''}`;
         wrap.appendChild(card);
         return;
       }
       const infBand = bandFor(st.notaInformada);
       card.innerHTML = `
         <div class="panel-head"><h2><span class="panel-num">${p.n}</span>${p.nome}</h2></div>
-        <div class="criteria-label">Critérios a serem utilizados na avaliação:</div>
-        <div class="aspect-hint">${p.aspectos.map(a => `<span class="aspect-chip">${a}</span>`).join('')}</div>
+        ${st.criterios ? '' : `<div class="criteria-label">Critérios a serem utilizados na avaliação:</div>
+        <div class="aspect-hint">${p.aspectos.map(a => `<span class="aspect-chip">${a}</span>`).join('')}</div>`}
         <div class="original-block">
           <div class="pillar-card-head">
             <h4><span class="tag-readonly">Somente leitura</span> Registro original — Cliente Oculto</h4>
-            <span class="band-chip ${infBand.tone}">${st.notaInformada !== null ? st.notaInformada.toFixed(1) + ' · ' : ''}${infBand.label}</span>
+            <span class="band-chip ${infBand.tone}">${st.notaInformada !== null ? (st.criterios ? 'Média ' : '') + st.notaInformada.toFixed(1) + ' · ' : ''}${infBand.label}</span>
           </div>
-          <p class="pillar-evid"><b>Evidências:</b> ${st.evidencia ? escapeHtml(st.evidencia) : '<span style="color:var(--text-muted)">Nenhuma evidência registrada.</span>'}</p>
+          ${st.criterios ? criteriosHtml(p.key, st.criterios)
+            : `<p class="pillar-evid"><b>Evidências:</b> ${st.evidencia ? escapeHtml(st.evidencia) : '<span style="color:var(--text-muted)">Nenhuma evidência registrada.</span>'}</p>`}
           ${fotosHtml(av.fotos, p.key)}
         </div>
         <div class="calib-zone">
@@ -532,6 +533,18 @@
         saveCalibragem(av.id, p.key, calInput, justInput, st.notaInformada);
       });
     });
+
+    // Observações gerais da visita (formulário por critérios), só leitura.
+    const obsAntiga = document.getElementById('panel-observacoes-coord');
+    if (obsAntiga) obsAntiga.remove();
+    if (av.identificacao.observacoesGerais) {
+      const obs = document.createElement('div');
+      obs.className = 'panel';
+      obs.id = 'panel-observacoes-coord';
+      obs.innerHTML = `<div class="panel-head"><h2>Observações gerais da visita</h2></div>
+        <p class="pillar-evid">${escapeHtml(av.identificacao.observacoesGerais)}</p>`;
+      document.getElementById('panel-jornada-coord').after(obs);
+    }
 
     renderJornadaCoord(av);
     renderGapsCoord(av);
@@ -918,7 +931,8 @@
           <h4>${p.nome}</h4>
           <span class="band-chip ${b.tone}">${st.notaCalibrada !== null && st.notaCalibrada !== undefined ? st.notaCalibrada.toFixed(1) + ' · ' : ''}${b.label}</span>
         </div>
-        <p class="pillar-evid">${st.evidencia ? escapeHtml(st.evidencia) : '<span style="color:var(--text-muted)">Sem evidências registradas.</span>'}</p>
+        ${st.criterios ? criteriosHtml(p.key, st.criterios)
+          : `<p class="pillar-evid">${st.evidencia ? escapeHtml(st.evidencia) : '<span style="color:var(--text-muted)">Sem evidências registradas.</span>'}</p>`}
         ${fotosHtml(av.fotos, p.key)}
         ${showDiff ? `<div class="calib-note"><b>Nota informada: ${st.notaInformada.toFixed(1)}</b> &nbsp;|&nbsp; <b>Nota calibrada: ${st.notaCalibrada.toFixed(1)}</b><br>${st.justificativaCalibragem ? escapeHtml(st.justificativaCalibragem) : 'Calibragem aplicada conforme a régua de avaliação.'}</div>` : ''}
       </div>`;
@@ -984,6 +998,7 @@
 
         <div class="section-title"><span class="n">5</span>Avaliação por pilar — evidências, nota informada x calibrada</div>
         ${pillarCardsHtml}
+        ${idz.observacoesGerais ? `<div class="pillar-card"><div class="pillar-card-head"><h4>Observações gerais da visita</h4></div><p class="pillar-evid">${escapeHtml(idz.observacoesGerais)}</p></div>` : ''}
 
         <div class="section-title"><span class="n">6</span>Mapa de gaps</div>
         ${gapsHtml}

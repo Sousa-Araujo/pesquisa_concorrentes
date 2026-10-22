@@ -30,6 +30,8 @@ export interface ColunaComparativo {
   areaM2: number | null;
   estoque: number | null;
   vendas: number | null;
+  /** Mês (YYYY-MM-01) de onde vieram estoque e vendas, quando não é o mês escolhido. */
+  mesDados: string | null;
   vso: number | null;
   mesesZerar: number | null;
   giro: Giro;
@@ -55,14 +57,18 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
     pool.query<{ id_concorrente: number; concorrente: string }>(
       `select id_concorrente, concorrente from concorrentes
         where id_empreendimento = $1 and ativo order by concorrente`, [idEmpreendimento]),
-    pool.query<{ estoque: number; vendas: number; ticket_tabela_centavos: string | null; ticket_desconto_centavos: string | null }>(
-      `select estoque, vendas, ticket_tabela_centavos, ticket_desconto_centavos
-         from dados_proprios_mensais where id_empreendimento = $1 and mes_ano = $2`,
+    // Sem dado no mês escolhido, usa o último mês anterior com dado (e mostra qual).
+    pool.query<{ estoque: number; vendas: number; ticket_tabela_centavos: string | null; ticket_desconto_centavos: string | null; mes: string }>(
+      `select estoque, vendas, ticket_tabela_centavos, ticket_desconto_centavos, to_char(mes_ano, 'YYYY-MM-DD') as mes
+         from dados_proprios_mensais where id_empreendimento = $1 and mes_ano <= $2
+        order by mes_ano desc limit 1`,
       [idEmpreendimento, mesAno]),
-    pool.query<{ id_concorrente: number; estoque: number; vendas: number }>(
-      `select cm.id_concorrente, cm.estoque, cm.vendas from coletas_mensais cm
+    pool.query<{ id_concorrente: number; estoque: number; vendas: number; mes: string }>(
+      `select distinct on (cm.id_concorrente) cm.id_concorrente, cm.estoque, cm.vendas, to_char(cm.mes_ano, 'YYYY-MM-DD') as mes
+         from coletas_mensais cm
          join concorrentes c on c.id_concorrente = cm.id_concorrente
-        where c.id_empreendimento = $1 and cm.mes_ano = $2`, [idEmpreendimento, mesAno]),
+        where c.id_empreendimento = $1 and cm.mes_ano <= $2
+        order by cm.id_concorrente, cm.mes_ano desc`, [idEmpreendimento, mesAno]),
     // Visitas concluídas até o fim da competência, a mais recente primeiro.
     pool.query(
       `select id, tipo_empreendimento, id_empreendimento, id_concorrente, empreendimento_texto, construtora_texto,
@@ -91,7 +97,7 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
 
   function coluna(
     nome: string, proprio: boolean, v: Record<string, unknown> | undefined, estoque: number | null, vendas: number | null,
-    precoCV?: { tabela: number | null; desconto: number | null },
+    mesDados: string | null, precoCV?: { tabela: number | null; desconto: number | null },
   ): ColunaComparativo {
     let preco = calcularPreco({
       valorTabelaCentavos: v?.valor_unidade_centavos ? Number(v.valor_unidade_centavos) : null,
@@ -137,6 +143,7 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
       areaM2: v?.area_unidade_m2 ? Number(v.area_unidade_m2) : null,
       estoque,
       vendas,
+      mesDados: mesDados && mesDados !== mesAno ? mesDados : null,
       vso: giro.vso,
       mesesZerar: giro.mesesZerar,
       giro: giro.giro,
@@ -149,13 +156,13 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
   }
 
   const colunas = [
-    coluna(emp.empreendimento, true, visitaSousa, proprio?.estoque ?? null, proprio?.vendas ?? null, {
+    coluna(emp.empreendimento, true, visitaSousa, proprio?.estoque ?? null, proprio?.vendas ?? null, proprio?.mes ?? null, {
       tabela: proprio?.ticket_tabela_centavos ? Number(proprio.ticket_tabela_centavos) / 100 : null,
       desconto: proprio?.ticket_desconto_centavos ? Number(proprio.ticket_desconto_centavos) / 100 : null,
     }),
     ...concorrentes.map((c) => {
       const col = coletas.find((x) => x.id_concorrente === c.id_concorrente);
-      return coluna(c.concorrente, false, visitaDe(c), col?.estoque ?? null, col?.vendas ?? null);
+      return coluna(c.concorrente, false, visitaDe(c), col?.estoque ?? null, col?.vendas ?? null, col?.mes ?? null);
     }),
   ];
   return { empreendimento: emp.empreendimento, colunas };

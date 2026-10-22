@@ -134,6 +134,68 @@
     return faltando;
   }
 
+  // Formulário por critérios (modelo 2): 4 critérios por pilar, nota 0–10 +
+  // evidência. 4.4 é Sim/Não (Sim = 10, Não = 0). Chaves iguais às de
+  // src/lib/cliente-oculto/criterios.ts.
+  const CRITERIOS = {
+    recepcao: [
+      { key: '1.1', nome: 'Prontidão no atendimento', desc: 'Percebe a chegada do cliente e o cumprimenta sem demora ou deixá-lo sem atenção.' },
+      { key: '1.2', nome: 'Cordialidade e receptividade', desc: 'Demonstra educação e simpatia na interação, por exemplo, com saudação atenciosa e tom respeitoso.' },
+      { key: '1.3', nome: 'Condução do cadastro', desc: 'Solicita e registra as informações necessárias de forma organizada e clara.' },
+      { key: '1.4', nome: 'Direcionamento e espera', desc: 'Aciona o corretor responsável e informa ao cliente o que acontecerá, evitando que fique sem orientação.' },
+    ],
+    corretorAtend: [
+      { key: '2.1', nome: 'Investigação das necessidades', desc: 'Pergunta sobre perfil, preferências, orçamento ou condições relevantes antes de apresentar a solução.' },
+      { key: '2.2', nome: 'Escuta e personalização', desc: 'Considera o que o cliente informou e adapta a conversa ou apresentação a essas necessidades.' },
+      { key: '2.3', nome: 'Clareza e domínio nas respostas', desc: 'Responde de forma compreensível e correta; quando não sabe, consulta uma fonte antes de responder.' },
+      { key: '2.4', nome: 'Ética, lealdade comercial e respeito à concorrência', desc: 'Mantém conduta respeitosa e transparente: não oferece produto de outra construtora nem denigre ou desqualifica empreendimentos concorrentes. Se fizer comparações, limita-se a informações objetivas e respeitosas. Não pressiona o cliente nem apresenta informações sem respaldo.' },
+    ],
+    pdv: [
+      { key: '3.1', nome: 'Acesso e estacionamento', desc: 'O ponto de venda é fácil de acessar e oferece orientação ou condições adequadas para estacionar.' },
+      { key: '3.2', nome: 'Limpeza e conservação', desc: 'PDV, decorado e áreas utilizadas pelo cliente estão limpos e sem problemas evidentes de manutenção.' },
+      { key: '3.3', nome: 'Organização e funcionalidade', desc: 'Os ambientes estão organizados e são confortáveis e utilizáveis durante a visita.' },
+      { key: '3.4', nome: 'Recursos de apresentação', desc: 'Maquete, totem, decorado e demais recursos disponíveis estão em boas condições e ajudam a compreender o empreendimento.' },
+    ],
+    materiais: [
+      { key: '4.1', nome: 'Disponibilidade de materiais', desc: 'Há materiais adequados para apresentar o empreendimento, em formato impresso, digital ou visual no PDV.' },
+      { key: '4.2', nome: 'Qualidade visual e legibilidade', desc: 'Textos, imagens e informações são legíveis, organizados e apresentados com boa qualidade.' },
+      { key: '4.3', nome: 'Clareza e consistência das informações', desc: 'Os materiais explicam o produto e não contradizem o que o corretor informa.' },
+      { key: '4.4', nome: 'Utilidade do material para o cliente', simNao: true, desc: 'O material foi apresentado ou disponibilizado e ajudou o cliente a compreender ou avaliar o empreendimento?' },
+    ],
+    negociacao: [
+      { key: '5.1', nome: 'Adequação da proposta ao perfil', desc: 'Considera as condições e necessidades relatadas pelo cliente ao apresentar valores ou alternativas.' },
+      { key: '5.2', nome: 'Clareza das condições comerciais', desc: 'Explica os valores e componentes da negociação, como ato, parcelas, financiamento, descontos e valores pré ou pós-entrega, quando aplicáveis.' },
+      { key: '5.3', nome: 'Argumentação e tratamento de dúvidas ou objeções', desc: 'Responde às preocupações com explicações pertinentes e sem omitir condições importantes.' },
+      { key: '5.4', nome: 'Formalização e próximos passos', desc: 'Apresenta ou encaminha uma proposta ou explica claramente os passos seguintes, incluindo documentação necessária, sem pressionar pelo fechamento.' },
+    ],
+    conhecimento: [
+      { key: '6.1', nome: 'Características do produto', desc: 'Informa corretamente tipologia, metragem, dormitórios, vagas e demais características da unidade.' },
+      { key: '6.2', nome: 'Áreas, diferenciais e acabamentos', desc: 'Explica áreas comuns, diferenciais, infraestrutura e acabamentos; confirma informações quando necessário.' },
+      { key: '6.3', nome: 'Disponibilidade e prazo', desc: 'Informa disponibilidade de unidades e previsão de entrega com base em dados atualizados.' },
+      { key: '6.4', nome: 'Regras e processo de venda', desc: 'Conhece e explica políticas e etapas relevantes, como financiamento, documentação e condições comerciais.' },
+    ],
+  };
+
+  // Média simples dos critérios aplicáveis com nota (mesma regra do servidor).
+  function mediaCriterios(resp) {
+    const notas = Object.values(resp || {}).filter(r => r && !r.na && r.nota !== null && r.nota !== undefined).map(r => Number(r.nota));
+    if (!notas.length) return null;
+    return Math.round(notas.reduce((a, b) => a + b, 0) / notas.length * 100) / 100;
+  }
+
+  // Critérios só leitura (calibragem e relatório): nota e evidência de cada item.
+  function criteriosHtml(pilarKey, resp) {
+    const defs = CRITERIOS[pilarKey] || [];
+    if (!resp) return '';
+    return `<div class="crit-leitura">${defs.map(d => {
+      const r = resp[d.key] || {};
+      const nota = r.na ? 'Não se aplica' : (r.nota === null || r.nota === undefined) ? '—'
+        : d.simNao ? (Number(r.nota) === 10 ? 'Sim' : 'Não') : String(r.nota).replace('.', ',');
+      return `<div class="crit-leitura-item"><div class="crit-leitura-top"><span><b>${d.key}</b> ${escapeHtml(d.nome)}</span><span class="crit-leitura-nota${r.na ? ' na' : ''}">${nota}</span></div>
+        ${r.evidencia ? `<p>${escapeHtml(r.evidencia)}</p>` : ''}</div>`;
+    }).join('')}</div>`;
+  }
+
   // -------------------------------------------------------------------------
   // Fotos de comprovação (somente leitura: calibragem e relatório)
   // -------------------------------------------------------------------------
@@ -234,6 +296,7 @@
     bandFor, toneColorVar, toneTintVar, pilarLabel, tipoTagHtml,
     regionalOptionsHtml, mesReferencia, validarCamposObrigatorios,
     PERGUNTA_ORIGEM, CANAIS_PREVIA, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml,
+    CRITERIOS, mediaCriterios, criteriosHtml,
     moneyMaskFromDigits, centavosToDisplay, areaMaskFromInput, percentMaskFromInput,
     escapeHtml, escapeAttr,
   };

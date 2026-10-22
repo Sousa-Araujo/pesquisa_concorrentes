@@ -127,10 +127,10 @@ function FormAgente({
             <p className="mt-1 text-xs text-ink/40">Será normalizado (somente dígitos) e deve ser único.</p>
           </div>
           <div>
-            <label className="rotulo" htmlFor="ag-email">E-mail (opcional)</label>
+            <label className="rotulo" htmlFor="ag-email">E-mail</label>
             <input id="ag-email" type="email" className="campo !text-base !py-2" value={email}
               onChange={(e) => setEmail(e.target.value)} />
-            <p className="mt-1 text-xs text-ink/40">O código de acesso vai para este e-mail enquanto o envio por SMS não estiver ativo.</p>
+            <p className="mt-1 text-xs text-ink/40">Obrigatório: o agente entra com este e-mail e recebe nele o código de acesso.</p>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />

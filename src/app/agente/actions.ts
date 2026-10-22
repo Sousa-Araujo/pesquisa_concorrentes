@@ -3,7 +3,7 @@
 /**
  * Server Actions da Área do Agente (seções 4, 13, 22–24).
  * Toda regra crítica é validada no backend (seção 40). O agente entra com
- * telefone + código e fica com uma sessão no banco (src/lib/auth/acesso.ts);
+ * e-mail + código e fica com uma sessão no banco (src/lib/auth/acesso.ts);
  * quem registra a coleta é sempre o agente da sessão.
  */
 import { db } from "@/lib/db/pool";
@@ -37,29 +37,27 @@ export interface AgenteSessao { id_agente: string; nome: string; }
 type Resultado<T> = { ok: true; data: T } | { ok: false; erro: string };
 
 /**
- * Login do agente (seção 4): telefone cadastrado e ativo + código de uso
- * único (e-mail cadastrado do agente ou SMS). Nunca cria agente.
+ * Login do agente (seção 4): e-mail cadastrado e ativo + código de uso
+ * único enviado para esse e-mail. Nunca cria agente.
  */
-export async function solicitarCodigoAgente(
-  telefoneBruto: string,
-): Promise<Resultado<{ canal: "email" | "sms" }>> {
-  const parsed = loginAgenteSchema.safeParse({ telefone: telefoneBruto });
-  if (!parsed.success) return { ok: false, erro: "Telefone inválido." };
-  const r = await pedirCodigoAgente(parsed.data.telefone);
-  return r.ok ? { ok: true, data: { canal: r.canal ?? "sms" } } : r;
+export async function solicitarCodigoAgente(emailBruto: string): Promise<Resultado<null>> {
+  const parsed = loginAgenteSchema.safeParse({ email: emailBruto });
+  if (!parsed.success) return { ok: false, erro: "E-mail inválido." };
+  const r = await pedirCodigoAgente(parsed.data.email);
+  return r.ok ? { ok: true, data: null } : r;
 }
 
 export async function entrarAgente(
-  telefoneBruto: string,
+  emailBruto: string,
   codigo: string,
 ): Promise<Resultado<AgenteSessao>> {
-  const parsed = loginAgenteSchema.safeParse({ telefone: telefoneBruto });
-  if (!parsed.success) return { ok: false, erro: "Telefone inválido." };
-  const r = await entrarComCodigoAgente(parsed.data.telefone, codigo);
+  const parsed = loginAgenteSchema.safeParse({ email: emailBruto });
+  if (!parsed.success) return { ok: false, erro: "E-mail inválido." };
+  const r = await entrarComCodigoAgente(parsed.data.email, codigo);
   if (!r.ok) return r;
   const { rows } = await db().query<AgenteSessao>(
-    `select id_agente, nome from agentes_campo where telefone = $1`,
-    [parsed.data.telefone],
+    `select id_agente, nome from agentes_campo where id_agente = $1`,
+    [r.idAgente],
   );
   return { ok: true, data: rows[0] };
 }
