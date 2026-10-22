@@ -136,3 +136,16 @@ export function resumoAtendimento(pilares: { key: string; nota: number | null }[
 export function nomeComparavel(s: string | null | undefined): string {
   return String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
+
+/**
+ * Nome "núcleo" do empreendimento, para ligar cadastros com nomes um pouco
+ * diferentes: sem pontuação e sem prefixos genéricos no começo
+ * ("Residencial Safira II" → "safira ii").
+ */
+export function nomeNucleo(s: string | null | undefined): string {
+  return nomeComparavel(s)
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/^(?:(?:residencial|condominio|cond|edificio|ed|empreendimento|res)\s+)+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}

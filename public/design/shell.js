@@ -5,13 +5,30 @@
   'use strict';
   var CHAVE = 'ms-menu-recolhido';
 
-  function css(href) {
-    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; document.head.appendChild(l);
+  // Folhas inseridas por script não seguram a pintura da página: até elas
+  // carregarem, o menu ficaria sem estilo (logo da Sousa no tamanho original).
+  // Por isso a página só aparece depois que as folhas do design carregam.
+  var pendentes = 0;
+  function css(href, essencial) {
+    // Já declarada no <head> da página (segura a pintura sozinha): não repete.
+    if (document.querySelector('link[rel="stylesheet"][href="' + href + '"]')) return;
+    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href;
+    if (essencial) {
+      pendentes++;
+      l.onload = l.onerror = function () { if (--pendentes === 0) estilosProntos(); };
+    }
+    document.head.appendChild(l);
   }
+  var semEstilo = document.createElement('style');
+  semEstilo.textContent = 'body { visibility: hidden; }';
+  document.head.appendChild(semEstilo);
+  function estilosProntos() { if (semEstilo.parentNode) semEstilo.parentNode.removeChild(semEstilo); }
+  setTimeout(estilosProntos, 3000);
   css('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
-  css('/design/tokens.css');
-  css('/design/ms.css');
-  css('/design/legado.css');
+  css('/design/tokens.css', true);
+  css('/design/ms.css', true);
+  css('/design/legado.css', true);
+  if (pendentes === 0) estilosProntos();
   // Diálogo do sistema no lugar do confirm()/alert() do navegador.
   if (!window.MSDialogo) {
     var dlg = document.createElement('script'); dlg.src = '/design/dialogo.js'; document.head.appendChild(dlg);
@@ -81,8 +98,8 @@
   function navbar(u) {
     var topo = el('header', { 'class': 'ms-topbar' });
     topo.appendChild(el('a', { href: '/inicio', 'class': 'ms-topbar-logo', 'aria-label': 'Início' },
-      '<img class="ms-logo-claro" src="/design/logo-sousa-araujo.svg" alt="Construtora Sousa Araujo">' +
-      '<img class="ms-logo-escuro" src="/design/logo-sousa-araujo-branco.svg" alt="Construtora Sousa Araujo">'));
+      '<img class="ms-logo-claro" src="/design/logo-sousa-araujo.svg" alt="Construtora Sousa Araujo" height="36">' +
+      '<img class="ms-logo-escuro" src="/design/logo-sousa-araujo-branco.svg" alt="Construtora Sousa Araujo" height="36">'));
 
     var acoes = el('div', { 'class': 'ms-topbar-acoes' });
     var bt = el('button', { type: 'button', 'class': 'ms-icon-btn', title: 'Minha conta', 'aria-haspopup': 'menu', 'aria-expanded': 'false' },

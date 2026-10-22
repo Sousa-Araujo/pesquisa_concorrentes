@@ -123,6 +123,10 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     });
   }
 
+  // Pesquisa de Concorrentes fica logo antes de Recibos (depois de Cliente Oculto e Tabelas).
+  const iPesquisa = modulos.findIndex((m) => m.id === "pesquisa");
+  if (iPesquisa >= 0) modulos.push(...modulos.splice(iPesquisa, 1));
+
   // Recibos de pagamento do Cliente Oculto: módulo próprio (Coordenador de Market Share e administrador).
   if (temPermissao(p, "recibos")) {
     const n = await recibosAPagar();

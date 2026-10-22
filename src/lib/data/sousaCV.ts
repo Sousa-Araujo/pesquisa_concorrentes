@@ -11,7 +11,7 @@
 import "server-only";
 import { db } from "@/lib/db/pool";
 import { cvConfigurado, lerEmpreendimentosCV, lerEstoqueAtual, lerVendasMensais, type EmpreendimentoCV } from "@/lib/db/cv";
-import { nomeComparavel } from "@/lib/domain/comparativo";
+import { nomeComparavel, nomeNucleo } from "@/lib/domain/comparativo";
 
 /** Primeiro dia do mês atual no horário de Brasília (YYYY-MM-01). */
 function mesAtual(agora = new Date()): string {
@@ -25,13 +25,22 @@ function mesAnterior(mes: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Liga ao CV, pelo nome, os empreendimentos ainda sem ligação manual. */
+/**
+ * Liga ao CV, pelo nome, os empreendimentos ainda sem ligação manual.
+ * Primeiro pelo nome igual; se não achar, pelo nome sem prefixos genéricos
+ * ("Residencial Safira II" = "SAFIRA II"), só quando há um único candidato.
+ */
 export async function ligarPorNome(cv: EmpreendimentoCV[]): Promise<number> {
   const { rows } = await db().query(`select id_empreendimento, empreendimento, id_cv from empreendimentos where not id_cv_manual`);
   const porNome = new Map(cv.map((c) => [nomeComparavel(c.nome), c.id]));
+  const porNucleo = new Map<string, number | null>();
+  for (const c of cv) {
+    const k = nomeNucleo(c.nome);
+    porNucleo.set(k, porNucleo.has(k) ? null : c.id); // null = ambíguo
+  }
   let ligados = 0;
   for (const e of rows) {
-    const id = porNome.get(nomeComparavel(e.empreendimento)) ?? null;
+    const id = porNome.get(nomeComparavel(e.empreendimento)) ?? porNucleo.get(nomeNucleo(e.empreendimento)) ?? null;
     if (id !== e.id_cv) await db().query(`update empreendimentos set id_cv = $2 where id_empreendimento = $1`, [e.id_empreendimento, id]);
     if (id) ligados++;
   }

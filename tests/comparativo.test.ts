@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  calcularGiro, calcularPreco, lerEntrega, lerParcelas, melhores, mesesAteEntrega, nomeComparavel, resumoAtendimento,
+  calcularGiro, calcularPreco, lerEntrega, lerParcelas, melhores, mesesAteEntrega, nomeComparavel, nomeNucleo, resumoAtendimento,
 } from "@/lib/domain/comparativo";
 
 describe("lerEntrega", () => {
@@ -62,6 +62,10 @@ describe("giro e destaques", () => {
     expect(lerParcelas("36x")).toBe(36);
     expect(lerParcelas("")).toBeNull();
     expect(nomeComparavel("  SOU  Viver Taubaté ")).toBe("sou viver taubate");
+    expect(nomeNucleo("Residencial Safira II")).toBe("safira ii");
+    expect(nomeNucleo("SAFIRA II")).toBe("safira ii");
+    expect(nomeNucleo("Cond. Residencial Jardim-Sul")).toBe("jardim sul");
+    expect(nomeNucleo("Sou Viver Milão")).toBe("sou viver milao");
   });
   it("resumo do atendimento", () => {
     const r = resumoAtendimento([{ key: "pdv", nota: 9 }, { key: "materiais", nota: 6 }, { key: "recepcao", nota: null }], "Sem maquete");
