@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import type { LinhaAgente } from "@/lib/data/gestor";
-import { criarAgente, editarAgente, definirStatusAgente } from "../../actions";
+import { criarAgente, editarAgente, definirStatusAgente, excluirAgente } from "../../actions";
+import { confirmar, avisar } from "@/lib/cliente/dialogo";
 
 export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
   const router = useRouter();
@@ -66,6 +67,21 @@ export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
                       recarregar();
                     }}>
                     {a.ativo ? "Inativar" : "Ativar"}
+                  </button>
+                  <button className="btn-acao btn-acao--perigo"
+                    onClick={async () => {
+                      const ok = await confirmar({
+                        titulo: `Excluir ${a.nome}?`,
+                        mensagem: "O agente sai da lista e perde o acesso. As coletas que ele já fez continuam na pesquisa, com o nome dele.",
+                        textoConfirmar: "Excluir agente",
+                        perigo: true,
+                      });
+                      if (!ok) return;
+                      const r = await excluirAgente(a.id_agente);
+                      if (!r.ok) await avisar(r.erro);
+                      recarregar();
+                    }}>
+                    Excluir
                   </button>
                 </div>
                 </td>

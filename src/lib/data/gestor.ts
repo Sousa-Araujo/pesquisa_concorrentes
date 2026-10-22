@@ -98,6 +98,7 @@ export async function listarAgentes(): Promise<LinhaAgente[]> {
             max(cm.coletado_em) as ultima_coleta
        from agentes_campo a
        left join coletas_mensais cm on cm.id_agente = a.id_agente
+      where a.excluido_em is null
       group by a.id_agente
       order by a.nome`,
   );
@@ -110,6 +111,8 @@ export interface DadoProprio {
   estoque: number;
   vendas: number;
   atualizado_em: string | null;
+  /** 'cv' = sincronizado do CV; 'manual' = digitado nesta tela. */
+  origem: "cv" | "manual";
 }
 
 /** Lê os dados próprios de um empreendimento numa competência (seção 25). */
@@ -118,7 +121,7 @@ export async function obterDadosProprios(
   mesAno: string,
 ): Promise<DadoProprio | null> {
   const { rows } = await db().query<DadoProprio>(
-    `select id_empreendimento, mes_ano, estoque, vendas, atualizado_em
+    `select id_empreendimento, mes_ano, estoque, vendas, atualizado_em, origem
        from dados_proprios_mensais
       where id_empreendimento = $1 and mes_ano = $2`,
     [idEmpreendimento, mesAno],
@@ -171,6 +174,8 @@ export interface LinhaEmpreendimento {
   ativo: boolean;
   cidade: string;
   regional: string;
+  /** AAAA-MM-DD */
+  data_lancamento: string | null;
 }
 
 export interface FiltroCadastro {
@@ -193,7 +198,7 @@ export async function listarEmpreendimentosAdmin(f: FiltroCadastro = {}): Promis
 
   const { rows } = await db().query<LinhaEmpreendimento>(
     `select emp.id_empreendimento, emp.id_cidade, emp.empreendimento, emp.ativo,
-            cid.cidade, cid.regional
+            cid.cidade, cid.regional, to_char(emp.data_lancamento, 'YYYY-MM-DD') as data_lancamento
        from empreendimentos emp
        join cidades cid on cid.id_cidade = emp.id_cidade
        ${where.length ? `where ${where.join(" and ")}` : ""}
@@ -211,6 +216,8 @@ export interface LinhaConcorrente {
   empreendimento: string;
   cidade: string;
   regional: string;
+  /** AAAA-MM-DD */
+  data_lancamento: string | null;
 }
 
 /**
@@ -232,7 +239,7 @@ export async function listarConcorrentesAdmin(
 
   const { rows } = await db().query<LinhaConcorrente>(
     `select c.id_concorrente, c.id_empreendimento, c.concorrente, c.ativo,
-            emp.empreendimento, cid.cidade, cid.regional
+            emp.empreendimento, cid.cidade, cid.regional, to_char(c.data_lancamento, 'YYYY-MM-DD') as data_lancamento
        from concorrentes c
        join empreendimentos emp on emp.id_empreendimento = c.id_empreendimento
        join cidades cid         on cid.id_cidade = emp.id_cidade

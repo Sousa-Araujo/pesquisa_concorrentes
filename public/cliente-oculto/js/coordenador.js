@@ -6,7 +6,7 @@
   const CFG = window.COConfig;
   const { PILARES, JORNADA, STATUS_JORNADA, GRAVIDADES, STATUS_AVALIACAO,
           bandFor, toneColorVar, toneTintVar, pilarLabel, tipoTagHtml, mesReferencia,
-          escapeHtml, escapeAttr, PERGUNTA_ORIGEM, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml, criteriosHtml } = CFG;
+          escapeHtml, escapeAttr, PERGUNTA_ORIGEM, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml, criteriosHtml, abrirFotos } = CFG;
 
   // Atendimento prévio online: tempos a partir do contato do cliente oculto.
   function previaHtml(idz) {
@@ -259,6 +259,14 @@
     loadList();
   });
 
+  const fotosDaLista = {};
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('[data-ver-fotos]');
+    if (!btn) return;
+    e.stopPropagation();
+    abrirFotos(fotosDaLista[btn.getAttribute('data-ver-fotos')], 0);
+  }, true);
+
   function rowHtml(r, { hasChildren = false, isChild = false, isAvulsaSemVinculo = false, collapsed = false, childCount = 0 } = {}) {
     const st = STATUS_AVALIACAO[r.status] || {};
     const rowClass = r.status === 'Aguardando Calibragem' ? 'row-aguardando' : (r.status === 'Concluída' ? 'row-concluida' : '');
@@ -267,6 +275,11 @@
     let acaoHtml;
     if (r.status === 'Aguardando Calibragem') acaoHtml = `<button class="btn btn-primary btn-sm" data-calibrar="${escapeAttr(r.id)}">🖊️ Calibrar</button>`;
     else if (r.status === 'Concluída') acaoHtml = `<button class="btn btn-ghost btn-sm" data-ver-relatorio="${escapeAttr(r.id)}">📄 Ver relatório</button>`;
+    // Prévia das fotos da visita direto da lista (avaliações já enviadas).
+    if (r.status !== 'Em Preenchimento' && r.fotos && r.fotos.length) {
+      fotosDaLista[r.id] = r.fotos;
+      acaoHtml += `<button class="btn btn-ghost btn-sm fotos-lista-btn" data-ver-fotos="${escapeAttr(r.id)}" title="Ver as fotos da visita"><img src="${escapeAttr(r.fotos[0].url)}" alt="" loading="lazy">${r.fotos.length} foto${r.fotos.length > 1 ? 's' : ''}</button>`;
+    }
     else acaoHtml = `<span class="row-action-muted">Aguardando preenchimento</span>`;
     const vinculoAvulso = isAvulsaSemVinculo ? '<span class="vinculo-chip-standalone" title="Concorrente sem vínculo a um projeto Sousa Araujo">🔗 sem vínculo</span>' : '';
     const toggle = hasChildren
@@ -522,6 +535,11 @@
           divergeEl.style.display = difere ? 'inline-flex' : 'none';
         }
       };
+      // A calibragem já começa com a nota do avaliador; o Coordenador só ajusta o que precisar.
+      if (calInput.value === '' && st.notaInformada !== null && st.notaInformada !== undefined) {
+        calInput.value = st.notaInformada;
+        saveCalibragem(av.id, p.key, calInput, justInput, st.notaInformada);
+      }
       refresh();
       calInput.addEventListener('input', refresh);
       calInput.addEventListener('blur', () => saveCalibragem(av.id, p.key, calInput, justInput, st.notaInformada));
@@ -1096,7 +1114,13 @@
   }
 
   function wireExport(av, notaGeral, bandGeral, counts, gaps, synth) {
-    document.getElementById('printBtn').onclick = () => window.print();
+    document.getElementById('printBtn').onclick = async () => {
+      // Miniaturas com carregamento preguiçoso podem sair em branco no PDF: carrega todas antes.
+      const imgs = [...document.querySelectorAll('#reportContent img')];
+      imgs.forEach(img => { img.loading = 'eager'; });
+      await Promise.all(imgs.map(img => img.complete ? null : new Promise(ok => { img.onload = img.onerror = ok; })));
+      window.print();
+    };
     document.getElementById('copyRowBtn').onclick = async () => {
       const row = buildExportRow(av, notaGeral, bandGeral, counts, gaps, synth);
       const tsv = row.map(toTsvCell).join('\t');
@@ -1132,6 +1156,16 @@
       span.style.fontWeight = '750';
       btn.replaceWith(span);
     });
+    // Fotos embutidas no arquivo (o endereço /api/co/fotos só abre com login no sistema).
+    await Promise.all([...clone.querySelectorAll('img[src^="/api/co/fotos/"]')].map(async (img) => {
+      try {
+        const blob = await fetch(img.getAttribute('src')).then((r) => r.blob());
+        img.src = await new Promise((ok, falha) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = falha; fr.readAsDataURL(blob); });
+        img.removeAttribute('loading');
+        const a = img.closest('a');
+        if (a) a.replaceWith(img);
+      } catch (err) { /* sem a foto, o arquivo sai só com a legenda */ }
+    }));
     let css = '';
     try { css = await fetch('css/styles.css').then((r) => r.text()); }
     catch (err) { css = ''; }

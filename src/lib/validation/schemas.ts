@@ -33,10 +33,19 @@ export const agenteSchema = z.object({
   ativo: z.boolean().default(true),
 });
 
+/** Data de lançamento opcional (AAAA-MM-DD); vazio vira null. */
+const dataLancamento = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de lançamento inválida")
+  .or(z.literal(""))
+  .nullish()
+  .transform((v) => v || null);
+
 /** Cadastro de novo concorrente (seção 13). ID é gerado no backend. */
 export const novoConcorrenteSchema = z.object({
   id_empreendimento: z.number().int().positive(),
   nome: z.string().trim().min(1, "Nome do concorrente é obrigatório"),
+  data_lancamento: dataLancamento,
 });
 
 /**
@@ -48,6 +57,7 @@ export const novoConcorrenteSchema = z.object({
 export const concorrenteEdicaoSchema = z.object({
   concorrente: z.string().trim().min(1, "Nome do concorrente é obrigatório"),
   ativo: z.boolean().default(true),
+  data_lancamento: dataLancamento,
 });
 
 /**
@@ -60,6 +70,7 @@ export const empreendimentoSchema = z.object({
   id_cidade: z.number().int().positive(),
   empreendimento: z.string().trim().min(1, "Nome é obrigatório"),
   ativo: z.boolean().default(true),
+  data_lancamento: dataLancamento,
 });
 
 /** Edição de empreendimento: o ID não muda depois de criado (ver acima). */
@@ -67,6 +78,7 @@ export const empreendimentoEdicaoSchema = z.object({
   id_cidade: z.number().int().positive(),
   empreendimento: z.string().trim().min(1, "Nome é obrigatório"),
   ativo: z.boolean().default(true),
+  data_lancamento: dataLancamento,
 });
 
 /**

@@ -256,6 +256,8 @@ export async function listarAvaliacoes(quem: Quem, f: Record<string, string | un
         where p.avaliacao_id = a.id and p.avaliado and p.nota_calibrada is not null) as nota_geral_calibrada,
       (select count(*) from co_pilares p where p.avaliacao_id = a.id and p.avaliado) as pilares_avaliados,
       (select count(*) from co_gaps g where g.avaliacao_id = a.id) as total_gaps,
+      (select coalesce(json_agg(json_build_object('id', f.id, 'pilarKey', f.pilar_key, 'legenda', f.legenda) order by f.criado_em, f.id), '[]')
+         from co_fotos f where f.avaliacao_id = a.id) as fotos,
       (select count(*) from co_gaps g where g.avaliacao_id = a.id and g.gravidade in ('alta','critica')) as gaps_alta_critica
     from co_avaliacoes a where true`;
   const params: unknown[] = [];
@@ -286,6 +288,8 @@ export async function listarAvaliacoes(quem: Quem, f: Record<string, string | un
     notaGeralCalibrada: quem.papel === "avaliador" ? null : num(r.nota_geral_calibrada),
     pilaresAvaliados: Number(r.pilares_avaliados),
     totalGaps: quem.papel === "avaliador" ? 0 : Number(r.total_gaps),
+    fotos: ((r.fotos ?? []) as { id: string; pilarKey: string; legenda: string | null }[])
+      .map((f) => ({ ...f, legenda: f.legenda ?? "", url: `/api/co/fotos/${f.id}` })),
     gapsAltaCritica: quem.papel === "avaliador" ? 0 : Number(r.gaps_alta_critica),
     tipoEmpreendimento: r.tipo_empreendimento,
     construtora: r.construtora_texto,

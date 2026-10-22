@@ -167,7 +167,6 @@ function FormUsuario({
   const [nome, setNome] = useState(usuario?.nome ?? "");
   const [email, setEmail] = useState(usuario?.email ?? "");
   const [perfis, setPerfis] = useState<string[]>(usuario?.perfis ?? (ehAdmin ? [] : ["avaliador"]));
-  const [temporario, setTemporario] = useState(Boolean(usuario?.acesso_ate));
   const [ate, setAte] = useState(usuario?.acesso_ate ?? "");
   const [ativo, setAtivo] = useState(usuario?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
@@ -179,9 +178,8 @@ function FormUsuario({
 
   async function salvar() {
     setErro(null);
-    if (temporario && !ate) { setErro("Informe até quando o acesso vale."); return; }
     setSalvando(true);
-    const dados = { nome, email, perfis, acesso_expira_em: temporario ? ate : "", ativo };
+    const dados = { nome, email, perfis, acesso_expira_em: ate, ativo };
     const r = usuario ? await editarUsuario(usuario.id_usuario, dados) : await criarUsuario(dados);
     setSalvando(false);
     if (r.ok) onSalvo(r.aviso);
@@ -221,18 +219,18 @@ function FormUsuario({
           </fieldset>
         )}
 
-        <div className="grid gap-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={temporario} onChange={(e) => setTemporario(e.target.checked)} />
-            Acesso temporário
-          </label>
-          {temporario && (
-            <div>
-              <label className="rotulo" htmlFor="u-ate">Acesso vale até (inclusive)</label>
-              <CampoData id="u-ate" tipo="data" value={ate} onChange={setAte} />
-              <p className="mt-1 text-xs text-ink/40">Depois desse dia o acesso expira sozinho. Para recontratar, basta mudar a data.</p>
-            </div>
-          )}
+        {/* Acesso temporário: com data, o acesso expira sozinho depois desse dia. */}
+        <div>
+          <label className="rotulo" htmlFor="u-ate">Acesso temporário — vale até (inclusive)</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1"><CampoData id="u-ate" tipo="data" value={ate} onChange={setAte} /></div>
+            {ate && <button type="button" className="btn-acao btn-acao--neutro" onClick={() => setAte("")}>Sem prazo</button>}
+          </div>
+          <p className="mt-1 text-xs text-ink/40">
+            {ate
+              ? "Depois desse dia o acesso expira sozinho. Para recontratar, basta mudar a data."
+              : "Opcional. Deixe em branco para acesso sem prazo; use para avaliadores contratados por visita."}
+          </p>
         </div>
 
         <label className="flex items-center gap-2 text-sm">

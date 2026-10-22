@@ -4,6 +4,8 @@
  * giro de estoque e o resumo do atendimento do Cliente Oculto.
  */
 
+import { calcularVso } from "./dashboard";
+
 /** Texto do formulário ("8", "8x", "36 parcelas") → número de parcelas. */
 export function lerParcelas(texto: string | null | undefined): number | null {
   const m = String(texto ?? "").match(/\d+/);
@@ -96,7 +98,7 @@ export function calcularGiro(estoque: number | null, vendas: number | null) {
   if (estoque === null || vendas === null) {
     return { vso: null as number | null, mesesZerar: null as number | null, giro: "sem_dados" as Giro };
   }
-  const vso = estoque + vendas > 0 ? vendas / (estoque + vendas) : 0;
+  const vso = calcularVso(vendas, estoque);
   const mesesZerar = vendas > 0 ? estoque / vendas : null;
   const giro: Giro = vendas === 0 ? "sem_vendas" : vso >= 0.15 ? "alto" : vso >= 0.08 ? "moderado" : "lento";
   return { vso, mesesZerar, giro };

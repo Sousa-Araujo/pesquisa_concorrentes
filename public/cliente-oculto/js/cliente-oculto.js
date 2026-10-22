@@ -524,7 +524,11 @@
   function pintarCriterio(pilarKey, key) {
     const card = document.querySelector(`[data-crit-pilar="${pilarKey}"][data-crit="${key}"]`);
     const r = (respostas[pilarKey] || {})[key] || {};
-    card.querySelectorAll('[data-nota]').forEach(b => b.classList.toggle('active', !r.na && r.nota !== null && r.nota !== undefined && Number(b.getAttribute('data-nota')) === Number(r.nota)));
+    // "Não se aplica" desabilita as notas (a evidência continua obrigatória).
+    card.querySelectorAll('[data-nota]').forEach(b => {
+      b.classList.toggle('active', !r.na && r.nota !== null && r.nota !== undefined && Number(b.getAttribute('data-nota')) === Number(r.nota));
+      b.disabled = !!r.na;
+    });
     card.querySelector('[data-na]').classList.toggle('active', !!r.na);
     card.classList.toggle('is-na', !!r.na);
     const evid = card.querySelector('.crit-evid');

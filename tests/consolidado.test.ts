@@ -24,18 +24,18 @@ describe("Consolidado — agregados", () => {
       .toBeCloseTo(1, 6);
   });
 
-  it("Sousa: representatividade 100/733 e VSO 11/100", () => {
+  it("Sousa: representatividade 100/733 e VSO 11/111", () => {
     expect(BASE.sousa.representatividade).toBeCloseTo(0.136426, 5);
-    expect(BASE.sousa.vso).toBeCloseTo(0.11, 6);
+    expect(BASE.sousa.vso).toBeCloseTo(0.099099, 5);
   });
 
-  it("Concorrentes: representatividade 633/733 e VSO 59/633", () => {
+  it("Concorrentes: representatividade 633/733 e VSO 59/692", () => {
     expect(BASE.concorrentes.representatividade).toBeCloseTo(0.863574, 5);
-    expect(BASE.concorrentes.vso).toBeCloseTo(0.093207, 5);
+    expect(BASE.concorrentes.vso).toBeCloseTo(0.085260, 5);
   });
 
-  it("VSO de mercado = 70/733", () => {
-    expect(BASE.vsoMercado).toBeCloseTo(0.095498, 5);
+  it("VSO de mercado = 70/803", () => {
+    expect(BASE.vsoMercado).toBeCloseTo(0.087173, 5);
   });
 });
 
@@ -54,6 +54,6 @@ describe("Consolidado — bordas", () => {
     expect(r.sousa.representatividade).toBe(0);
     expect(r.sousa.vso).toBe(0);
     expect(r.concorrentes.representatividade).toBeCloseTo(1, 6);
-    expect(r.concorrentes.vso).toBeCloseTo(0.08, 6);
+    expect(r.concorrentes.vso).toBeCloseTo(0.074074, 5);
   });
 });

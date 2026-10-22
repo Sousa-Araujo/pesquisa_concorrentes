@@ -47,24 +47,28 @@ describe("Representatividade (seção 31)", () => {
   });
 });
 
-describe("VSO individual (seção 32)", () => {
-  it("11 / 100 = 11,00%", () => {
-    expect(calcularVso(11, 100)).toBeCloseTo(0.11, 6);
+describe("VSO individual — vendas ÷ (estoque + vendas)", () => {
+  it("11 / (100 + 11) ≈ 9,91%", () => {
+    expect(calcularVso(11, 100)).toBeCloseTo(0.099099, 5);
   });
-  it("11 / 187 ≈ 5,88%", () => {
-    expect(calcularVso(11, 187)).toBeCloseTo(0.058824, 5);
+  it("11 / (187 + 11) ≈ 5,56%", () => {
+    expect(calcularVso(11, 187)).toBeCloseTo(0.055556, 5);
   });
-  it("15 / 122 ≈ 12,30%", () => {
-    expect(calcularVso(15, 122)).toBeCloseTo(0.122951, 5);
+  it("15 / (122 + 15) ≈ 10,95%", () => {
+    expect(calcularVso(15, 122)).toBeCloseTo(0.109489, 5);
   });
-  it("11 / 90 ≈ 12,22%", () => {
-    expect(calcularVso(11, 90)).toBeCloseTo(0.122222, 5);
+  it("11 / (90 + 11) ≈ 10,89%", () => {
+    expect(calcularVso(11, 90)).toBeCloseTo(0.108911, 5);
   });
-  it("22 / 234 ≈ 9,40%", () => {
-    expect(calcularVso(22, 234)).toBeCloseTo(0.094017, 5);
+  it("22 / (234 + 22) ≈ 8,59%", () => {
+    expect(calcularVso(22, 234)).toBeCloseTo(0.085938, 5);
   });
-  it("estoque 0 não divide por zero -> 0", () => {
-    expect(calcularVso(10, 0)).toBe(0);
+  it("vendeu tudo (estoque 0) = 100%; sem estoque nem vendas = 0", () => {
+    expect(calcularVso(10, 0)).toBe(1);
+    expect(calcularVso(0, 0)).toBe(0);
+  });
+  it("Sou Pleno Home II out/26: 2 / (6 + 2) = 25%", () => {
+    expect(calcularVso(2, 6)).toBe(0.25);
   });
 });
 

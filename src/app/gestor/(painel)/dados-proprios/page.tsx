@@ -4,6 +4,7 @@ import {
   listarRegionais, listarCidades, listarEmpreendimentos,
 } from "@/lib/data/hierarquia";
 import { obterDadosProprios } from "@/lib/data/gestor";
+import { vendasCVDoMes } from "@/lib/data/sousaCV";
 import FormDadosProprios from "./FormDadosProprios";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export default async function DadosPropriosPage({
   const regionais = await listarRegionais();
   const cidades = regional ? await listarCidades(regional) : [];
   const emps = idCidade ? await listarEmpreendimentos(idCidade) : [];
-  const atual = idEmp ? await obterDadosProprios(idEmp, mesAno) : null;
+  const [atual, vendasCV] = idEmp
+    ? await Promise.all([obterDadosProprios(idEmp, mesAno), vendasCVDoMes(idEmp, mesAno)])
+    : [null, null];
 
   return (
     <div className="grid gap-6">
@@ -42,7 +45,8 @@ export default async function DadosPropriosPage({
         regionais={regionais.map((r) => r.regional)}
         cidades={cidades.map((c) => ({ id: c.id_cidade, nome: c.cidade }))}
         emps={emps.map((e) => ({ id: e.id_empreendimento, nome: e.empreendimento }))}
-        atual={atual ? { estoque: atual.estoque, vendas: atual.vendas } : null}
+        atual={atual ? { estoque: atual.estoque, vendas: atual.vendas, origem: atual.origem } : null}
+        vendasCV={vendasCV}
       />
     </div>
   );

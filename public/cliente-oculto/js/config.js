@@ -203,9 +203,65 @@
     const lista = (fotos || []).filter(f => f.pilarKey === pilarKey);
     if (!lista.length) return '';
     return `<div class="fotos-grid fotos-leitura">${lista.map(f => `
-      <figure class="foto-item"><a href="${escapeAttr(f.url)}" target="_blank" rel="noopener"><img src="${escapeAttr(f.url)}" alt="${escapeAttr(f.legenda || 'Foto da visita')}" loading="lazy"></a>
+      <figure class="foto-item"><a href="${escapeAttr(f.url)}" target="_blank" rel="noopener" data-pilar="${escapeAttr(pilarKey)}" data-legenda="${escapeAttr(f.legenda || '')}"><img src="${escapeAttr(f.url)}" alt="${escapeAttr(f.legenda || 'Foto da visita')}" loading="lazy"></a>
       ${f.legenda ? `<figcaption>${escapeHtml(f.legenda)}</figcaption>` : ''}</figure>`).join('')}</div>`;
   }
+
+  // -------------------------------------------------------------------------
+  // Prévia ampliada das fotos: clique numa miniatura abre a foto grande, com
+  // a etapa, a legenda e setas para as outras fotos do mesmo grupo.
+  // -------------------------------------------------------------------------
+  function nomeEtapaFoto(pilarKey) {
+    const p = PILARES.find(x => x.key === pilarKey);
+    return p ? `${p.n}. ${p.nome}` : '';
+  }
+  function abrirFotos(fotos, inicio) {
+    if (!fotos || !fotos.length) return;
+    let i = Math.max(0, Math.min(inicio || 0, fotos.length - 1));
+    const fundo = document.createElement('div');
+    fundo.className = 'foto-lightbox';
+    fundo.setAttribute('role', 'dialog');
+    fundo.setAttribute('aria-modal', 'true');
+    fundo.innerHTML = `
+      <button type="button" class="foto-lb-fechar" aria-label="Fechar">✕</button>
+      <button type="button" class="foto-lb-seta foto-lb-ant" aria-label="Foto anterior">‹</button>
+      <figure class="foto-lb-fig"><img alt=""><figcaption></figcaption></figure>
+      <button type="button" class="foto-lb-seta foto-lb-prox" aria-label="Próxima foto">›</button>`;
+    const img = fundo.querySelector('img');
+    const cap = fundo.querySelector('figcaption');
+    const mostrar = () => {
+      const f = fotos[i];
+      img.src = f.url;
+      img.alt = f.legenda || 'Foto da visita';
+      cap.textContent = [nomeEtapaFoto(f.pilarKey), f.legenda, fotos.length > 1 ? `${i + 1} de ${fotos.length}` : ''].filter(Boolean).join(' · ');
+      fundo.querySelectorAll('.foto-lb-seta').forEach(b => { b.style.visibility = fotos.length > 1 ? 'visible' : 'hidden'; });
+    };
+    const fechar = () => { document.removeEventListener('keydown', tecla); fundo.remove(); };
+    const passo = (d) => { i = (i + d + fotos.length) % fotos.length; mostrar(); };
+    const tecla = (e) => {
+      if (e.key === 'Escape') fechar();
+      else if (e.key === 'ArrowRight') passo(1);
+      else if (e.key === 'ArrowLeft') passo(-1);
+    };
+    fundo.addEventListener('click', (e) => {
+      if (e.target.closest('.foto-lb-ant')) passo(-1);
+      else if (e.target.closest('.foto-lb-prox')) passo(1);
+      else if (e.target === fundo || e.target.closest('.foto-lb-fechar')) fechar();
+    });
+    document.addEventListener('keydown', tecla);
+    document.body.appendChild(fundo);
+    mostrar();
+    fundo.querySelector('.foto-lb-fechar').focus();
+  }
+  // Miniaturas só de leitura (calibragem e relatório): abre a prévia em vez de uma aba nova.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('.fotos-leitura a');
+    if (!a) return;
+    e.preventDefault();
+    const links = [...a.closest('.fotos-leitura').querySelectorAll('a')];
+    const fotos = links.map(l => ({ url: l.getAttribute('href'), pilarKey: l.getAttribute('data-pilar') || '', legenda: l.getAttribute('data-legenda') || '' }));
+    abrirFotos(fotos, links.indexOf(a));
+  });
 
   // -------------------------------------------------------------------------
   // Pergunta da recepção e atendimento prévio online
@@ -296,7 +352,7 @@
     bandFor, toneColorVar, toneTintVar, pilarLabel, tipoTagHtml,
     regionalOptionsHtml, mesReferencia, validarCamposObrigatorios,
     PERGUNTA_ORIGEM, CANAIS_PREVIA, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml,
-    CRITERIOS, mediaCriterios, criteriosHtml,
+    CRITERIOS, mediaCriterios, criteriosHtml, abrirFotos,
     moneyMaskFromDigits, centavosToDisplay, areaMaskFromInput, percentMaskFromInput,
     escapeHtml, escapeAttr,
   };

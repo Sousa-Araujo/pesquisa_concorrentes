@@ -10,7 +10,7 @@ import CampoData from "@/components/CampoData";
 type Item = { id: number; nome: string };
 
 export default function FormDadosProprios({
-  mesAno, regional, idCidade, idEmp, regionais, cidades, emps, atual,
+  mesAno, regional, idCidade, idEmp, regionais, cidades, emps, atual, vendasCV,
 }: {
   mesAno: string;
   regional: string;
@@ -19,11 +19,15 @@ export default function FormDadosProprios({
   regionais: string[];
   cidades: Item[];
   emps: Item[];
-  atual: { estoque: number; vendas: number } | null;
+  atual: { estoque: number; vendas: number; origem: "cv" | "manual" } | null;
+  /** Vendas do empreendimento no CV nesta competência (null = sem ligação com o CV). */
+  vendasCV: number | null;
 }) {
   const router = useRouter();
+  // Sem registro no mês, as vendas já vêm do CV.
+  const vendasIniciais = atual ? String(atual.vendas) : vendasCV !== null ? String(vendasCV) : "";
   const [estoque, setEstoque] = useState(atual ? String(atual.estoque) : "");
-  const [vendas, setVendas] = useState(atual ? String(atual.vendas) : "");
+  const [vendas, setVendas] = useState(vendasIniciais);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -34,11 +38,11 @@ export default function FormDadosProprios({
   // Ressincroniza quando a seleção (e portanto os dados atuais) muda.
   useEffect(() => {
     setEstoque(atual ? String(atual.estoque) : "");
-    setVendas(atual ? String(atual.vendas) : "");
+    setVendas(atual ? String(atual.vendas) : vendasCV !== null ? String(vendasCV) : "");
     setOk(false);
     setConfirmandoExclusao(false);
     setErroExcluir(null);
-  }, [atual, idEmp, mesAno]);
+  }, [atual, idEmp, mesAno, vendasCV]);
 
   function navegar(next: Partial<{ mes: string; regional: string; cidade: string; emp: string }>) {
     const params = new URLSearchParams({ mes: mesAno });
@@ -130,9 +134,19 @@ export default function FormDadosProprios({
                 value={vendas} onChange={(e) => setVendas(e.target.value.replace(/\D/g, ""))} />
             </div>
           </div>
+          {vendasCV !== null && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg bg-brand/5 px-4 py-3 text-sm text-ink/80">
+              <span>Vendas no CV em {formatarCompetenciaLonga(mesAno)}: <b className="tabular-nums">{vendasCV}</b></span>
+              {String(vendasCV) !== vendas && (
+                <button type="button" className="btn-acao" onClick={() => setVendas(String(vendasCV))}>Usar vendas do CV</button>
+              )}
+            </div>
+          )}
           {atual && (
             <p className="text-xs text-ink/50">
-              Já existe registro nesta competência. Salvar irá atualizá-lo.
+              {atual.origem === "cv"
+                ? "Estes números vieram do CV e são atualizados sozinhos. Se você salvar, passam a valer os números digitados aqui."
+                : "Já existe registro digitado nesta competência. Salvar irá atualizá-lo."}
             </p>
           )}
           {erro && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}

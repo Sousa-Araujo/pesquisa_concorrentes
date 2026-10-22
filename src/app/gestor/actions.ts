@@ -75,6 +75,26 @@ export async function editarAgente(id: string, input: {
   return { ok: true };
 }
 
+/**
+ * Exclui o agente da lista sem apagar a pesquisa: as coletas dele continuam
+ * (com o nome dele), o acesso é encerrado e telefone/e-mail ficam livres.
+ */
+export async function excluirAgente(id: string): Promise<R> {
+  const g = await exigirPermissao("auditoriaPesquisa");
+  try {
+    await db().query(
+      `update agentes_campo set excluido_em = now(), ativo = false, telefone = null, email = null, updated_by = $2
+        where id_agente = $1 and excluido_em is null`,
+      [id, g.id_usuario],
+    );
+  } catch {
+    return { ok: false, erro: "Não foi possível excluir o agente." };
+  }
+  await encerrarSessoesDoAgente(id);
+  await db().query(`delete from codigos_acesso where id_agente = $1`, [id]);
+  return { ok: true };
+}
+
 /** Ativa/inativa (nunca exclui fisicamente — seção 6). */
 export async function definirStatusAgente(id: string, ativo: boolean): Promise<R> {
   const g = await exigirPermissao("auditoriaPesquisa");
@@ -97,7 +117,7 @@ export async function definirStatusAgente(id: string, ativo: boolean): Promise<R
  * assina como created_by.
  */
 export async function criarConcorrenteGestor(input: {
-  id_empreendimento: number; nome: string;
+  id_empreendimento: number; nome: string; data_lancamento?: string | null;
 }): Promise<R<{ id_concorrente: number }>> {
   const g = await exigirPermissao("cadastros");
   const parsed = novoConcorrenteSchema.safeParse(input);
@@ -108,6 +128,10 @@ export async function criarConcorrenteGestor(input: {
       `select id_concorrente from inserir_concorrente($1, $2, $3)`,
       [parsed.data.id_empreendimento, parsed.data.nome, g.id_usuario],
     );
+    if (parsed.data.data_lancamento) {
+      await db().query(`update concorrentes set data_lancamento = $1 where id_concorrente = $2`,
+        [parsed.data.data_lancamento, rows[0].id_concorrente]);
+    }
     return { ok: true, data: { id_concorrente: rows[0].id_concorrente } };
   } catch (e) {
     const erro = e as { code?: string; message?: string };
@@ -124,7 +148,7 @@ export async function criarConcorrenteGestor(input: {
  */
 export async function editarConcorrente(
   id: number,
-  input: { concorrente: string; ativo: boolean },
+  input: { concorrente: string; ativo: boolean; data_lancamento?: string | null },
 ): Promise<R> {
   const g = await exigirPermissao("cadastros");
   const parsed = concorrenteEdicaoSchema.safeParse(input);
@@ -132,8 +156,8 @@ export async function editarConcorrente(
 
   try {
     await db().query(
-      `update concorrentes set concorrente = $1, ativo = $2, updated_by = $3 where id_concorrente = $4`,
-      [parsed.data.concorrente, parsed.data.ativo, g.id_usuario, id],
+      `update concorrentes set concorrente = $1, ativo = $2, updated_by = $3, data_lancamento = $5 where id_concorrente = $4`,
+      [parsed.data.concorrente, parsed.data.ativo, g.id_usuario, id, parsed.data.data_lancamento],
     );
   } catch (e) {
     const erro = e as { code?: string };
@@ -164,7 +188,7 @@ export async function definirStatusConcorrente(id: number, ativo: boolean): Prom
  * concorrente, o ID é informado pelo gestor, não gerado — ver schemas.ts.
  */
 export async function criarEmpreendimento(input: {
-  id_empreendimento: number; id_cidade: number; empreendimento: string; ativo: boolean;
+  id_empreendimento: number; id_cidade: number; empreendimento: string; ativo: boolean; data_lancamento?: string | null;
 }): Promise<R> {
   await exigirPermissao("cadastros");
   const parsed = empreendimentoSchema.safeParse(input);
@@ -179,9 +203,9 @@ export async function criarEmpreendimento(input: {
 
   try {
     await pool.query(
-      `insert into empreendimentos (id_empreendimento, id_cidade, empreendimento, ativo)
-       values ($1, $2, $3, $4)`,
-      [parsed.data.id_empreendimento, parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo],
+      `insert into empreendimentos (id_empreendimento, id_cidade, empreendimento, ativo, data_lancamento)
+       values ($1, $2, $3, $4, $5)`,
+      [parsed.data.id_empreendimento, parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo, parsed.data.data_lancamento],
     );
   } catch (e) {
     const erro = e as { code?: string };
@@ -193,7 +217,7 @@ export async function criarEmpreendimento(input: {
 
 export async function editarEmpreendimento(
   id: number,
-  input: { id_cidade: number; empreendimento: string; ativo: boolean },
+  input: { id_cidade: number; empreendimento: string; ativo: boolean; data_lancamento?: string | null },
 ): Promise<R> {
   await exigirPermissao("cadastros");
   const parsed = empreendimentoEdicaoSchema.safeParse(input);
@@ -201,8 +225,8 @@ export async function editarEmpreendimento(
 
   try {
     await db().query(
-      `update empreendimentos set id_cidade = $1, empreendimento = $2, ativo = $3 where id_empreendimento = $4`,
-      [parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo, id],
+      `update empreendimentos set id_cidade = $1, empreendimento = $2, ativo = $3, data_lancamento = $5 where id_empreendimento = $4`,
+      [parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo, id, parsed.data.data_lancamento],
     );
   } catch (e) {
     const erro = e as { code?: string };
@@ -233,12 +257,14 @@ export async function salvarDadosProprios(input: {
 
   try {
     await db().query(
+      // Digitado aqui vira 'manual': a sincronização com o CV não sobrescreve mais este mês.
       `insert into dados_proprios_mensais
-         (id_empreendimento, mes_ano, estoque, vendas, atualizado_por, atualizado_em)
-       values ($1, $2, $3, $4, $5, now())
+         (id_empreendimento, mes_ano, estoque, vendas, atualizado_por, atualizado_em, origem)
+       values ($1, $2, $3, $4, $5, now(), 'manual')
        on conflict (id_empreendimento, mes_ano) do update
          set estoque = excluded.estoque,
              vendas = excluded.vendas,
+             origem = 'manual',
              atualizado_por = excluded.atualizado_por,
              atualizado_em = now()`,
       [parsed.data.id_empreendimento, parsed.data.mes_ano, parsed.data.estoque, parsed.data.vendas, g.id_usuario],

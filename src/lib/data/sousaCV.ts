@@ -47,6 +47,24 @@ export async function ligarPorNome(cv: EmpreendimentoCV[]): Promise<number> {
   return ligados;
 }
 
+/**
+ * Vendas do empreendimento Sousa no CV numa competência (para a tela de
+ * Dados próprios). null quando o empreendimento não está ligado ao CV ou o
+ * CV não respondeu.
+ */
+export async function vendasCVDoMes(idEmpreendimento: number, mesAno: string): Promise<number | null> {
+  if (!cvConfigurado()) return null;
+  const { rows: [e] } = await db().query(`select id_cv from empreendimentos where id_empreendimento = $1`, [idEmpreendimento]);
+  if (!e?.id_cv) return null;
+  try {
+    const vendas = await lerVendasMensais([Number(e.id_cv)], mesAno);
+    return vendas.find((v) => v.mesAno === mesAno)?.vendas ?? 0;
+  } catch (err) {
+    console.error("[cv] vendas do mês:", (err as Error).message);
+    return null;
+  }
+}
+
 let rodando: Promise<SincronizacaoCV> | null = null;
 
 export interface SincronizacaoCV { ok: boolean; mensagem: string }

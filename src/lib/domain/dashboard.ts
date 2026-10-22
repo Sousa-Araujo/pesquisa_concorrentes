@@ -57,10 +57,16 @@ export function calcularRepresentatividade(estoqueItem: number, estoqueTotal: nu
   return estoqueItem / estoqueTotal;
 }
 
-/** VSO individual — seção 32. Fração 0..1; trata divisão por zero. */
+/**
+ * VSO — regra da Diretoria (confirmada em 2026-10-22): vendas do mês ÷
+ * (estoque no fim do mês + vendas do mês), ou seja, sobre o que estava à
+ * venda no começo do mês. Fração 0..1; 0 quando não há estoque nem vendas.
+ * É a mesma regra do comparativo (calcularGiro em comparativo.ts).
+ */
 export function calcularVso(vendas: number, estoque: number): number {
-  if (estoque <= 0) return 0; // seção 32: não dividir por zero -> 0,00%
-  return vendas / estoque;
+  const base = estoque + vendas;
+  if (base <= 0) return 0;
+  return vendas / base;
 }
 
 /**

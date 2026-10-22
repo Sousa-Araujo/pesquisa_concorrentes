@@ -499,7 +499,8 @@ tr.row-concorrente-child td:first-child::before{
 .crit-desc{margin:3px 0 0; font-size:12.5px; line-height:1.45; color:var(--text-secondary);}
 .crit-notas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
 .crit-notas button{min-width:36px; height:36px; padding:0 8px; border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-3); color:var(--text-primary); font:inherit; font-size:13px; font-weight:650; cursor:pointer; font-variant-numeric:tabular-nums;}
-.crit-notas button:hover{border-color:var(--accent);}
+.crit-notas button:hover:not(:disabled){border-color:var(--accent);}
+.crit-notas button:disabled{opacity:.35; cursor:not-allowed;}
 .crit-notas button.active{background:var(--accent); border-color:var(--accent); color:#fff;}
 .crit-notas-simnao button[data-nota]{min-width:72px;}
 .crit-notas .crit-na{margin-left:auto; color:var(--text-secondary); font-weight:600;}
@@ -518,3 +519,18 @@ tr.row-concorrente-child td:first-child::before{
 .crit-leitura-nota{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
 .crit-leitura-nota.na{color:var(--text-muted); font-weight:600;}
 .crit-leitura-item p{margin:5px 0 0; font-size:12.5px; color:var(--text-secondary); line-height:1.45;}
+
+/* Prévia ampliada das fotos */
+.foto-lightbox{position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.86); display:flex; align-items:center; justify-content:center; gap:12px; padding:24px;}
+.foto-lb-fig{margin:0; display:flex; flex-direction:column; align-items:center; gap:10px; max-width:min(1100px, 100%);}
+.foto-lb-fig img{max-width:100%; max-height:80vh; border-radius:10px; object-fit:contain; background:#111;}
+.foto-lb-fig figcaption{color:#fff; font-size:13.5px; text-align:center;}
+.foto-lb-seta, .foto-lb-fechar{border:none; background:rgba(255,255,255,.14); color:#fff; border-radius:999px; cursor:pointer; font:inherit;}
+.foto-lb-seta{width:44px; height:44px; font-size:26px; line-height:1; flex:none;}
+.foto-lb-fechar{position:absolute; top:16px; right:16px; width:40px; height:40px; font-size:18px;}
+.foto-lb-seta:hover, .foto-lb-fechar:hover{background:rgba(255,255,255,.26);}
+@media (max-width:600px){.foto-lightbox{padding:12px; gap:4px;} .foto-lb-seta{width:36px; height:36px; font-size:22px;}}
+.fotos-leitura a{cursor:zoom-in;}
+.fotos-lista-btn{display:inline-flex; align-items:center; gap:6px;}
+.fotos-lista-btn img{width:26px; height:26px; object-fit:cover; border-radius:5px;}
+@media print{.fotos-lista-btn, .foto-lightbox{display:none !important;}}
