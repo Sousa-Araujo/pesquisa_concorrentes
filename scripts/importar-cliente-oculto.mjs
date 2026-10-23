@@ -19,7 +19,11 @@
  * O app antigo não guardava quem criou cada avaliação, então as avaliações
  * importadas ficam sem avaliador dono (só Coordenador/Admin as veem). O
  * empreendimento continua como texto (empreendimento_texto); a ligação com
- * o cadastro oficial é feita depois.
+ * o cadastro oficial é feita depois. As avaliações antigas ficam no formato
+ * antigo (modelo_criterios = 1, nota única por pilar).
+ *
+ * Sem acesso de rede entre os bancos, use a versão em SQL
+ * (scripts/importar-cliente-oculto.sql), que roda dentro do servidor.
  */
 import pg from "pg";
 
@@ -90,8 +94,8 @@ async function main() {
            cliente_oculto_nome, recepcionista, corretor, area_unidade_m2, area_unidade_display,
            valor_unidade_centavos, valor_unidade_display, valor_ato_centavos, valor_ato_display,
            qtd_pre_chaves, qtd_pos_chaves, desconto_tipo, desconto_valor_centavos, desconto_percentual,
-           desconto_display, previsao_entrega, campanha_vigente, vinculo_sousa_label)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33)
+           desconto_display, previsao_entrega, campanha_vigente, vinculo_sousa_label, modelo_criterios)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,1)
          on conflict (id) do nothing`,
         [
           a.id, a.status, a.created_at, a.updated_at, a.finalized_at, a.concluded_at, a.calibragem_aberta, a.excluida, a.excluida_em,

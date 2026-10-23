@@ -51,12 +51,10 @@ export default function FormEntrar({
         className="hidden flex-col justify-between p-12 md:flex"
         style={{ background: "var(--brand-deep)", color: "var(--on-brand)" }}
       >
-        <div className="flex items-center gap-3">
-          <span className="ms-brand-mark">SA</span>
-          <span className="text-sm font-bold tracking-wide">
-            SOUSA ARAUJO
-            <small className="block text-[11px] font-medium uppercase tracking-[0.14em] opacity-80">Market Share</small>
-          </span>
+        <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/design/logo-sousa-araujo-branco.svg" alt="Construtora Sousa Araujo" height={40} style={{ height: 40, width: "auto" }} />
+          <small className="mt-2 block text-[11px] font-medium uppercase tracking-[0.14em] opacity-80">Market Share</small>
         </div>
         <div className="max-w-md">
           <h2 className="text-[32px] font-bold leading-[38px]">Pesquisa de concorrentes e Cliente Oculto num só lugar.</h2>

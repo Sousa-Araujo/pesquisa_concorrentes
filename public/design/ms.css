@@ -187,6 +187,9 @@
   .ms-main > :not(.toast) { animation: none; }
 }
 .ms-dual:not([data-pronto]) .ms-panel { transition: none; }
+/* Menu recolhido salvo (ou celular): decidido no <head> antes de desenhar, para a coluna
+   não aparecer aberta por um instante enquanto a tela carrega (src/app/layout.tsx). */
+html[data-menu-recolhido] .ms-dual:not([data-pronto]) .ms-panel { width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
 
 /* Calendário (Flatpickr) nas cores do design system. */
 .flatpickr-calendar { font-family: var(--font-sans); border-radius: var(--radius-card); box-shadow: var(--shadow-overlay); }

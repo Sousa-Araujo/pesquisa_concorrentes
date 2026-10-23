@@ -8,6 +8,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Market Share · Sousa Araujo",
   description: "Pesquisa de concorrentes e Cliente Oculto da Sousa Araujo.",
+  icons: { icon: "/design/icone-sousa-araujo.svg", apple: "/design/icone-sousa-araujo.svg" },
 };
 
 export const viewport: Viewport = {
@@ -20,10 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" data-theme="light" suppressHydrationWarning>
       <head>
-        {/* Tema escolhido no menu do usuário, aplicado antes de desenhar a tela (sem piscar). */}
+        {/* Tema e menu recolhido escolhidos pelo usuário, aplicados antes de desenhar a tela (sem piscar). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem("ms-tema")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}`,
+            __html: `try{if(localStorage.getItem("ms-tema")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}`
+              + `try{if(matchMedia("(max-width: 720px)").matches||localStorage.getItem("ms-menu-recolhido")==="1")document.documentElement.setAttribute("data-menu-recolhido","")}catch(e){}`,
           }}
         />
         {/* Fonte Satoshi (a mesma do site sousaaraujo.com.br). */}

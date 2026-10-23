@@ -76,6 +76,10 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
       return !r;
     });
   }
+  // Atributo lido no <head> (layout.tsx) na próxima tela, antes de desenhar.
+  useEffect(() => {
+    if (pronto && !ehCelular()) document.documentElement.toggleAttribute("data-menu-recolhido", recolhido);
+  }, [recolhido, pronto]);
 
   const modulo: ModuloMenu | undefined = menu.modulos.find((m) => m.id === aberto);
   const temPendencia = (m: ModuloMenu) => m.grupos.some((g) => g.itens.some((i) => i.contador));
