@@ -3,12 +3,11 @@
 /**
  * Server Actions da Área do Agente (seções 4, 13, 22–24).
  * Toda regra crítica é validada no backend (seção 40). O agente entra com
- * e-mail + código e fica com uma sessão no banco (src/lib/auth/acesso.ts);
+ * e-mail + código pela entrada única (/entrar) e fica com uma sessão no banco (src/lib/auth/acesso.ts);
  * quem registra a coleta é sempre o agente da sessão.
  */
 import { db } from "@/lib/db/pool";
 import {
-  loginAgenteSchema,
   novoConcorrenteSchema,
   coletaSchema,
 } from "@/lib/validation/schemas";
@@ -26,41 +25,13 @@ import {
 import {
   agenteAtual,
   encerrarSessao,
-  entrarComCodigoAgente,
   exigirAgente,
-  pedirCodigoAgente,
   usuarioAtual,
 } from "@/lib/auth/acesso";
 
 export interface AgenteSessao { id_agente: string; nome: string; }
 
 type Resultado<T> = { ok: true; data: T } | { ok: false; erro: string };
-
-/**
- * Login do agente (seção 4): e-mail cadastrado e ativo + código de uso
- * único enviado para esse e-mail. Nunca cria agente.
- */
-export async function solicitarCodigoAgente(emailBruto: string): Promise<Resultado<null>> {
-  const parsed = loginAgenteSchema.safeParse({ email: emailBruto });
-  if (!parsed.success) return { ok: false, erro: "E-mail inválido." };
-  const r = await pedirCodigoAgente(parsed.data.email);
-  return r.ok ? { ok: true, data: null } : r;
-}
-
-export async function entrarAgente(
-  emailBruto: string,
-  codigo: string,
-): Promise<Resultado<AgenteSessao>> {
-  const parsed = loginAgenteSchema.safeParse({ email: emailBruto });
-  if (!parsed.success) return { ok: false, erro: "E-mail inválido." };
-  const r = await entrarComCodigoAgente(parsed.data.email, codigo);
-  if (!r.ok) return r;
-  const { rows } = await db().query<AgenteSessao>(
-    `select id_agente, nome from agentes_campo where id_agente = $1`,
-    [r.idAgente],
-  );
-  return { ok: true, data: rows[0] };
-}
 
 export async function sairAgente(): Promise<void> {
   await encerrarSessao();

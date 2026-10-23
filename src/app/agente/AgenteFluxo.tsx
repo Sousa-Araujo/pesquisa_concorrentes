@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import { formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import {
-  solicitarCodigoAgente,
-  entrarAgente,
   sairAgente,
   actRegionais,
   actCidades,
@@ -25,113 +23,14 @@ export default function AgenteFluxo({
   agenteInicial,
 }: {
   competenciaInicial: string;
-  agenteInicial: AgenteSessao | null;
+  agenteInicial: AgenteSessao;
 }) {
-  const [agente, setAgente] = useState<AgenteSessao | null>(agenteInicial);
-
-  if (!agente) {
-    return <Login onOk={setAgente} />;
-  }
   return (
     <Formulario
-      agente={agente}
+      agente={agenteInicial}
       competenciaInicial={competenciaInicial}
-      onTrocarAgente={async () => { await sairAgente(); setAgente(null); }}
+      onTrocarAgente={async () => { await sairAgente(); window.location.href = "/entrar"; }}
     />
-  );
-}
-
-/* ------------------------------- Login ------------------------------- */
-function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
-  const [email, setEmail] = useState("");
-  const [codigo, setCodigo] = useState("");
-  const [etapa, setEtapa] = useState<"email" | "codigo">("email");
-  const [aviso, setAviso] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(false);
-
-  async function pedirCodigo() {
-    setErro(null); setAviso(null);
-    setCarregando(true);
-    const r = await solicitarCodigoAgente(email);
-    setCarregando(false);
-    if (!r.ok) { setErro(r.erro); return; }
-    setEtapa("codigo");
-    setAviso("Enviamos um código de 6 números para o seu e-mail. Confira também a caixa de spam.");
-  }
-
-  async function entrar() {
-    setErro(null);
-    setCarregando(true);
-    const r = await entrarAgente(email, codigo);
-    setCarregando(false);
-    if (r.ok) onOk(r.data);
-    else setErro(r.erro);
-  }
-
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-widest text-brand">
-          Identificação do agente
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-ink">
-          {etapa === "email" ? "Informe seu e-mail" : "Digite o código"}
-        </h1>
-      </div>
-      {etapa === "email" ? (
-        <div>
-          <label className="rotulo" htmlFor="email">E-mail</label>
-          <input
-            id="email"
-            type="email"
-            className="campo"
-            inputMode="email"
-            autoComplete="email"
-            placeholder="seu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && email && pedirCodigo()}
-          />
-        </div>
-      ) : (
-        <div>
-          <label className="rotulo" htmlFor="codigo">Código</label>
-          <input
-            id="codigo"
-            className="campo text-center text-2xl tracking-[0.5em]"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
-            onKeyDown={(e) => e.key === "Enter" && codigo.length === 6 && entrar()}
-          />
-        </div>
-      )}
-      {aviso && <p className="rounded-lg bg-brand/5 px-4 py-3 text-sm text-ink/80">{aviso}</p>}
-      {erro && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
-      {etapa === "email" ? (
-        <button className="btn-primary" onClick={pedirCodigo} disabled={carregando || !email}>
-          {carregando ? "Enviando…" : "Receber código"}
-        </button>
-      ) : (
-        <>
-          <button className="btn-primary" onClick={entrar} disabled={carregando || codigo.length !== 6}>
-            {carregando ? "Verificando…" : "Entrar"}
-          </button>
-          <button className="btn-ghost" onClick={pedirCodigo} disabled={carregando}>
-            Reenviar código
-          </button>
-          <button className="btn-ghost" onClick={() => { setEtapa("email"); setCodigo(""); setAviso(null); setErro(null); }}>
-            Trocar e-mail
-          </button>
-        </>
-      )}
-      <p className="text-center text-xs text-ink/40">
-        O acesso é liberado apenas para e-mails cadastrados pela coordenação.
-      </p>
-    </main>
   );
 }
 

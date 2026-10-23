@@ -285,13 +285,26 @@ export async function entrarComCodigoUsuario(email: string, codigo: string): Pro
   return { ok: true };
 }
 
+/**
+ * Entrada única (/entrar): diz se o e-mail é de alguém da equipe, de um
+ * agente de campo ou dos dois, para mandar o código e abrir a tela certa.
+ */
+export async function tiposDeAcesso(email: string): Promise<{ equipe: boolean; agente: boolean }> {
+  const e = email.trim();
+  const [{ rows: u }, { rows: a }] = await Promise.all([
+    db().query(`select 1 from usuarios where lower(email) = lower($1) and ${USUARIO_PODE_ENTRAR}`, [e]),
+    db().query(`select 1 from agentes_campo where lower(email) = lower($1) and ativo and excluido_em is null`, [e]),
+  ]);
+  return { equipe: u.length > 0, agente: a.length > 0 };
+}
+
 const MSG_EMAIL_NAO_LOCALIZADO =
   "E-mail não localizado. Verifique o e-mail informado ou entre em contato com o responsável.";
 
 /** Agente: pede código pelo e-mail cadastrado (mesma mensagem para inexistente e inativo). */
 export async function pedirCodigoAgente(email: string): Promise<Resultado> {
   const { rows } = await db().query<{ id_agente: string; nome: string; email: string }>(
-    `select id_agente, nome, email from agentes_campo where lower(email) = lower($1) and ativo`,
+    `select id_agente, nome, email from agentes_campo where lower(email) = lower($1) and ativo and excluido_em is null`,
     [email.trim()],
   );
   const a = rows[0];
@@ -301,7 +314,7 @@ export async function pedirCodigoAgente(email: string): Promise<Resultado> {
 
 export async function entrarComCodigoAgente(email: string, codigo: string): Promise<Resultado & { idAgente?: string }> {
   const { rows } = await db().query<{ id_agente: string }>(
-    `select id_agente from agentes_campo where lower(email) = lower($1) and ativo`,
+    `select id_agente from agentes_campo where lower(email) = lower($1) and ativo and excluido_em is null`,
     [email.trim()],
   );
   const a = rows[0];

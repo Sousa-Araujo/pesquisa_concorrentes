@@ -9,6 +9,12 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.1.0] - 2026-10-23
+
+### Alterado
+- Entrada única no sistema: equipe e agentes de campo entram pela mesma tela, só com o e-mail. O sistema reconhece o tipo de acesso e abre a tela certa; se o e-mail estiver nos dois cadastros, a pessoa escolhe por onde entrar.
+- A página inicial deixa de pedir "Sou agente de campo / Equipe" e leva direto para a entrada.
+
 ## [1.0.0] - 2026-10-23
 
 Primeira versão do sistema unificado de Market Share: Pesquisa de
@@ -53,5 +59,6 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.0.0...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/releases/tag/v1.0.0
