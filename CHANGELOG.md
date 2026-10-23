@@ -9,6 +9,11 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.2.1] - 2026-10-23
+
+### Alterado
+- Tela de entrada: sem a frase explicativa no painel da marca.
+
 ## [1.2.0] - 2026-10-23
 
 ### Adicionado
@@ -68,7 +73,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.0...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/releases/tag/v1.0.0

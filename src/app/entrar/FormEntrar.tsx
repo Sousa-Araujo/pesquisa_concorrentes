@@ -58,7 +58,6 @@ export default function FormEntrar({
         </div>
         <div className="max-w-md">
           <h2 className="text-[32px] font-bold leading-[38px]">Pesquisa de concorrentes e Cliente Oculto num só lugar.</h2>
-          <p className="mt-3 opacity-80">Equipe e agentes de campo entram por aqui, sem senha: você recebe um código no seu e-mail.</p>
         </div>
         <p className="text-xs opacity-70">Uso interno · Sousa Araujo</p>
       </section>
