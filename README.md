@@ -1,5 +1,8 @@
 # Market Share Sousa Araujo — Pesquisa de Concorrentes + Cliente Oculto
 
+Versão atual: veja o [CHANGELOG.md](CHANGELOG.md). Como versionar e publicar:
+[docs/versionamento.md](docs/versionamento.md).
+
 Sistema único de Market Share da Sousa Araujo. Hoje traz a **Pesquisa de
 Concorrentes** (agentes de campo registram estoque e vendas dos
 concorrentes; coordenação acompanha por dashboards) e a base do módulo
@@ -18,7 +21,7 @@ de UI e acesso a dados.
 
 | Quem | Como entra |
 | --- | --- |
-| Agente de campo (`/agente`) | Telefone cadastrado + código de 6 dígitos (no e-mail do agente; SMS ainda não configurado) |
+| Agente de campo (`/agente`) | E-mail cadastrado + código de 6 dígitos enviado para esse e-mail |
 | Demais perfis (`/entrar`) | Convite por e-mail com link → tela com o e-mail preenchido → **Enviar código** → código no e-mail |
 
 - Perfis: Administrador, Coordenador de Produto, Supervisor de Parcerias,

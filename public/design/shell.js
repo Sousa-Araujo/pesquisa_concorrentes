@@ -376,6 +376,17 @@
       document.querySelector('.ms-app').appendChild(baixo);
     }
     montado = { topo: topo, dual: dual, baixo: nosBaixo };
+    // Rodapé com a versão do sistema (vem de /api/menu, igual às telas em React).
+    if (menu.versao) {
+      var principal = document.querySelector('.ms-main');
+      var rodape = principal.querySelector(':scope > .ms-rodape');
+      if (!rodape) {
+        rodape = el('footer', { 'class': 'ms-rodape' });
+        rodape.appendChild(document.createElement('span'));
+        principal.appendChild(rodape);
+      }
+      rodape.firstChild.textContent = 'Versão: ' + menu.versao;
+    }
     if (window.lucide) window.lucide.createIcons({ attrs: { width: 18, height: 18, 'stroke-width': 1.75 } });
     mostrar();
   }

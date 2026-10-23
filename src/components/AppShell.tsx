@@ -11,6 +11,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChartColumn, CirclePlus, Eye, FileText, House, ListChecks, Menu as MenuIcon, Receipt, Users, type LucideIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { VERSAO } from "@/lib/versao";
 import BarraInferior from "@/components/BarraInferior";
 import type { Icone, Menu, ModuloMenu } from "@/lib/menu";
 
@@ -143,7 +144,10 @@ export default function AppShell({ menu, children }: { menu: Menu; children: Rea
           </nav>
         )}
       </div>
-      <div className="ms-main">{children}</div>
+      <div className="ms-main">
+        {children}
+        <footer className="ms-rodape"><span>Versão: {VERSAO}</span></footer>
+      </div>
       </div>
       <BarraInferior menu={menu} icones={ICONES} moduloAtual={atual.modulo} hrefAtual={atual.href} />
     </div>

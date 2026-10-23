@@ -43,6 +43,11 @@
 .ms-shell { display: flex; min-height: 100%; background: var(--bg); }
 .ms-main { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
 
+/* Rodapé com a versão do sistema (docs/versionamento.md) */
+.ms-rodape { display: flex; justify-content: center; padding: var(--space-6, 24px) 16px var(--space-4, 16px); }
+.ms-rodape span { font: 500 12px/1 var(--font-sans); color: var(--text-3); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-variant-numeric: tabular-nums; }
+@media print { .ms-rodape { display: none; } }
+
 /* Marca e avatar */
 .ms-brand-mark { width: 32px; height: 32px; flex: none; display: grid; place-items: center; background: var(--brand); color: var(--on-brand); font: 700 13px/1 var(--font-sans); border-radius: var(--radius-control); }
 .ms-avatar { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--ink); font: 700 12px/1 var(--font-sans); }
