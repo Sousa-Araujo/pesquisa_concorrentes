@@ -271,13 +271,18 @@
 
     const valUnidDiv = document.createElement('div');
     valUnidDiv.className = 'field';
-    valUnidDiv.innerHTML = `<label>Valor da unidade</label><input type="text" placeholder="Ex.: R$ 350.000,00" data-mask="money" data-mask-field="valorUnidade">`;
+    valUnidDiv.innerHTML = `<label>Valor da unidade <span class="required-mark">*</span></label><input type="text" placeholder="Ex.: R$ 350.000,00" data-mask="money" data-mask-field="valorUnidade">`;
     el.appendChild(valUnidDiv);
 
     const valAtoDiv = document.createElement('div');
     valAtoDiv.className = 'field';
-    valAtoDiv.innerHTML = `<label>Valor do ato</label><input type="text" placeholder="Ex.: R$ 15.000,00" data-mask="money" data-mask-field="valorAto">`;
+    valAtoDiv.innerHTML = `<label>Valor do ato <span class="required-mark">*</span></label><input type="text" placeholder="Ex.: R$ 15.000,00" data-mask="money" data-mask-field="valorAto">`;
     el.appendChild(valAtoDiv);
+
+    const valEntradaDiv = document.createElement('div');
+    valEntradaDiv.className = 'field';
+    valEntradaDiv.innerHTML = `<label>Valor de entrada <span class="required-mark">*</span></label><input type="text" placeholder="Ex.: R$ 35.000,00" data-mask="money" data-mask-field="valorEntrada">`;
+    el.appendChild(valEntradaDiv);
 
     el.appendChild(makeSimpleField(ID_FIELDS_SIMPLE.find(f => f.key === 'qtdPreChaves')));
     el.appendChild(makeSimpleField(ID_FIELDS_SIMPLE.find(f => f.key === 'qtdPosChaves')));
@@ -285,7 +290,7 @@
     const descDiv = document.createElement('div');
     descDiv.className = 'field';
     descDiv.innerHTML = `
-      <label>Desconto informado</label>
+      <label>Desconto informado <span class="required-mark">*</span></label>
       <div class="nota-row" style="margin-bottom:6px;">
         <div class="segmented small" id="descontoTipoToggle">
           <button type="button" data-val="valor" class="active">R$</button>
@@ -939,6 +944,7 @@
     if (areaInput) areaInput.value = idz.areaUnidadeDisplay || '';
     document.querySelector('[data-mask-field="valorUnidade"]').value = idz.valorUnidadeDisplay || '';
     document.querySelector('[data-mask-field="valorAto"]').value = idz.valorAtoDisplay || '';
+    document.querySelector('[data-mask-field="valorEntrada"]').value = idz.valorEntradaDisplay || '';
     if (idz.descontoTipo) {
       descontoTipo = idz.descontoTipo;
       const toggle = document.getElementById('descontoTipoToggle');

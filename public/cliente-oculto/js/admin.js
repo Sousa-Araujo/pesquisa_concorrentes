@@ -293,7 +293,7 @@
     const regDiv = document.createElement('div'); regDiv.className = 'field';
     regDiv.innerHTML = `<label>Regional</label><select data-admin-id="regional">${regionalOptionsHtml(idz.regional)}</select>`;
     el.appendChild(regDiv);
-    [['areaUnidadeDisplay', 'Área da unidade', 'text'], ['valorUnidadeDisplay', 'Valor da unidade', 'text'], ['valorAtoDisplay', 'Valor do ato', 'text'],
+    [['areaUnidadeDisplay', 'Área da unidade', 'text'], ['valorUnidadeDisplay', 'Valor da unidade', 'text'], ['valorAtoDisplay', 'Valor do ato', 'text'], ['valorEntradaDisplay', 'Valor de entrada', 'text'],
      ['qtdPreChaves', 'Qtd. pré-chaves', 'text'], ['qtdPosChaves', 'Qtd. pós-chaves', 'text'], ['descontoDisplay', 'Desconto informado', 'text'], ['previsaoEntrega', 'Previsão de entrega', 'text'], ['campanhaVigente', 'Campanha vigente', 'text']]
       .forEach(([key, label, type]) => {
         const div = document.createElement('div'); div.className = 'field';

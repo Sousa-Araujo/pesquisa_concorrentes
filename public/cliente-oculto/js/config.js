@@ -111,6 +111,9 @@
     empreendimento: 'Empreendimento', dataVisita: 'Data da visita',
     clienteOculto: 'Cliente oculto (avaliador)', corretor: 'Corretor', regional: 'Regional',
     previaPrimeiroRetornoEm: 'Primeiro retorno (prévia online)',
+    // Condições comerciais: todos os campos de valor.
+    valorUnidadeDisplay: 'Valor da unidade', valorAtoDisplay: 'Valor do ato',
+    valorEntradaDisplay: 'Valor de entrada', descontoDisplay: 'Desconto informado',
   };
   // Só prévia (a visita ao decorado não aconteceu): não há data da visita nem
   // corretor do PDV, mas a prévia precisa ter pelo menos o primeiro contato.

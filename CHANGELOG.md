@@ -9,6 +9,18 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.3.0] - 2026-11-05
+
+### Adicionado
+- Cliente Oculto: campo "Valor de entrada" nas condições comerciais, também no relatório, na comparação entre visitas, na exportação e nas correções do administrador.
+
+### Alterado
+- Cliente Oculto: valor da unidade, valor do ato, valor de entrada e desconto passam a ser obrigatórios para finalizar a avaliação (exceto "só prévia").
+
+### Segurança
+- Cabeçalhos de segurança em todas as telas: política de conteúdo (só o próprio sistema e a fonte), HSTS, proteção contra a tela ser embutida em outro site, `nosniff`, `Referrer-Policy` e `Permissions-Policy`; o sistema não informa mais a tecnologia usada (`X-Powered-By`).
+- Script para a TI criar um usuário só de leitura no CV (`docs/seguranca/cv-usuario-leitura.sql`) e plano de reforço em `docs/seguranca.md`.
+
 ## [1.2.1] - 2026-10-23
 
 ### Alterado
@@ -73,7 +85,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.1...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.0.0...v1.1.0

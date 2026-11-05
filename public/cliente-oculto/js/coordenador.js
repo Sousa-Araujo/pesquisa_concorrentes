@@ -822,6 +822,7 @@
     const linhas = [
       mesaRowHtml('Valor da unidade', ordenadas, ordenadas.map(e => e.av.identificacao.valorUnidadeDisplay)),
       mesaRowHtml('Valor do ato', ordenadas, ordenadas.map(e => e.av.identificacao.valorAtoDisplay)),
+      mesaRowHtml('Valor de entrada', ordenadas, ordenadas.map(e => e.av.identificacao.valorEntradaDisplay)),
       mesaRowHtml('Quantidade de pré-chaves', ordenadas, ordenadas.map(e => e.av.identificacao.qtdPreChaves)),
       mesaRowHtml('Quantidade de pós-chaves', ordenadas, ordenadas.map(e => e.av.identificacao.qtdPosChaves)),
       mesaRowHtml('Desconto informado', ordenadas, ordenadas.map(e => e.av.identificacao.descontoDisplay)),
@@ -906,7 +907,7 @@
     const idRows = [
       ['Empreendimento', idz.empreendimento], ['Regional', idz.regional], ['Data da visita', idz.dataVisita], ['Horário', idz.horario],
       ['Cliente oculto (avaliador)', idz.clienteOculto], ['Recepcionista', idz.recepcionista], ['Corretor', idz.corretor],
-      ['Área da unidade', idz.areaUnidadeDisplay], ['Valor da unidade', idz.valorUnidadeDisplay], ['Valor do ato', idz.valorAtoDisplay],
+      ['Área da unidade', idz.areaUnidadeDisplay], ['Valor da unidade', idz.valorUnidadeDisplay], ['Valor do ato', idz.valorAtoDisplay], ['Valor de entrada', idz.valorEntradaDisplay],
       ['Qtd. pré-chaves', idz.qtdPreChaves], ['Qtd. pós-chaves', idz.qtdPosChaves], ['Desconto informado', idz.descontoDisplay], ['Previsão de entrega', idz.previsaoEntrega], ['Campanha vigente', idz.campanhaVigente],
     ];
     if ((idz.tipoEmpreendimento || 'sousa') === 'concorrente') idRows.splice(1, 0, ['Construtora (concorrente)', idz.construtora]);
@@ -1053,7 +1054,7 @@
   const EXPORT_HEADERS = [
     'ID da avaliação', 'Status', 'Tipo de empreendimento', 'Empreendimento Sousa comparado', 'Construtora (concorrente)',
     'Empreendimento', 'Regional', 'Data da visita', 'Horário', 'Cliente oculto', 'Recepcionista', 'Corretor',
-    'Área da unidade', 'Valor da unidade', 'Valor do ato', 'Qtd. pré-chaves', 'Qtd. pós-chaves', 'Desconto informado', 'Previsão de entrega', 'Campanha vigente',
+    'Área da unidade', 'Valor da unidade', 'Valor do ato', 'Valor de entrada', 'Qtd. pré-chaves', 'Qtd. pós-chaves', 'Desconto informado', 'Previsão de entrega', 'Campanha vigente',
     'Recepção - avaliado', 'Recepção - nota informada', 'Recepção - nota calibrada', 'Recepção - evidência', 'Recepção - justificativa calibragem',
     'Corretor (atend.) - avaliado', 'Corretor (atend.) - nota informada', 'Corretor (atend.) - nota calibrada', 'Corretor (atend.) - evidência', 'Corretor (atend.) - justificativa calibragem',
     'PDV - avaliado', 'PDV - nota informada', 'PDV - nota calibrada', 'PDV - evidência', 'PDV - justificativa calibragem',
@@ -1087,7 +1088,7 @@
     const num = v => v === null || v === undefined || isNaN(v) ? '' : v.toFixed(1);
     const row = [av.id, av.status, (idz.tipoEmpreendimento === 'concorrente' ? 'Concorrente' : 'Sousa Araujo'), av.vinculoSousaLabel || '', idz.construtora || ''];
     [idz.empreendimento, idz.regional, idz.dataVisita, idz.horario, idz.clienteOculto, idz.recepcionista, idz.corretor,
-     idz.areaUnidadeDisplay, idz.valorUnidadeDisplay, idz.valorAtoDisplay, idz.qtdPreChaves, idz.qtdPosChaves, idz.descontoDisplay, idz.previsaoEntrega, idz.campanhaVigente]
+     idz.areaUnidadeDisplay, idz.valorUnidadeDisplay, idz.valorAtoDisplay, idz.valorEntradaDisplay, idz.qtdPreChaves, idz.qtdPosChaves, idz.descontoDisplay, idz.previsaoEntrega, idz.campanhaVigente]
       .forEach(v => row.push(v || ''));
     PILARES.forEach(p => {
       const st = av.pilares[p.key];
