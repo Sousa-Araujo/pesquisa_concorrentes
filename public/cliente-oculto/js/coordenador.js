@@ -508,7 +508,7 @@
             </div>
             <div class="field">
               <label>Justificativa da calibragem</label>
-              <textarea rows="2" placeholder="Ex.: atendimento correto e cordial, porém sem evidências de diferenciação suficientes para nota excepcional." data-just="${p.key}">${st.justificativaCalibragem || ''}</textarea>
+              <textarea rows="2" placeholder="Ex.: atendimento correto e cordial, porém sem evidências de diferenciação suficientes para nota excepcional." data-just="${p.key}">${escapeHtml(st.justificativaCalibragem || '')}</textarea>
             </div>
           </div>
         </div>

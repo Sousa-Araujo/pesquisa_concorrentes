@@ -353,7 +353,7 @@
             <label>Nota informada (Cliente Oculto)</label>
             <div class="nota-row"><input type="number" min="0" max="10" step="0.1" value="${st.notaInformada ?? ''}" data-admin-informada="${p.key}"><span class="nota-badge" data-admin-badge-inf="${p.key}">—</span></div>
           </div>
-          <div class="field"><label>Evidências</label><textarea rows="2" data-admin-evidencia="${p.key}">${st.evidencia || ''}</textarea></div>
+          <div class="field"><label>Evidências</label><textarea rows="2" data-admin-evidencia="${p.key}">${escapeHtml(st.evidencia || '')}</textarea></div>
         </div>
         <div class="calib-zone" style="margin-top:14px;">
           <div class="calib-zone-label">🖊️ Calibragem (Coordenador)</div>
@@ -362,7 +362,7 @@
               <label>Nota calibrada</label>
               <div class="nota-row"><input type="number" min="0" max="10" step="0.1" value="${st.notaCalibrada ?? ''}" data-admin-calibrada="${p.key}"><span class="nota-badge" data-admin-badge-cal="${p.key}">—</span></div>
             </div>
-            <div class="field"><label>Justificativa</label><textarea rows="2" data-admin-justificativa="${p.key}">${st.justificativaCalibragem || ''}</textarea></div>
+            <div class="field"><label>Justificativa</label><textarea rows="2" data-admin-justificativa="${p.key}">${escapeHtml(st.justificativaCalibragem || '')}</textarea></div>
           </div>
         </div>`;
       wrap.appendChild(card);

@@ -9,6 +9,15 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.3.1] - 2026-11-05
+
+### Segurança
+- Cliente Oculto: evidências e justificativas da calibragem passam a ser tratadas antes de entrar na tela de calibragem e na de correções do administrador (um texto malicioso não roda mais como código).
+
+### Corrigido
+- Lista de Tabelas e espelhos não carrega mais o arquivo inteiro de cada tabela só para montar a lista (tela mais leve e rápida).
+- Sessões vencidas e códigos de acesso antigos são apagados automaticamente a cada 6 horas.
+
 ## [1.3.0] - 2026-11-05
 
 ### Adicionado
@@ -85,7 +94,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.0...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.1.0...v1.2.0

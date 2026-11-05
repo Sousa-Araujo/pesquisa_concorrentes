@@ -36,8 +36,15 @@ export interface Leitura {
 
 const q = (t: string, p: unknown[] = []) => db().query(t, p);
 
+// Sem a coluna "arquivo" (até 10 MB por leitura): o documento só é lido em lerArquivo/processarLeitura.
 const SELECT = `
-  select l.*, c.concorrente, e.empreendimento, cid.regional, to_char(l.mes_ano, 'YYYY-MM-DD') as mes,
+  select l.id, l.id_concorrente, l.mes_ano, l.arquivo_nome, l.arquivo_mime, l.enviado_por, l.enviado_em,
+         l.status, l.erro_ia, l.modelo_ia, l.unidades, l.observacoes_ia, l.total_unidades, l.estoque,
+         l.reservadas, l.vendidas_total, l.vendas_mes, l.vendas_metodo, l.valor_min_centavos,
+         l.valor_max_centavos, l.ticket_medio_centavos, l.unidade_min, l.unidade_max,
+         l.desconto_min_centavos, l.desconto_max_centavos, l.ticket_desconto_centavos,
+         l.conferido_por, l.conferido_em, l.motivo_recusa, l.coleta_substituida,
+         c.concorrente, e.empreendimento, cid.regional, to_char(l.mes_ano, 'YYYY-MM-DD') as mes,
          ue.nome as enviado_nome, uc.nome as conferido_nome
     from leituras_tabela l
     join concorrentes c on c.id_concorrente = l.id_concorrente
