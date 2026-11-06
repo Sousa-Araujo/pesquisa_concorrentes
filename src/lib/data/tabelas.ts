@@ -18,8 +18,10 @@ export interface Leitura {
   empreendimento: string;
   regional: string;
   mesAno: string;
-  arquivoNome: string;
-  arquivoMime: string;
+  /** "manual": estoque e vendas digitados pelo supervisor, sem arquivo. */
+  origem: "arquivo" | "manual";
+  arquivoNome: string | null;
+  arquivoMime: string | null;
   enviadoPor: string | null;
   enviadoEm: string;
   status: StatusLeitura;
@@ -38,7 +40,7 @@ const q = (t: string, p: unknown[] = []) => db().query(t, p);
 
 // Sem a coluna "arquivo" (até 10 MB por leitura): o documento só é lido em lerArquivo/processarLeitura.
 const SELECT = `
-  select l.id, l.id_concorrente, l.mes_ano, l.arquivo_nome, l.arquivo_mime, l.enviado_por, l.enviado_em,
+  select l.id, l.id_concorrente, l.mes_ano, l.origem, l.arquivo_nome, l.arquivo_mime, l.enviado_por, l.enviado_em,
          l.status, l.erro_ia, l.modelo_ia, l.unidades, l.observacoes_ia, l.total_unidades, l.estoque,
          l.reservadas, l.vendidas_total, l.vendas_mes, l.vendas_metodo, l.valor_min_centavos,
          l.valor_max_centavos, l.ticket_medio_centavos, l.unidade_min, l.unidade_max,
@@ -63,8 +65,9 @@ function paraLeitura(r: Record<string, unknown>): Leitura {
     empreendimento: String(r.empreendimento),
     regional: String(r.regional),
     mesAno: String(r.mes),
-    arquivoNome: String(r.arquivo_nome),
-    arquivoMime: String(r.arquivo_mime),
+    origem: r.origem === "manual" ? "manual" : "arquivo",
+    arquivoNome: (r.arquivo_nome as string) ?? null,
+    arquivoMime: (r.arquivo_mime as string) ?? null,
     enviadoPor: (r.enviado_nome as string) ?? null,
     enviadoEm: new Date(r.enviado_em as string).toISOString(),
     status: r.status as StatusLeitura,
@@ -117,7 +120,7 @@ export async function contarParaConferir(): Promise<number> {
 }
 
 export async function lerArquivo(id: string) {
-  const { rows: [r] } = await q(`select arquivo, arquivo_mime, arquivo_nome from leituras_tabela where id = $1`, [id]);
+  const { rows: [r] } = await q(`select arquivo, arquivo_mime, arquivo_nome from leituras_tabela where id = $1 and arquivo is not null`, [id]);
   return r ? { bytes: r.arquivo as Buffer, mime: String(r.arquivo_mime), nome: String(r.arquivo_nome) } : null;
 }
 
@@ -163,9 +166,27 @@ export async function criarLeitura(d: {
   return r.id;
 }
 
+/**
+ * Envio manual: o supervisor informa direto a quantidade em estoque e as
+ * vendas do mês. Vai para a mesma conferência das leituras por IA.
+ */
+export async function criarLeituraManual(d: {
+  idConcorrente: number; mesAno: string; estoque: number; vendas: number; idUsuario: string;
+}): Promise<string> {
+  const { rows: [r] } = await q(
+    `insert into leituras_tabela (id_concorrente, mes_ano, origem, enviado_por, status,
+                                  total_unidades, estoque, reservadas, vendidas_total, vendas_mes, vendas_metodo)
+     values ($1, $2, 'manual', $3, 'para_conferir', 0, $4, 0, 0, $5, null) returning id`,
+    [d.idConcorrente, d.mesAno, d.idUsuario, d.estoque, d.vendas],
+  );
+  return r.id;
+}
+
 /** Pede a leitura ao Gemini e deixa a leitura pronta para conferir (com ou sem a lista de unidades). */
 export async function processarLeitura(id: string): Promise<void> {
-  const { rows: [l] } = await q(`select id_concorrente, mes_ano, arquivo, arquivo_mime from leituras_tabela where id = $1`, [id]);
+  const { rows: [l] } = await q(
+    `select id_concorrente, mes_ano, arquivo, arquivo_mime from leituras_tabela where id = $1 and arquivo is not null`, [id],
+  );
   if (!l) return;
   try {
     const ia = await lerTabela(l.arquivo as Buffer, String(l.arquivo_mime));
@@ -246,7 +267,9 @@ export async function aprovarLeitura(id: string, idUsuario: string): Promise<{ o
       // Sem mês anterior para comparar, as vendas do mês entram como 0.
       [l.idConcorrente, l.mesAno, l.resumo.estoque, l.resumo.vendasMes ?? 0, l.id],
     );
-    await cliente.query(
+    const temPreco = [l.resumo.valorMin, l.resumo.valorMax, l.resumo.ticketMedio, l.resumo.descontoMin, l.resumo.descontoMax, l.resumo.ticketDesconto]
+      .some((v) => v !== null && v !== undefined);
+    if (temPreco) await cliente.query(
       `insert into precos_mensais (id_concorrente, mes_ano, valor_min_centavos, valor_max_centavos, ticket_medio_centavos, unidade_min, unidade_max, id_leitura,
                                   desconto_min_centavos, desconto_max_centavos, ticket_desconto_centavos)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)

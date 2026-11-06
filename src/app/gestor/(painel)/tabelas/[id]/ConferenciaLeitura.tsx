@@ -144,7 +144,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
       {!lendo && leitura.erroIa && leitura.status === "para_conferir" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-ink)]">
           <span className="min-w-0 flex-1">{leitura.erroIa}</span>
-          {iaConfigurada && unidades.length === 0 && (
+          {iaConfigurada && unidades.length === 0 && leitura.origem !== "manual" && (
             <button className="btn-secundario" onClick={fazerLerDeNovo} disabled={pendente}>{pendente ? <><Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />Lendo com IA…</> : "Ler de novo com IA"}</button>
           )}
         </div>
@@ -158,6 +158,15 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* self-start: o cartão do documento não estica até a altura da coluna da direita. */}
+        {leitura.origem === "manual" ? (
+          <div className="card self-start xl:sticky xl:top-4">
+            <p className="text-sm font-semibold text-ink">Envio manual</p>
+            <p className="mt-1 text-sm text-ink/70">
+              {leitura.enviadoPor ?? "O supervisor"} informou os números direto, sem arquivo, em {new Date(leitura.enviadoEm).toLocaleDateString("pt-BR")}.
+            </p>
+            <p className="mt-3 text-xs text-ink/50">Confira a quantidade em estoque e as vendas ao lado antes de aprovar.</p>
+          </div>
+        ) : (
         <div className="card self-start p-0 xl:sticky xl:top-4">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2 text-sm">
             <span className="truncate text-ink/70">{leitura.arquivoNome}</span>
@@ -168,6 +177,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
             // eslint-disable-next-line @next/next/no-img-element
             : <img src={urlArquivo} alt="Documento enviado" className="max-h-[70vh] w-full object-contain" />}
         </div>
+        )}
 
         <div className="grid content-start gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

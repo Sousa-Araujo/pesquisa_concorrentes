@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, PencilLine, Save, Upload } from "lucide-react";
 import CampoData from "@/components/CampoData";
 import LendoComIA, { type EtapaLeitura } from "./LendoComIA";
 import { actCidades, actConcorrentes, actEmpreendimentos } from "@/app/agente/actions";
@@ -21,8 +21,14 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
   const [mes, setMes] = useState(mesInicial);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [etapa, setEtapa] = useState<EtapaLeitura | null>(null);
-  const enviando = etapa !== null;
   const [erro, setErro] = useState<string | null>(null);
+  // Envio manual: estoque e vendas digitados, sem arquivo.
+  const [manual, setManual] = useState(false);
+  const [estoque, setEstoque] = useState("");
+  const [vendas, setVendas] = useState("");
+  const [salvandoManual, setSalvandoManual] = useState(false);
+  const enviando = etapa !== null || salvandoManual;
+  const podeManual = Boolean(idConc && mes);
 
   useEffect(() => { if (regional) actCidades(regional).then((cs) => setCidades(cs.map((c) => ({ id: c.id_cidade, nome: c.cidade })))); else setCidades([]); }, [regional]);
   useEffect(() => { if (idCidade) actEmpreendimentos(Number(idCidade)).then((es) => setEmps(es.map((e) => ({ id: e.id_empreendimento, nome: e.empreendimento })))); else setEmps([]); }, [idCidade]);
@@ -51,6 +57,32 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
     } catch {
       setErro("Falha de conexão. Tente de novo.");
       setEtapa(null);
+    }
+  }
+
+  async function salvarManual() {
+    setErro(null);
+    if (!idConc) { setErro("Escolha o concorrente."); return; }
+    if (estoque === "") { setErro("Informe a quantidade em estoque."); return; }
+    if (vendas === "") { setErro("Informe as vendas realizadas no período."); return; }
+    const dados = new FormData();
+    dados.set("manual", "1");
+    dados.set("idConcorrente", idConc);
+    dados.set("mes", mes);
+    dados.set("estoque", estoque);
+    dados.set("vendas", vendas);
+    setSalvandoManual(true);
+    try {
+      const r = await fetch("/api/tabelas", { method: "POST", body: dados });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setErro(j.error ?? "Não foi possível salvar."); return; }
+      if (podeConferir) { router.push(`/gestor/tabelas/${j.id}`); return; }
+      setEstoque(""); setVendas(""); setManual(false);
+      router.refresh();
+    } catch {
+      setErro("Falha de conexão. Tente de novo.");
+    } finally {
+      setSalvandoManual(false);
     }
   }
 
@@ -97,10 +129,35 @@ export default function EnvioTabela({ regionais, mesInicial, podeConferir }: { r
           <input id="tab-arquivo" className="campo" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"
             onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
         </div>
-        <button className="btn-primary btn-cabecalho" onClick={enviar} disabled={enviando}>
-          {enviando ? <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload size={14} aria-hidden="true" />}{enviando ? "Enviando…" : "Enviar e ler"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-primary btn-cabecalho" onClick={enviar} disabled={enviando}>
+            {etapa ? <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload size={14} aria-hidden="true" />}{etapa ? "Enviando…" : "Enviar e ler"}
+          </button>
+          <button className="btn-secundario btn-cabecalho" onClick={() => { setManual((m) => !m); setErro(null); }}
+            disabled={!podeManual || enviando} aria-expanded={manual}
+            title={podeManual ? "Informar estoque e vendas sem arquivo" : "Escolha o concorrente e o mês primeiro"}>
+            <PencilLine size={14} aria-hidden="true" />Enviar manualmente
+          </button>
+        </div>
       </div>
+      {manual && podeManual && (
+        <div className="grid gap-3 border-t border-dashed border-[var(--line)] pt-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <div>
+            <label className="rotulo" htmlFor="tab-estoque">Quantidade (estoque)</label>
+            <input id="tab-estoque" className="campo" inputMode="numeric" pattern="[0-9]*" placeholder="Ex.: 42"
+              value={estoque} onChange={(e) => setEstoque(e.target.value.replace(/\D/g, ""))} />
+          </div>
+          <div>
+            <label className="rotulo" htmlFor="tab-vendas">Vendas realizadas no período</label>
+            <input id="tab-vendas" className="campo" inputMode="numeric" pattern="[0-9]*" placeholder="Ex.: 5"
+              value={vendas} onChange={(e) => setVendas(e.target.value.replace(/\D/g, ""))} />
+          </div>
+          <button className="btn-primary btn-cabecalho" onClick={salvarManual} disabled={enviando}>
+            {salvandoManual ? <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" /> : <Save size={14} aria-hidden="true" />}{salvandoManual ? "Salvando…" : "Salvar dados"}
+          </button>
+          <p className="text-xs text-ink/50 sm:col-span-3">Os números vão para a conferência do Coordenador de Market Share, como as tabelas lidas pela IA.</p>
+        </div>
+      )}
       {etapa && <LendoComIA etapa={etapa} />}
       {erro && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
     </div>

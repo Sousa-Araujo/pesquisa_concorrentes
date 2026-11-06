@@ -73,9 +73,9 @@ export default function ListaLeituras({ leituras, filtro, titulo = "Leituras env
             )}
             {leituras.map((l) => (
               <tr key={l.id} className="border-b border-[var(--line)]">
-                <td className="px-4 py-3"><span className="font-medium text-ink">{l.concorrente}</span><span className="block text-xs text-ink/50">{l.empreendimento}</span></td>
+                <td className="px-4 py-3"><span className="font-medium text-ink">{l.concorrente}</span><span className="block text-xs text-ink/50">{l.empreendimento}{l.origem === "manual" ? " · envio manual" : ""}</span></td>
                 <td className="px-4 py-3">{mesBR(l.mesAno)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{l.resumo.totalUnidades || l.status !== "para_conferir" ? l.resumo.estoque : "—"}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{l.resumo.totalUnidades || l.status !== "para_conferir" || l.origem === "manual" ? l.resumo.estoque : "—"}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{l.resumo.vendasMes ?? 0}</td>
                 <td className="px-4 py-3 text-ink/70">{dataBR(l.enviadoEm)}{l.enviadoPor ? <span className="block text-xs text-ink/50">{l.enviadoPor}</span> : null}</td>
                 <td className="px-4 py-3">

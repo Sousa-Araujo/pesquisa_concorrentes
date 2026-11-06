@@ -9,6 +9,14 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.4.0] - 2026-11-06
+
+### Adicionado
+- Tabelas e espelhos: botão "Enviar manualmente" (liberado depois de escolher concorrente e mês) para informar a quantidade em estoque e as vendas do período sem arquivo. O envio passa pela mesma conferência do Coordenador de Market Share e, aprovado, vale na Pesquisa como a tabela.
+
+### Corrigido
+- Aprovar uma leitura sem preços não apaga mais os preços que o mês já tinha.
+
 ## [1.3.1] - 2026-11-05
 
 ### Segurança
@@ -94,7 +102,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.1...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.0...v1.2.1
