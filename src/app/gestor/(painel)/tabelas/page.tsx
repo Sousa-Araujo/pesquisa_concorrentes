@@ -5,19 +5,20 @@
 import { exigirPagina } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
 import { listarRegionais } from "@/lib/data/hierarquia";
-import { listarLeituras } from "@/lib/data/tabelas";
+import { listarEnvios } from "@/lib/data/tabelas";
+import { mesDoParametro } from "@/lib/domain/acompanhamento";
 import { iaConfigurada } from "@/lib/ia/leitura";
 import { competenciaVigente } from "@/lib/domain/competencia";
 import EnvioTabela from "./EnvioTabela";
-import ListaLeituras from "./ListaLeituras";
+import AcompanhamentoEnvios from "./AcompanhamentoEnvios";
 
 export const dynamic = "force-dynamic";
 
-export default async function TabelasPage({ searchParams: sp }: { searchParams: Promise<{ status?: string }> }) {
+export default async function TabelasPage({ searchParams: sp }: { searchParams: Promise<{ mes?: string }> }) {
   const u = await exigirPagina("tabelasEnviar", "tabelasConferir");
-  const { status } = await sp;
-  const filtro = ["para_conferir", "aprovada", "recusada"].includes(status ?? "") ? status! : "";
-  const [regionais, leituras] = await Promise.all([listarRegionais(), listarLeituras({ status: filtro || undefined })]);
+  const { mes: mesParam } = await sp;
+  const mes = mesDoParametro(mesParam) ?? competenciaVigente();
+  const [regionais, envios] = await Promise.all([listarRegionais(), listarEnvios(mes)]);
   const podeEnviar = temPermissao(u.perfis, "tabelasEnviar");
   const podeConferir = temPermissao(u.perfis, "tabelasConferir");
   return (
@@ -31,8 +32,9 @@ export default async function TabelasPage({ searchParams: sp }: { searchParams: 
       {!iaConfigurada() && (
         <p className="ms-alert ms-alert--info">A leitura por IA ainda não está configurada neste ambiente. O envio funciona e os números podem ser preenchidos na conferência.</p>
       )}
-      {podeEnviar && <EnvioTabela regionais={regionais.map((r) => r.regional)} mesInicial={competenciaVigente().slice(0, 7)} podeConferir={podeConferir} />}
-      <ListaLeituras leituras={leituras} filtro={filtro} podeExcluir={u.perfis.includes("admin")} podeConferir={podeConferir} />
+      <AcompanhamentoEnvios linhas={envios} mes={mes} podeExcluir={u.perfis.includes("admin")} podeConferir={podeConferir}>
+        {podeEnviar && <EnvioTabela regionais={regionais.map((r) => r.regional)} mesInicial={competenciaVigente().slice(0, 7)} podeConferir={podeConferir} />}
+      </AcompanhamentoEnvios>
     </div>
   );
 }

@@ -6,6 +6,7 @@
  */
 import "server-only";
 import { db } from "@/lib/db/pool";
+import { classificarEnvio, type LinhaEnvio } from "@/lib/domain/acompanhamento";
 import { normalizarUnidades, resumirUnidades, type Resumo, type Unidade } from "@/lib/domain/tabelas";
 import { ErroIA, lerTabela } from "@/lib/ia/leitura";
 
@@ -112,6 +113,43 @@ export async function listarLeituras(f: { status?: string } = {}): Promise<Leitu
   sql += " order by l.enviado_em desc limit 200";
   const { rows } = await q(sql, params);
   return rows.map(paraLeitura);
+}
+
+/**
+ * Todos os concorrentes ativos (e de empreendimento ativo) com o status do envio no mês:
+ * aprovado se há leitura aprovada; senão pendente, com a leitura mais recente como detalhe.
+ */
+export async function listarEnvios(mesAno: string): Promise<LinhaEnvio[]> {
+  const { rows } = await q(
+    `select c.id_concorrente, c.concorrente, e.id_empreendimento, e.empreendimento, cid.id_cidade, cid.cidade, cid.regional,
+            l.id as id_leitura, l.status as status_leitura, l.enviado_em, l.estoque, l.vendas_mes, l.enviado_nome
+       from concorrentes c
+       join empreendimentos e on e.id_empreendimento = c.id_empreendimento
+       join cidades cid on cid.id_cidade = e.id_cidade
+       left join lateral (
+         select x.id, x.status, x.enviado_em, x.estoque, x.vendas_mes, u.nome as enviado_nome
+           from leituras_tabela x left join usuarios u on u.id_usuario = x.enviado_por
+          where x.id_concorrente = c.id_concorrente and x.mes_ano = $1::date
+          order by (x.status = 'aprovada') desc, x.enviado_em desc limit 1
+       ) l on true
+      where c.ativo and e.ativo
+      order by cid.regional, cid.cidade, e.empreendimento, c.concorrente`,
+    [mesAno],
+  );
+  return rows.map((r) => {
+    const { status, detalhe } = classificarEnvio((r.status_leitura as StatusLeitura) ?? null);
+    return {
+      idConcorrente: Number(r.id_concorrente), concorrente: String(r.concorrente),
+      idEmpreendimento: Number(r.id_empreendimento), empreendimento: String(r.empreendimento),
+      idCidade: Number(r.id_cidade), cidade: String(r.cidade), regional: String(r.regional),
+      status, detalhe,
+      idLeitura: r.id_leitura ? String(r.id_leitura) : null,
+      enviadoEm: r.enviado_em ? new Date(r.enviado_em as string).toISOString() : null,
+      enviadoPor: (r.enviado_nome as string) ?? null,
+      estoque: num(r.estoque), vendas: num(r.vendas_mes),
+      paraConferir: r.status_leitura === "para_conferir",
+    } satisfies LinhaEnvio;
+  });
 }
 
 export async function contarParaConferir(): Promise<number> {
