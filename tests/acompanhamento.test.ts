@@ -6,6 +6,7 @@ import {
 const l = (id: number, regional: string, idCidade: number, idEmp: number, status: LinhaEnvio["status"]): LinhaEnvio => ({
   idConcorrente: id, concorrente: `C${id}`, idEmpreendimento: idEmp, empreendimento: `E${idEmp}`,
   idCidade, cidade: `Cidade ${idCidade}`, regional, status, detalhe: null, idLeitura: null, enviadoEm: null,
+  enviadoPor: null, estoque: null, vendas: null, paraConferir: false,
 });
 
 const base = [

@@ -20,6 +20,12 @@ export interface LinhaEnvio {
   detalhe: string | null;
   idLeitura: string | null;
   enviadoEm: string | null;
+  enviadoPor: string | null;
+  /** Estoque e vendas do mês da leitura (nulos sem leitura). */
+  estoque: number | null;
+  vendas: number | null;
+  /** Leitura aguardando conferência: a ação vira "Conferir". */
+  paraConferir: boolean;
 }
 
 export interface FiltroEnvio {

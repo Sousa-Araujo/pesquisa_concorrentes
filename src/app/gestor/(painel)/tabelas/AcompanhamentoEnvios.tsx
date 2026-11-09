@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import CampoData from "@/components/CampoData";
+import { confirmar } from "@/lib/cliente/dialogo";
 import { filtrarEnvios, resumirEnvios, type FiltroEnvio, type LinhaEnvio, type StatusEnvio } from "@/lib/domain/acompanhamento";
+import { excluir } from "./[id]/actions";
 
 const STATUS: Record<StatusEnvio, { rotulo: string; fundo: string; selo: string }> = {
   aprovado: { rotulo: "Aprovado", fundo: "bg-[var(--good-tint)]", selo: "text-[var(--good-ink)] border-[var(--good-ink)]/30" },
@@ -13,9 +16,33 @@ const STATUS: Record<StatusEnvio, { rotulo: string; fundo: string; selo: string 
 const dataBR = (d: string) => new Date(d).toLocaleDateString("pt-BR");
 const unicos = <T,>(xs: T[]) => xs.filter((x, i) => xs.indexOf(x) === i);
 
-export default function AcompanhamentoEnvios({ linhas, mes }: { linhas: LinhaEnvio[]; mes: string }) {
+/** `children` (o formulário de envio) fica entre os indicadores e os filtros/lista. */
+export default function AcompanhamentoEnvios({ linhas, mes, podeExcluir = false, podeConferir = false, children }: {
+  linhas: LinhaEnvio[]; mes: string; podeExcluir?: boolean; podeConferir?: boolean; children?: React.ReactNode;
+}) {
   const router = useRouter();
   const params = useSearchParams();
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+
+  async function fazerExcluir(l: LinhaEnvio) {
+    if (!l.idLeitura) return;
+    const ok = await confirmar({
+      titulo: `Excluir a leitura de ${l.concorrente}?`,
+      mensagem: l.status === "aprovado"
+        ? "Ela já foi aprovada: a coleta deste mês na Pesquisa e os preços do mês saem junto. O arquivo enviado também é apagado."
+        : "O arquivo enviado também é apagado.",
+      textoConfirmar: "Excluir",
+      perigo: true,
+    });
+    if (!ok) return;
+    setErro(null);
+    iniciar(async () => {
+      const r = await excluir(l.idLeitura!);
+      if (!r.ok) setErro(r.erro);
+      router.refresh();
+    });
+  }
   const [f, setF] = useState<FiltroEnvio>({ status: "", regional: "", idCidade: "", idEmpreendimento: "" });
 
   // Os filtros de cima restringem os de baixo: Regional, Cidade e Empreendimento.
@@ -74,6 +101,8 @@ export default function AcompanhamentoEnvios({ linhas, mes }: { linhas: LinhaEnv
         <div className="h-full bg-[var(--good-ink)]" style={{ width: `${pct}%` }} />
       </div>
 
+      {children && <div className="my-3">{children}</div>}
+
       <div className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="rotulo" htmlFor="ae-status">Status</label>
@@ -111,6 +140,7 @@ export default function AcompanhamentoEnvios({ linhas, mes }: { linhas: LinhaEnv
         )}
       </div>
 
+      {erro && <p className="rounded-lg bg-[var(--critical-tint)] px-4 py-3 text-sm text-[var(--critical-ink)]" role="alert">{erro}</p>}
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
@@ -118,27 +148,44 @@ export default function AcompanhamentoEnvios({ linhas, mes }: { linhas: LinhaEnv
               <th className="px-4 py-3 font-medium">Concorrente</th>
               <th className="px-4 py-3 font-medium">Regional</th>
               <th className="px-4 py-3 font-medium">Cidade</th>
+              <th className="px-4 py-3 text-right font-medium">Estoque</th>
+              <th className="px-4 py-3 text-right font-medium">Vendas</th>
+              <th className="px-4 py-3 font-medium">Enviado</th>
               <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Enviado em</th>
               <th className="px-4 py-3 text-right font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
             {visiveis.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-ink/50">Nenhum concorrente com esses filtros.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-ink/50">Nenhum concorrente com esses filtros.</td></tr>
             )}
             {visiveis.map((l) => (
               <tr key={l.idConcorrente} className={`border-b border-[var(--line)] ${STATUS[l.status].fundo}`}>
                 <td className="px-4 py-3"><span className="font-medium text-ink">{l.concorrente}</span><span className="block text-xs text-ink/50">{l.empreendimento}</span></td>
                 <td className="px-4 py-3">{l.regional}</td>
                 <td className="px-4 py-3">{l.cidade}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{l.estoque ?? "—"}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{l.vendas ?? "—"}</td>
+                <td className="px-4 py-3 text-ink/70">
+                  {l.enviadoEm ? dataBR(l.enviadoEm) : "—"}
+                  {l.enviadoPor && <span className="block text-xs text-ink/50">{l.enviadoPor}</span>}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS[l.status].selo}`}>{STATUS[l.status].rotulo}</span>
                   {l.detalhe && <span className="mt-1 block text-xs text-[var(--warning-ink)]">{l.detalhe}</span>}
                 </td>
-                <td className="px-4 py-3 text-ink/70">{l.enviadoEm ? dataBR(l.enviadoEm) : "—"}</td>
                 <td className="px-4 py-3 text-right">
-                  {l.idLeitura ? <a className="btn-acao" href={`/gestor/tabelas/${l.idLeitura}`}>Abrir</a> : <span className="text-ink/40">—</span>}
+                  {l.idLeitura ? (
+                    <div className="acoes-linha justify-end">
+                      <a className="btn-acao" href={`/gestor/tabelas/${l.idLeitura}`}>{l.paraConferir && podeConferir ? "Conferir" : "Abrir"}</a>
+                      {podeExcluir && (
+                        <button className="btn-acao btn-acao--perigo !px-2" title="Excluir leitura" aria-label={`Excluir leitura de ${l.concorrente}`}
+                          disabled={pendente} onClick={() => fazerExcluir(l)}>
+                          <Trash2 size={13} aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  ) : <span className="text-ink/40">—</span>}
                 </td>
               </tr>
             ))}

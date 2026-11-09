@@ -122,14 +122,15 @@ export async function listarLeituras(f: { status?: string } = {}): Promise<Leitu
 export async function listarEnvios(mesAno: string): Promise<LinhaEnvio[]> {
   const { rows } = await q(
     `select c.id_concorrente, c.concorrente, e.id_empreendimento, e.empreendimento, cid.id_cidade, cid.cidade, cid.regional,
-            l.id as id_leitura, l.status as status_leitura, l.enviado_em
+            l.id as id_leitura, l.status as status_leitura, l.enviado_em, l.estoque, l.vendas_mes, l.enviado_nome
        from concorrentes c
        join empreendimentos e on e.id_empreendimento = c.id_empreendimento
        join cidades cid on cid.id_cidade = e.id_cidade
        left join lateral (
-         select id, status, enviado_em from leituras_tabela
-          where id_concorrente = c.id_concorrente and mes_ano = $1::date
-          order by (status = 'aprovada') desc, enviado_em desc limit 1
+         select x.id, x.status, x.enviado_em, x.estoque, x.vendas_mes, u.nome as enviado_nome
+           from leituras_tabela x left join usuarios u on u.id_usuario = x.enviado_por
+          where x.id_concorrente = c.id_concorrente and x.mes_ano = $1::date
+          order by (x.status = 'aprovada') desc, x.enviado_em desc limit 1
        ) l on true
       where c.ativo and e.ativo
       order by cid.regional, cid.cidade, e.empreendimento, c.concorrente`,
@@ -144,6 +145,9 @@ export async function listarEnvios(mesAno: string): Promise<LinhaEnvio[]> {
       status, detalhe,
       idLeitura: r.id_leitura ? String(r.id_leitura) : null,
       enviadoEm: r.enviado_em ? new Date(r.enviado_em as string).toISOString() : null,
+      enviadoPor: (r.enviado_nome as string) ?? null,
+      estoque: num(r.estoque), vendas: num(r.vendas_mes),
+      paraConferir: r.status_leitura === "para_conferir",
     } satisfies LinhaEnvio;
   });
 }
