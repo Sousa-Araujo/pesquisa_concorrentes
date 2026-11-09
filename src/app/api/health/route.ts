@@ -6,9 +6,10 @@
  * usam, não do healthcheck de processo.
  */
 import { NextResponse } from "next/server";
+import { VERSAO } from "@/lib/versao";
 
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  return NextResponse.json({ status: "ok" });
+  return NextResponse.json({ status: "ok", versao: VERSAO });
 }

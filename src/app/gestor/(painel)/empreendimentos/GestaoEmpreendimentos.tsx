@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
+import CampoData from "@/components/CampoData";
 import type { LinhaEmpreendimento } from "@/lib/data/gestor";
 import { actCidades } from "@/app/agente/actions";
 import {
@@ -12,6 +14,7 @@ import {
 } from "../../actions";
 
 type Cidade = { id: number; nome: string };
+const fmtData = (d: string | null) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "—");
 
 export default function GestaoEmpreendimentos({
   regional, idCidade, regionais, cidades, itens,
@@ -42,7 +45,7 @@ export default function GestaoEmpreendimentos({
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink">Empreendimentos</h1>
-        <button className="btn-primary !w-auto !py-2.5 !text-base" onClick={() => setCriando(true)}>
+        <button className="btn-primary btn-cabecalho" onClick={() => setCriando(true)}>
           Cadastrar empreendimento
         </button>
       </div>
@@ -74,13 +77,14 @@ export default function GestaoEmpreendimentos({
               <th className="px-4 py-3 font-medium">Empreendimento</th>
               <th className="px-4 py-3 font-medium">Cidade</th>
               <th className="px-4 py-3 font-medium">Regional</th>
+              <th className="px-4 py-3 font-medium">Lançamento</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 text-right font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
             {itens.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-ink/50">
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-ink/50">
                 Nenhum empreendimento encontrado.
               </td></tr>
             )}
@@ -90,22 +94,24 @@ export default function GestaoEmpreendimentos({
                 <td className="px-4 py-3 font-medium text-ink">{e.empreendimento}</td>
                 <td className="px-4 py-3">{e.cidade}</td>
                 <td className="px-4 py-3">{e.regional}</td>
+                <td className="px-4 py-3 tabular-nums text-ink/70">{fmtData(e.data_lancamento)}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    e.ativo ? "bg-brand/15 text-brand" : "bg-black/10 text-ink/50"
+                    e.ativo ? "bg-[var(--good-tint)] text-[var(--good-ink)]" : "bg-black/10 text-ink/50"
                   }`}>
                     {e.ativo ? "Ativo" : "Inativo"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="btn-ghost" onClick={() => setEditando(e)}>Editar</button>
-                  <button className="btn-ghost"
+                <td className="px-4 py-3"><div className="acoes-linha">
+                  <button className="btn-acao" onClick={() => setEditando(e)}><Pencil size={13} aria-hidden="true" />Editar</button>
+                  <button className="btn-acao btn-acao--neutro"
                     onClick={async () => {
                       await definirStatusEmpreendimento(e.id_empreendimento, !e.ativo);
                       recarregar();
                     }}>
                     {e.ativo ? "Inativar" : "Ativar"}
                   </button>
+                </div>
                 </td>
               </tr>
             ))}
@@ -140,6 +146,7 @@ function FormEmpreendimento({
   const [idCidade, setIdCidade] = useState(empreendimento ? String(empreendimento.id_cidade) : "");
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [ativo, setAtivo] = useState(empreendimento?.ativo ?? true);
+  const [lancamento, setLancamento] = useState(empreendimento?.data_lancamento ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -160,10 +167,11 @@ function FormEmpreendimento({
     setSalvando(true);
     const r = editandoExistente
       ? await editarEmpreendimento(empreendimento!.id_empreendimento, {
-          id_cidade: Number(idCidade), empreendimento: nome, ativo,
+          id_cidade: Number(idCidade), empreendimento: nome, ativo, data_lancamento: lancamento || null,
         })
       : await criarEmpreendimento({
           id_empreendimento: Number(id), id_cidade: Number(idCidade), empreendimento: nome, ativo,
+          data_lancamento: lancamento || null,
         });
     setSalvando(false);
     if (r.ok) onSalvo();
@@ -209,6 +217,11 @@ function FormEmpreendimento({
             </select>
           </div>
         </div>
+        <div>
+          <label className="rotulo" htmlFor="emp-lancamento">Data de lançamento</label>
+          <CampoData tipo="data" id="emp-lancamento" className="campo !text-base !py-2" value={lancamento} onChange={setLancamento} />
+          <p className="mt-1 text-xs text-ink/40">Opcional.</p>
+        </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
           Empreendimento ativo
@@ -216,10 +229,10 @@ function FormEmpreendimento({
         {erro && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{erro}</p>}
       </div>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>
           Cancelar
         </button>
-        <button className="btn-primary flex-1 !py-3" onClick={salvar} disabled={salvando}>
+        <button className="btn-primary flex-1" onClick={salvar} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar"}
         </button>
       </div>

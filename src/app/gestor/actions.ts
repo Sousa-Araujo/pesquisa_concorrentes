@@ -1,18 +1,13 @@
 "use server";
 
 /**
- * Server Actions da Área do Gestor (seções 3, 36, 25).
- * Autenticação própria (bcrypt + sessão JWT em cookie httpOnly — ver
- * src/lib/auth); administração via SQL direto após confirmar que o
- * solicitante é gestor ativo.
+ * Server Actions do painel da Pesquisa de Concorrentes (seções 3, 36, 25).
+ * Cada ação confere a sessão e a permissão do perfil de quem chama
+ * (src/lib/auth/perfis.ts) antes de tocar no banco.
  */
 import type { PoolClient } from "pg";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { db } from "@/lib/db/pool";
-import { gestorAtual } from "@/lib/auth/gestor";
-import { COOKIE_SESSAO, SESSAO_MAX_AGE_SEGUNDOS, criarSessao } from "@/lib/auth/session";
-import { verificarSenha, hashSenha } from "@/lib/auth/senha";
+import { encerrarSessoesDoAgente, exigirPermissao } from "@/lib/auth/acesso";
 import {
   agenteSchema,
   coletaEdicaoSchema,
@@ -21,52 +16,14 @@ import {
   concorrenteEdicaoSchema,
   empreendimentoSchema,
   empreendimentoEdicaoSchema,
-  gestorSchema,
-  gestorEdicaoSchema,
 } from "@/lib/validation/schemas";
 
 type R<T = void> = { ok: true; data?: T } | { ok: false; erro: string };
 
-export async function loginGestor(email: string, senha: string): Promise<R> {
-  const emailNormalizado = email.trim().toLowerCase();
-  const { rows } = await db().query<{ id_gestor: string; senha_hash: string; ativo: boolean }>(
-    `select id_gestor, senha_hash, ativo from gestores where lower(email) = $1`,
-    [emailNormalizado],
-  );
-  const gestor = rows[0];
-  // Mesma mensagem para e-mail inexistente, senha errada e conta inativa —
-  // evita confirmar a existência de uma conta a quem tenta adivinhar.
-  if (!gestor || !gestor.ativo) return { ok: false, erro: "E-mail ou senha inválidos." };
-
-  const senhaOk = await verificarSenha(senha, gestor.senha_hash);
-  if (!senhaOk) return { ok: false, erro: "E-mail ou senha inválidos." };
-
-  const token = await criarSessao(gestor.id_gestor);
-  cookies().set(COOKIE_SESSAO, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSAO_MAX_AGE_SEGUNDOS,
-  });
-  return { ok: true };
-}
-
-export async function logoutGestor() {
-  cookies().set(COOKIE_SESSAO, "", { httpOnly: true, path: "/", maxAge: 0 });
-  redirect("/gestor/login");
-}
-
-async function exigirGestor() {
-  const g = await gestorAtual();
-  if (!g) throw new Error("Não autorizado");
-  return g;
-}
-
 export async function criarAgente(input: {
-  nome: string; telefone: string; ativo: boolean;
+  nome: string; telefone: string; email?: string; ativo: boolean;
 }): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   const parsed = agenteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
@@ -80,20 +37,21 @@ export async function criarAgente(input: {
 
   try {
     await pool.query(
-      `insert into agentes_campo (nome, telefone, ativo, created_by, updated_by)
-       values ($1, $2, $3, $4, $4)`,
-      [parsed.data.nome, parsed.data.telefone, parsed.data.ativo, g.id_gestor],
+      `insert into agentes_campo (nome, telefone, email, ativo, created_by, updated_by)
+       values ($1, $2, $3, $4, $5, $5)`,
+      [parsed.data.nome, parsed.data.telefone, parsed.data.email, parsed.data.ativo, g.id_usuario],
     );
-  } catch {
+  } catch (e) {
+    if ((e as { code?: string }).code === "23505") return { ok: false, erro: "E-mail já usado por outro agente." };
     return { ok: false, erro: "Não foi possível cadastrar o agente." };
   }
   return { ok: true };
 }
 
 export async function editarAgente(id: string, input: {
-  nome: string; telefone: string; ativo: boolean;
+  nome: string; telefone: string; email?: string; ativo: boolean;
 }): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   const parsed = agenteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
@@ -106,26 +64,49 @@ export async function editarAgente(id: string, input: {
 
   try {
     await pool.query(
-      `update agentes_campo set nome = $1, telefone = $2, ativo = $3, updated_by = $4 where id_agente = $5`,
-      [parsed.data.nome, parsed.data.telefone, parsed.data.ativo, g.id_gestor, id],
+      `update agentes_campo set nome = $1, telefone = $2, email = $3, ativo = $4, updated_by = $5 where id_agente = $6`,
+      [parsed.data.nome, parsed.data.telefone, parsed.data.email, parsed.data.ativo, g.id_usuario, id],
     );
-  } catch {
+  } catch (e) {
+    if ((e as { code?: string }).code === "23505") return { ok: false, erro: "E-mail já usado por outro agente." };
     return { ok: false, erro: "Não foi possível salvar as alterações." };
   }
+  if (!parsed.data.ativo) await encerrarSessoesDoAgente(id);
+  return { ok: true };
+}
+
+/**
+ * Exclui o agente da lista sem apagar a pesquisa: as coletas dele continuam
+ * (com o nome dele), o acesso é encerrado e telefone/e-mail ficam livres.
+ */
+export async function excluirAgente(id: string): Promise<R> {
+  const g = await exigirPermissao("auditoriaPesquisa");
+  try {
+    await db().query(
+      `update agentes_campo set excluido_em = now(), ativo = false, telefone = null, email = null, updated_by = $2
+        where id_agente = $1 and excluido_em is null`,
+      [id, g.id_usuario],
+    );
+  } catch {
+    return { ok: false, erro: "Não foi possível excluir o agente." };
+  }
+  await encerrarSessoesDoAgente(id);
+  await db().query(`delete from codigos_acesso where id_agente = $1`, [id]);
   return { ok: true };
 }
 
 /** Ativa/inativa (nunca exclui fisicamente — seção 6). */
 export async function definirStatusAgente(id: string, ativo: boolean): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   try {
     await db().query(
       `update agentes_campo set ativo = $1, updated_by = $2 where id_agente = $3`,
-      [ativo, g.id_gestor, id],
+      [ativo, g.id_usuario, id],
     );
   } catch {
     return { ok: false, erro: "Não foi possível alterar o status." };
   }
+  if (!ativo) await encerrarSessoesDoAgente(id);
   return { ok: true };
 }
 
@@ -136,17 +117,21 @@ export async function definirStatusAgente(id: string, ativo: boolean): Promise<R
  * assina como created_by.
  */
 export async function criarConcorrenteGestor(input: {
-  id_empreendimento: number; nome: string;
+  id_empreendimento: number; nome: string; data_lancamento?: string | null;
 }): Promise<R<{ id_concorrente: number }>> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("cadastros");
   const parsed = novoConcorrenteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0]?.message ?? "Dados inválidos." };
 
   try {
     const { rows } = await db().query<{ id_concorrente: number }>(
       `select id_concorrente from inserir_concorrente($1, $2, $3)`,
-      [parsed.data.id_empreendimento, parsed.data.nome, g.id_gestor],
+      [parsed.data.id_empreendimento, parsed.data.nome, g.id_usuario],
     );
+    if (parsed.data.data_lancamento) {
+      await db().query(`update concorrentes set data_lancamento = $1 where id_concorrente = $2`,
+        [parsed.data.data_lancamento, rows[0].id_concorrente]);
+    }
     return { ok: true, data: { id_concorrente: rows[0].id_concorrente } };
   } catch (e) {
     const erro = e as { code?: string; message?: string };
@@ -163,16 +148,16 @@ export async function criarConcorrenteGestor(input: {
  */
 export async function editarConcorrente(
   id: number,
-  input: { concorrente: string; ativo: boolean },
+  input: { concorrente: string; ativo: boolean; data_lancamento?: string | null },
 ): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("cadastros");
   const parsed = concorrenteEdicaoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
   try {
     await db().query(
-      `update concorrentes set concorrente = $1, ativo = $2, updated_by = $3 where id_concorrente = $4`,
-      [parsed.data.concorrente, parsed.data.ativo, g.id_gestor, id],
+      `update concorrentes set concorrente = $1, ativo = $2, updated_by = $3, data_lancamento = $5 where id_concorrente = $4`,
+      [parsed.data.concorrente, parsed.data.ativo, g.id_usuario, id, parsed.data.data_lancamento],
     );
   } catch (e) {
     const erro = e as { code?: string };
@@ -186,11 +171,11 @@ export async function editarConcorrente(
 
 /** Ativa/inativa concorrente (nunca exclui fisicamente — mesma regra dos agentes). */
 export async function definirStatusConcorrente(id: number, ativo: boolean): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("cadastros");
   try {
     await db().query(
       `update concorrentes set ativo = $1, updated_by = $2 where id_concorrente = $3`,
-      [ativo, g.id_gestor, id],
+      [ativo, g.id_usuario, id],
     );
   } catch {
     return { ok: false, erro: "Não foi possível alterar o status." };
@@ -203,9 +188,9 @@ export async function definirStatusConcorrente(id: number, ativo: boolean): Prom
  * concorrente, o ID é informado pelo gestor, não gerado — ver schemas.ts.
  */
 export async function criarEmpreendimento(input: {
-  id_empreendimento: number; id_cidade: number; empreendimento: string; ativo: boolean;
+  id_empreendimento: number; id_cidade: number; empreendimento: string; ativo: boolean; data_lancamento?: string | null;
 }): Promise<R> {
-  await exigirGestor();
+  await exigirPermissao("cadastros");
   const parsed = empreendimentoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
@@ -218,9 +203,9 @@ export async function criarEmpreendimento(input: {
 
   try {
     await pool.query(
-      `insert into empreendimentos (id_empreendimento, id_cidade, empreendimento, ativo)
-       values ($1, $2, $3, $4)`,
-      [parsed.data.id_empreendimento, parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo],
+      `insert into empreendimentos (id_empreendimento, id_cidade, empreendimento, ativo, data_lancamento)
+       values ($1, $2, $3, $4, $5)`,
+      [parsed.data.id_empreendimento, parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo, parsed.data.data_lancamento],
     );
   } catch (e) {
     const erro = e as { code?: string };
@@ -232,16 +217,16 @@ export async function criarEmpreendimento(input: {
 
 export async function editarEmpreendimento(
   id: number,
-  input: { id_cidade: number; empreendimento: string; ativo: boolean },
+  input: { id_cidade: number; empreendimento: string; ativo: boolean; data_lancamento?: string | null },
 ): Promise<R> {
-  await exigirGestor();
+  await exigirPermissao("cadastros");
   const parsed = empreendimentoEdicaoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
   try {
     await db().query(
-      `update empreendimentos set id_cidade = $1, empreendimento = $2, ativo = $3 where id_empreendimento = $4`,
-      [parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo, id],
+      `update empreendimentos set id_cidade = $1, empreendimento = $2, ativo = $3, data_lancamento = $5 where id_empreendimento = $4`,
+      [parsed.data.id_cidade, parsed.data.empreendimento, parsed.data.ativo, id, parsed.data.data_lancamento],
     );
   } catch (e) {
     const erro = e as { code?: string };
@@ -253,7 +238,7 @@ export async function editarEmpreendimento(
 
 /** Ativa/inativa empreendimento (nunca exclui fisicamente — mesma regra dos agentes). */
 export async function definirStatusEmpreendimento(id: number, ativo: boolean): Promise<R> {
-  await exigirGestor();
+  await exigirPermissao("cadastros");
   try {
     await db().query(`update empreendimentos set ativo = $1 where id_empreendimento = $2`, [ativo, id]);
   } catch {
@@ -266,21 +251,23 @@ export async function definirStatusEmpreendimento(id: number, ativo: boolean): P
 export async function salvarDadosProprios(input: {
   id_empreendimento: number; mes_ano: string; estoque: number; vendas: number;
 }): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   const parsed = dadosPropriosSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
   try {
     await db().query(
+      // Digitado aqui vira 'manual': a sincronização com o CV não sobrescreve mais este mês.
       `insert into dados_proprios_mensais
-         (id_empreendimento, mes_ano, estoque, vendas, atualizado_por, atualizado_em)
-       values ($1, $2, $3, $4, $5, now())
+         (id_empreendimento, mes_ano, estoque, vendas, atualizado_por, atualizado_em, origem)
+       values ($1, $2, $3, $4, $5, now(), 'manual')
        on conflict (id_empreendimento, mes_ano) do update
          set estoque = excluded.estoque,
              vendas = excluded.vendas,
+             origem = 'manual',
              atualizado_por = excluded.atualizado_por,
              atualizado_em = now()`,
-      [parsed.data.id_empreendimento, parsed.data.mes_ano, parsed.data.estoque, parsed.data.vendas, g.id_gestor],
+      [parsed.data.id_empreendimento, parsed.data.mes_ano, parsed.data.estoque, parsed.data.vendas, g.id_usuario],
     );
   } catch {
     return { ok: false, erro: "Não foi possível salvar os dados próprios." };
@@ -297,7 +284,7 @@ export async function salvarDadosProprios(input: {
 export async function editarColeta(idColeta: string, input: {
   estoque: number; vendas: number; mes_ano: string;
 }): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   const parsed = coletaEdicaoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
 
@@ -306,7 +293,7 @@ export async function editarColeta(idColeta: string, input: {
       `update coletas_mensais
           set estoque = $1, vendas = $2, mes_ano = $3, atualizado_por = $4
         where id_coleta = $5`,
-      [parsed.data.estoque, parsed.data.vendas, parsed.data.mes_ano, g.id_gestor, idColeta],
+      [parsed.data.estoque, parsed.data.vendas, parsed.data.mes_ano, g.id_usuario, idColeta],
     );
     if (!rowCount) return { ok: false, erro: "Coleta não encontrada." };
   } catch (e) {
@@ -339,7 +326,7 @@ async function registrarExclusao(
 
 /** Exclui uma coleta de concorrente, guardando o snapshot em auditoria. */
 export async function excluirColeta(idColeta: string): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   const client = await db().connect();
   try {
     await client.query("begin");
@@ -352,7 +339,7 @@ export async function excluirColeta(idColeta: string): Promise<R> {
       await client.query("rollback");
       return { ok: false, erro: "Coleta não encontrada." };
     }
-    await registrarExclusao(client, "coleta_mensal", idColeta, registro, g.id_gestor);
+    await registrarExclusao(client, "coleta_mensal", idColeta, registro, g.id_usuario);
     await client.query(`delete from coletas_mensais where id_coleta = $1`, [idColeta]);
     await client.query("commit");
   } catch {
@@ -366,7 +353,7 @@ export async function excluirColeta(idColeta: string): Promise<R> {
 
 /** Exclui o registro de dados próprios de um empreendimento numa competência. */
 export async function excluirDadosProprios(idEmpreendimento: number, mesAno: string): Promise<R> {
-  const g = await exigirGestor();
+  const g = await exigirPermissao("auditoriaPesquisa");
   const client = await db().connect();
   try {
     await client.query("begin");
@@ -380,7 +367,7 @@ export async function excluirDadosProprios(idEmpreendimento: number, mesAno: str
       await client.query("rollback");
       return { ok: false, erro: "Não há dados próprios nesta competência." };
     }
-    await registrarExclusao(client, "dados_proprios_mensal", registro.id_registro, registro, g.id_gestor);
+    await registrarExclusao(client, "dados_proprios_mensal", registro.id_registro, registro, g.id_usuario);
     await client.query(`delete from dados_proprios_mensais where id_registro = $1`, [registro.id_registro]);
     await client.query("commit");
   } catch {
@@ -388,111 +375,6 @@ export async function excluirDadosProprios(idEmpreendimento: number, mesAno: str
     return { ok: false, erro: "Não foi possível excluir o registro." };
   } finally {
     client.release();
-  }
-  return { ok: true };
-}
-
-/**
- * Cadastro de gestor por outro gestor — extensão pedida pelo usuário, além
- * do escopo original da especificação. Sem convite por e-mail nem tela de
- * "esqueci minha senha": a senha inicial é definida diretamente no
- * formulário pelo gestor que está cadastrando.
- */
-export async function criarGestor(input: {
-  nome: string; email: string; senha: string; ativo: boolean;
-}): Promise<R> {
-  const g = await exigirGestor();
-  const parsed = gestorSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
-
-  const pool = db();
-  const { rows: existe } = await pool.query<{ id_gestor: string }>(
-    `select id_gestor from gestores where lower(email) = lower($1)`,
-    [parsed.data.email],
-  );
-  if (existe[0]) return { ok: false, erro: "Já existe um gestor com este e-mail." };
-
-  const senhaHash = await hashSenha(parsed.data.senha);
-  try {
-    await pool.query(
-      `insert into gestores (nome, email, senha_hash, ativo, created_by, updated_by)
-       values ($1, $2, $3, $4, $5, $5)`,
-      [parsed.data.nome, parsed.data.email, senhaHash, parsed.data.ativo, g.id_gestor],
-    );
-  } catch (e) {
-    const erro = e as { code?: string };
-    if (erro.code === "23505") return { ok: false, erro: "Já existe um gestor com este e-mail." };
-    return { ok: false, erro: "Não foi possível cadastrar o gestor." };
-  }
-  return { ok: true };
-}
-
-/**
- * Confere se é seguro inativar `idAlvo`: nunca a própria conta de quem
- * pede, e nunca o último gestor ativo (senão ninguém mais administra o
- * sistema). Retorna a mensagem de erro, ou null se pode inativar.
- */
-async function motivoNaoPodeInativarGestor(idAlvo: string, idSolicitante: string): Promise<string | null> {
-  if (idAlvo === idSolicitante) return "Você não pode inativar a própria conta.";
-  const { rows } = await db().query<{ total: string }>(
-    `select count(*)::text as total from gestores where ativo = true and id_gestor <> $1`,
-    [idAlvo],
-  );
-  if (Number(rows[0].total) === 0) return "Não é possível inativar o último gestor ativo.";
-  return null;
-}
-
-export async function editarGestor(id: string, input: {
-  nome: string; email: string; senha?: string; ativo: boolean;
-}): Promise<R> {
-  const g = await exigirGestor();
-  const parsed = gestorEdicaoSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, erro: parsed.error.issues[0].message };
-
-  if (!parsed.data.ativo) {
-    const motivo = await motivoNaoPodeInativarGestor(id, g.id_gestor);
-    if (motivo) return { ok: false, erro: motivo };
-  }
-
-  const pool = db();
-  const { rows: outro } = await pool.query<{ id_gestor: string }>(
-    `select id_gestor from gestores where lower(email) = lower($1) and id_gestor <> $2`,
-    [parsed.data.email, id],
-  );
-  if (outro[0]) return { ok: false, erro: "E-mail já usado por outro gestor." };
-
-  try {
-    if (parsed.data.senha) {
-      const senhaHash = await hashSenha(parsed.data.senha);
-      await pool.query(
-        `update gestores set nome = $1, email = $2, senha_hash = $3, ativo = $4, updated_by = $5 where id_gestor = $6`,
-        [parsed.data.nome, parsed.data.email, senhaHash, parsed.data.ativo, g.id_gestor, id],
-      );
-    } else {
-      await pool.query(
-        `update gestores set nome = $1, email = $2, ativo = $3, updated_by = $4 where id_gestor = $5`,
-        [parsed.data.nome, parsed.data.email, parsed.data.ativo, g.id_gestor, id],
-      );
-    }
-  } catch (e) {
-    const erro = e as { code?: string };
-    if (erro.code === "23505") return { ok: false, erro: "E-mail já usado por outro gestor." };
-    return { ok: false, erro: "Não foi possível salvar as alterações." };
-  }
-  return { ok: true };
-}
-
-/** Ativa/inativa gestor (nunca exclui fisicamente — mesma regra dos agentes). */
-export async function definirStatusGestor(id: string, ativo: boolean): Promise<R> {
-  const g = await exigirGestor();
-  if (!ativo) {
-    const motivo = await motivoNaoPodeInativarGestor(id, g.id_gestor);
-    if (motivo) return { ok: false, erro: motivo };
-  }
-  try {
-    await db().query(`update gestores set ativo = $1, updated_by = $2 where id_gestor = $3`, [ativo, g.id_gestor, id]);
-  } catch {
-    return { ok: false, erro: "Não foi possível alterar o status." };
   }
   return { ok: true };
 }

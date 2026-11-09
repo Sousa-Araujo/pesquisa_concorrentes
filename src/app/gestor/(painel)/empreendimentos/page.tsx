@@ -1,3 +1,4 @@
+import { exigirPagina } from "@/lib/auth/acesso";
 import { listarEmpreendimentosAdmin } from "@/lib/data/gestor";
 import { listarRegionais, listarCidades } from "@/lib/data/hierarquia";
 import GestaoEmpreendimentos from "./GestaoEmpreendimentos";
@@ -5,10 +6,12 @@ import GestaoEmpreendimentos from "./GestaoEmpreendimentos";
 export const dynamic = "force-dynamic";
 
 export default async function EmpreendimentosPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { regional?: string; cidade?: string };
+  searchParams: Promise<{ regional?: string; cidade?: string }>;
 }) {
+  await exigirPagina("cadastros");
+  const searchParams = await searchParamsPromise;
   const regional = searchParams.regional ?? "";
   const idCidade = searchParams.cidade ?? "";
 

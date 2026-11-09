@@ -1,3 +1,5 @@
+import { exigirPagina } from "@/lib/auth/acesso";
+import { sincronizarSeAntigo } from "@/lib/data/sousaCV";
 import Link from "next/link";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import { formatarPercentual } from "@/lib/domain/dashboard";
@@ -10,10 +12,14 @@ import FiltrosDashboard from "./FiltrosDashboard";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { mes?: string; regional?: string; cidade?: string; emp?: string };
+  searchParams: Promise<{ mes?: string; regional?: string; cidade?: string; emp?: string }>;
 }) {
+  await exigirPagina("painelPesquisa");
+  // Dados Sousa do BI do CV: atualiza em segundo plano se a última sincronização for antiga.
+  void sincronizarSeAntigo().catch(() => {});
+  const searchParams = await searchParamsPromise;
   const mesAno = searchParams.mes ?? competenciaVigente();
   const regional = searchParams.regional ?? "";
   const idCidade = searchParams.cidade ? Number(searchParams.cidade) : undefined;

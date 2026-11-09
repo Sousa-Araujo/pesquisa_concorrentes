@@ -67,10 +67,10 @@ export async function listarPesquisas(f: FiltroPesquisas): Promise<LinhaPesquisa
   const { rows } = await db().query<LinhaPesquisa>(
     `select cm.id_coleta, cm.id_concorrente, cm.coletado_em, cm.atualizado_em,
             cm.mes_ano, cm.estoque, cm.vendas,
-            ag.nome as agente, cid.regional, cid.cidade,
+            coalesce(ag.nome, 'Tabela da construtora') as agente, cid.regional, cid.cidade,
             emp.empreendimento, c.concorrente
        from coletas_mensais cm
-       join agentes_campo ag  on ag.id_agente = cm.id_agente
+       left join agentes_campo ag on ag.id_agente = cm.id_agente
        join concorrentes c    on c.id_concorrente = cm.id_concorrente
        join empreendimentos emp on emp.id_empreendimento = c.id_empreendimento
        join cidades cid       on cid.id_cidade = emp.id_cidade
@@ -86,6 +86,7 @@ export interface LinhaAgente {
   id_agente: string;
   nome: string;
   telefone: string;
+  email: string | null;
   ativo: boolean;
   created_at: string;
   ultima_coleta: string | null;
@@ -93,10 +94,11 @@ export interface LinhaAgente {
 
 export async function listarAgentes(): Promise<LinhaAgente[]> {
   const { rows } = await db().query<LinhaAgente>(
-    `select a.id_agente, a.nome, a.telefone, a.ativo, a.created_at,
+    `select a.id_agente, a.nome, a.telefone, a.email, a.ativo, a.created_at,
             max(cm.coletado_em) as ultima_coleta
        from agentes_campo a
        left join coletas_mensais cm on cm.id_agente = a.id_agente
+      where a.excluido_em is null
       group by a.id_agente
       order by a.nome`,
   );
@@ -109,6 +111,8 @@ export interface DadoProprio {
   estoque: number;
   vendas: number;
   atualizado_em: string | null;
+  /** 'cv' = sincronizado do CV; 'manual' = digitado nesta tela. */
+  origem: "cv" | "manual";
 }
 
 /** Lê os dados próprios de um empreendimento numa competência (seção 25). */
@@ -117,7 +121,7 @@ export async function obterDadosProprios(
   mesAno: string,
 ): Promise<DadoProprio | null> {
   const { rows } = await db().query<DadoProprio>(
-    `select id_empreendimento, mes_ano, estoque, vendas, atualizado_em
+    `select id_empreendimento, mes_ano, estoque, vendas, atualizado_em, origem
        from dados_proprios_mensais
       where id_empreendimento = $1 and mes_ano = $2`,
     [idEmpreendimento, mesAno],
@@ -133,22 +137,32 @@ export async function listarAgentesOpcoes(): Promise<{ id_agente: string; nome: 
   return rows;
 }
 
-export interface LinhaGestor {
-  id_gestor: string;
+export interface LinhaUsuario {
+  id_usuario: string;
   nome: string;
   email: string;
+  perfis: string[];
   ativo: boolean;
-  created_at: string;
+  /** Último dia de acesso (YYYY-MM-DD, horário de Brasília), ou null. */
+  acesso_ate: string | null;
+  acesso_expirado: boolean;
+  ultimo_acesso_em: string | null;
+  convite_enviado_em: string | null;
   criado_por: string | null;
 }
 
-/** Lista gestores para a página de administração (cadastro entre gestores). */
-export async function listarGestores(): Promise<LinhaGestor[]> {
-  const { rows } = await db().query<LinhaGestor>(
-    `select g.id_gestor, g.nome, g.email, g.ativo, g.created_at, cb.nome as criado_por
-       from gestores g
-       left join gestores cb on cb.id_gestor = g.created_by
-      order by g.nome`,
+/** Usuários para a tela de administração. `soAvaliadores` = visão do Coordenador de Market Share. */
+export async function listarUsuarios(soAvaliadores = false): Promise<LinhaUsuario[]> {
+  const { rows } = await db().query<LinhaUsuario>(
+    `select u.id_usuario, u.nome, u.email, u.perfis, u.ativo,
+            to_char((u.acesso_expira_em at time zone 'America/Sao_Paulo') - interval '1 day', 'YYYY-MM-DD') as acesso_ate,
+            coalesce(u.acesso_expira_em <= now(), false) as acesso_expirado,
+            u.ultimo_acesso_em, u.convite_enviado_em, cb.nome as criado_por
+       from usuarios u
+       left join usuarios cb on cb.id_usuario = u.created_by
+      where not $1 or u.perfis = '{avaliador}'
+      order by u.ativo desc, u.nome`,
+    [soAvaliadores],
   );
   return rows;
 }
@@ -160,6 +174,8 @@ export interface LinhaEmpreendimento {
   ativo: boolean;
   cidade: string;
   regional: string;
+  /** AAAA-MM-DD */
+  data_lancamento: string | null;
 }
 
 export interface FiltroCadastro {
@@ -182,7 +198,7 @@ export async function listarEmpreendimentosAdmin(f: FiltroCadastro = {}): Promis
 
   const { rows } = await db().query<LinhaEmpreendimento>(
     `select emp.id_empreendimento, emp.id_cidade, emp.empreendimento, emp.ativo,
-            cid.cidade, cid.regional
+            cid.cidade, cid.regional, to_char(emp.data_lancamento, 'YYYY-MM-DD') as data_lancamento
        from empreendimentos emp
        join cidades cid on cid.id_cidade = emp.id_cidade
        ${where.length ? `where ${where.join(" and ")}` : ""}
@@ -200,6 +216,8 @@ export interface LinhaConcorrente {
   empreendimento: string;
   cidade: string;
   regional: string;
+  /** AAAA-MM-DD */
+  data_lancamento: string | null;
 }
 
 /**
@@ -221,7 +239,7 @@ export async function listarConcorrentesAdmin(
 
   const { rows } = await db().query<LinhaConcorrente>(
     `select c.id_concorrente, c.id_empreendimento, c.concorrente, c.ativo,
-            emp.empreendimento, cid.cidade, cid.regional
+            emp.empreendimento, cid.cidade, cid.regional, to_char(c.data_lancamento, 'YYYY-MM-DD') as data_lancamento
        from concorrentes c
        join empreendimentos emp on emp.id_empreendimento = c.id_empreendimento
        join cidades cid         on cid.id_cidade = emp.id_cidade

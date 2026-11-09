@@ -1,44 +1,16 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { gestorAtual } from "@/lib/auth/gestor";
-import { logoutGestor } from "../actions";
+import AppShell from "@/components/AppShell";
+import { exigirPagina } from "@/lib/auth/acesso";
+import { montarMenu } from "@/lib/menu";
 
-// Seção 26: menu mínimo (Dashboard, Pesquisas, Agentes, Concorrentes,
-// Empreendimentos) + Dados próprios + Gestores (extensão pedida pelo
-// usuário, além do escopo original da especificação).
-const NAV = [
-  { href: "/gestor", label: "Dashboard" },
-  { href: "/gestor/pesquisas", label: "Pesquisas" },
-  { href: "/gestor/agentes", label: "Agentes" },
-  { href: "/gestor/gestores", label: "Gestores" },
-  { href: "/gestor/concorrentes", label: "Concorrentes" },
-  { href: "/gestor/empreendimentos", label: "Empreendimentos" },
-  { href: "/gestor/dados-proprios", label: "Dados próprios" },
-];
-
+// Telas internas com o menu lateral do design system (trilho + painel).
+// Os módulos e itens de cada perfil vêm de src/lib/menu.ts.
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {
-  const g = await gestorAtual();
-  if (!g) redirect("/gestor/login");
-
+  // Cada página confere a própria permissão; aqui basta ter acesso a algum módulo do painel.
+  const u = await exigirPagina("painelPesquisa", "gerirUsuarios", "tabelasEnviar", "tabelasConferir", "recibos");
+  const menu = await montarMenu(u);
   return (
-    <div className="min-h-dvh">
-      <header className="border-b border-black/[.06] bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <nav className="flex items-center gap-1">
-            <span className="mr-4 font-bold text-brand">Pesquisa</span>
-            {NAV.map((n) => (
-              <Link key={n.href} href={n.href}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-ink/70 hover:bg-black/5">
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-          <form action={logoutGestor}>
-            <button className="btn-ghost">Sair ({g.nome})</button>
-          </form>
-        </div>
-      </header>
-      <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
-    </div>
+    <AppShell menu={menu}>
+      <div className="w-full px-6 py-6">{children}</div>
+    </AppShell>
   );
 }

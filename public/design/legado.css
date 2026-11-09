@@ -1,0 +1,121 @@
+/*
+ * Telas do Cliente Oculto (app antigo) no design system Market Share Sousa
+ * Araujo: troca as cores e a fonte antigas pelas do design system, mantém a
+ * régua de notas, e encaixa a página no menu lateral (trilho + painel).
+ * Carregado por public/design/shell.js.
+ */
+:root[data-theme] {
+  --surface-1: var(--surface);
+  --surface-2: var(--bg);
+  --surface-3: var(--surface);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-2);
+  --border: var(--line);
+  --border-strong: var(--line);
+  --accent: var(--brand);
+  --accent-ink: var(--brand-hover);
+  --muted-tint: var(--surface-2);
+  --neutral-tint: var(--surface-2);
+  --shadow: var(--shadow-card);
+}
+
+.ms-legado body, body { font-family: var(--font-sans); }
+.ms-legado .ms-main { min-width: 0; }
+.ms-legado .app, .ms-legado .panel, .ms-legado main { min-width: 0; max-width: 100%; }
+.ms-legado .ms-dual { position: sticky; top: 56px; height: calc(100dvh - 56px); }
+.ms-legado .ms-panel { overflow-y: auto; }
+
+/* Cabeçalho antigo: a marca, o nome da pessoa, o sair e o tema ficam no menu lateral. */
+.ms-legado .topbar { position: static; background: transparent; border-bottom: 0; backdrop-filter: none; padding: var(--space-4) var(--space-6) 0; min-height: 0; }
+.ms-legado .topbar .brand,
+.ms-legado #userChipName,
+.ms-legado #logoutBtn,
+.ms-legado #themeToggle { display: none !important; }
+.ms-legado .app { max-width: none; width: 100%; box-sizing: border-box; padding: 0 var(--space-6) 48px; margin: 0; }
+
+/* Botões e cartões no formato do design system. */
+.ms-legado .btn { border-radius: var(--radius-control); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 8px 14px; min-height: 36px; }
+.ms-legado .btn-sm { min-height: 30px; padding: 6px 10px; font-size: 11px; }
+.ms-legado .btn-primary { background: var(--brand); color: var(--on-brand); }
+.ms-legado .btn-primary:hover { background: var(--brand-hover); }
+.ms-legado .btn-ghost { background: var(--surface); color: var(--brand-text); border-color: var(--line-strong); }
+.ms-legado .table-wrap, .ms-legado .report-sheet { border-radius: var(--radius-card); }
+.ms-legado .brand-mark { background: var(--brand); }
+
+@media print {
+  .ms-legado .ms-dual { display: none !important; }
+  .ms-legado .app { padding: 0; }
+}
+
+/* Campos mais compactos, iguais aos do design system. */
+.ms-legado .field label { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.ms-legado .field input, .ms-legado .field select, .ms-legado .field textarea { min-height: 36px; padding: 7px 10px; font-size: 13.5px; border-radius: var(--radius-control); border-color: var(--line-strong); }
+.ms-legado .field textarea { min-height: 64px; }
+
+/* Listas: filtros num cartão, dados em outro. */
+.ms-legado #view-list > .panel { background: transparent; border: 0; box-shadow: none; padding: 0; margin: 0; }
+.ms-legado #view-list > .panel > .panel-head h2 { font-size: 20px; line-height: 26px; font-weight: 700; color: var(--ink); }
+.ms-legado #view-list > .panel > .panel-hint { margin: 2px 0 var(--space-4); }
+.ms-legado .filters-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin: 0 0 var(--space-4); padding: var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.ms-legado .filters-bar .field { flex: 1 1 150px; min-width: 140px; margin: 0; }
+.ms-legado .filters-bar > .btn, .ms-legado .filters-bar > label { flex: none; }
+.ms-legado .filters-bar > label { padding-bottom: 9px !important; }
+.ms-legado .table-wrap { max-width: 100%; }
+.ms-legado table.av-table td { padding: 10px 12px; }
+.ms-legado table.av-table th { padding: 10px 12px; }
+
+/* Sem moldura vermelha nas telas do administrador. */
+.ms-legado .danger-zone { border-color: var(--line); }
+.ms-legado .danger-zone .panel-head h2 { color: var(--ink); }
+.ms-legado table.av-table td:first-child, .ms-legado table.av-table td:first-child * { white-space: nowrap; }
+
+/* Botões de ação sempre um ao lado do outro (sem quebrar linha). */
+.row-actions, .form-actions-right, .top-actions { flex-wrap: nowrap !important; }
+.row-actions .btn, td .btn { white-space: nowrap; }
+/* Na tabela, botões compactos para caberem lado a lado sem rolar para o lado. */
+.row-actions { gap: 4px !important; }
+.row-actions .btn { text-transform: none; letter-spacing: 0; padding: 4px 8px; font-size: 12px; }
+
+/* Lista de avaliações: sem a seta das linhas de concorrente vinculadas e com
+   o empreendimento e as etiquetas na mesma linha. */
+.ms-legado tr.row-concorrente-child td:first-child { padding-left: 12px; }
+.ms-legado tr.row-concorrente-child td:first-child::before { content: none; }
+.ms-legado td.cel-emp, .ms-legado td.cel-data, .ms-legado td .status-badge { white-space: nowrap; }
+.ms-legado td.cel-emp > * { display: inline-flex; vertical-align: middle; margin-top: 0; margin-bottom: 0; }
+.ms-legado #view-list .av-table th, .ms-legado #view-list .av-table td { padding-left: 7px; padding-right: 7px; }
+.ms-legado td.cel-emp .tipo-tag, .ms-legado td.cel-emp .vinculo-chip-standalone, .ms-legado td.cel-emp .child-count-chip { margin-left: 4px; padding: 1px 6px; font-size: 9.5px; }
+.ms-legado #view-list .id-mono { font-size: 11.5px; }
+.ms-legado #view-list td .status-badge { padding: 3px 8px; font-size: 11.5px; }
+.ms-legado #view-list .av-table th { letter-spacing: 0.02em; }
+.ms-legado .app { padding-left: var(--space-5); padding-right: var(--space-5); }
+
+/* Caixa de marcar com o texto ao lado (ex.: "Só prévia"). */
+.ms-legado .check-line { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.ms-legado .check-line input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand); }
+
+/* Fotos de comprovação do Cliente Oculto */
+.fotos-pilar { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line, #e9e8e4); }
+.fotos-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.fotos-head label:first-child { font-weight: 700; font-size: 13px; }
+.fotos-add { cursor: pointer; }
+.fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.foto-item { margin: 0; display: grid; gap: 6px; padding: 6px; border: 1px solid var(--line, #e9e8e4); border-radius: 10px; background: var(--surface, #fff); }
+.foto-item img { display: block; width: 100%; height: 110px; object-fit: cover; border-radius: 7px; background: var(--surface-2, #eeede9); }
+.foto-item input { font-size: 12px; padding: 5px 8px; min-height: 0; }
+.foto-item figcaption { font-size: 12px; line-height: 16px; color: var(--text-2, #65645e); }
+.fotos-leitura { margin-top: 10px; }
+@media print { .foto-item { break-inside: avoid; } .foto-item img { height: 120px; } }
+
+/* Celular: grupos de botões (ex.: "Sim, perguntou / Não perguntou / Não houve recepção")
+   um embaixo do outro, na largura toda, fáceis de tocar. Os pequenos (R$ / %) ficam lado a lado. */
+@media (max-width: 720px) {
+  .ms-legado .segmented:not(.small) { display: flex; flex-direction: column; width: 100%; }
+  .ms-legado .segmented:not(.small) button { width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; font-size: 14px; }
+  .ms-legado .segmented:not(.small) button + button { border-left: 0; border-top: 1px solid var(--border-strong); }
+  .ms-legado .panel-head > .segmented { order: 3; flex-basis: 100%; }
+  .ms-legado .app { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Botões que são links não ficam sublinhados. */
+.ms-legado a.btn { text-decoration: none; }

@@ -2,12 +2,12 @@
 
 /**
  * Server Actions da Área do Agente (seções 4, 13, 22–24).
- * Toda regra crítica é validada no backend (seção 40). O agente não tem
- * login/sessão: o telefone é conferido a cada ação direto no banco.
+ * Toda regra crítica é validada no backend (seção 40). O agente entra com
+ * e-mail + código pela entrada única (/entrar) e fica com uma sessão no banco (src/lib/auth/acesso.ts);
+ * quem registra a coleta é sempre o agente da sessão.
  */
 import { db } from "@/lib/db/pool";
 import {
-  loginAgenteSchema,
   novoConcorrenteSchema,
   coletaSchema,
 } from "@/lib/validation/schemas";
@@ -22,46 +22,33 @@ import {
   listarEmpreendimentos,
   listarConcorrentes,
 } from "@/lib/data/hierarquia";
+import {
+  agenteAtual,
+  encerrarSessao,
+  exigirAgente,
+  usuarioAtual,
+} from "@/lib/auth/acesso";
 
 export interface AgenteSessao { id_agente: string; nome: string; }
 
 type Resultado<T> = { ok: true; data: T } | { ok: false; erro: string };
 
-/**
- * Identificação do agente pelo telefone (seção 4).
- * Nunca cria agente. Bloqueia telefone inexistente ou inativo.
- */
-export async function identificarAgente(
-  telefoneBruto: string,
-): Promise<Resultado<AgenteSessao>> {
-  const parsed = loginAgenteSchema.safeParse({ telefone: telefoneBruto });
-  if (!parsed.success) {
-    return { ok: false, erro: "Telefone inválido." };
-  }
-  const telefone = parsed.data.telefone; // já normalizado
+export async function sairAgente(): Promise<void> {
+  await encerrarSessao();
+}
 
-  const { rows } = await db().query<{ id_agente: string; nome: string; ativo: boolean }>(
-    `select id_agente, nome, ativo from agentes_campo where telefone = $1`,
-    [telefone],
-  );
-  const agente = rows[0];
-
-  // Mesma mensagem para inexistente e inativo (seção 4).
-  if (!agente || !agente.ativo) {
-    return {
-      ok: false,
-      erro:
-        "Telefone não localizado. Verifique o número informado ou entre em contato com o responsável.",
-    };
-  }
-  return { ok: true, data: { id_agente: agente.id_agente, nome: agente.nome } };
+/** Agente logado ou usuário interno (os seletores também servem o painel). */
+async function exigirSessaoCampo(): Promise<void> {
+  if (await agenteAtual()) return;
+  if (await usuarioAtual()) return;
+  throw new Error("Não autorizado");
 }
 
 // Seletores em cascata expostos como actions para o cliente.
-export async function actRegionais() { return listarRegionais(); }
-export async function actCidades(regional: string) { return listarCidades(regional); }
-export async function actEmpreendimentos(idCidade: number) { return listarEmpreendimentos(idCidade); }
-export async function actConcorrentes(idEmp: number) { return listarConcorrentes(idEmp); }
+export async function actRegionais() { await exigirSessaoCampo(); return listarRegionais(); }
+export async function actCidades(regional: string) { await exigirSessaoCampo(); return listarCidades(regional); }
+export async function actEmpreendimentos(idCidade: number) { await exigirSessaoCampo(); return listarEmpreendimentos(idCidade); }
+export async function actConcorrentes(idEmp: number) { await exigirSessaoCampo(); return listarConcorrentes(idEmp); }
 
 /**
  * Cadastro de novo concorrente durante a coleta (seção 13).
@@ -71,6 +58,7 @@ export async function cadastrarConcorrente(input: {
   id_empreendimento: number;
   nome: string;
 }): Promise<Resultado<{ id_concorrente: number; concorrente: string }>> {
+  await exigirAgente();
   const parsed = novoConcorrenteSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, erro: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -108,7 +96,6 @@ export interface ResumoColeta {
  * cliente confirmar atualização.
  */
 export async function salvarColeta(input: {
-  id_agente: string;
   id_concorrente: number;
   estoque: number;
   vendas: number;
@@ -118,8 +105,11 @@ export async function salvarColeta(input: {
   | { ok: true; data: ResumoColeta }
   | { ok: false; erro: string; jaExiste?: boolean; competencia?: string }
 > {
+  const sessao = await agenteAtual();
+  if (!sessao) {
+    return { ok: false, erro: "Sua sessão expirou. Entre novamente." };
+  }
   const parsed = coletaSchema.safeParse({
-    id_agente: input.id_agente,
     id_concorrente: input.id_concorrente,
     estoque: input.estoque,
     vendas: input.vendas,
@@ -137,22 +127,23 @@ export async function salvarColeta(input: {
       ? parsed.data.mes_ano
       : competenciaVigente();
 
-  // Confere agente ativo (seção 24: agente identificado).
-  const { rows: agenteRows } = await pool.query<{ ativo: boolean }>(
-    `select ativo from agentes_campo where id_agente = $1`,
-    [parsed.data.id_agente],
-  );
-  const agente = agenteRows[0];
-  if (!agente || !agente.ativo) {
-    return { ok: false, erro: "Sessão do agente inválida. Identifique-se novamente." };
-  }
+  // Agente identificado pela sessão (seção 24) — nunca pelo que vem do navegador.
+  const idAgente = sessao.id_agente;
 
   // Coleta existente para o concorrente/mês?
-  const { rows: existenteRows } = await pool.query<{ id_coleta: string }>(
-    `select id_coleta from coletas_mensais where id_concorrente = $1 and mes_ano = $2`,
+  const { rows: existenteRows } = await pool.query<{ id_coleta: string; origem: string }>(
+    `select id_coleta, origem from coletas_mensais where id_concorrente = $1 and mes_ano = $2`,
     [parsed.data.id_concorrente, mes_ano],
   );
   const existente = existenteRows[0];
+
+  // O número vindo da tabela da construtora (conferido) vale mais que a coleta em campo.
+  if (existente?.origem === "tabela") {
+    return {
+      ok: false,
+      erro: `Este concorrente já tem os números de ${formatarCompetenciaCurta(mes_ano)} pela tabela da construtora, conferida pela coordenação.`,
+    };
+  }
 
   if (existente && !parsed.data.atualizar) {
     return {
@@ -167,7 +158,7 @@ export async function salvarColeta(input: {
     try {
       await pool.query(
         `update coletas_mensais set estoque = $1, vendas = $2, id_agente = $3 where id_coleta = $4`,
-        [parsed.data.estoque, parsed.data.vendas, parsed.data.id_agente, existente.id_coleta],
+        [parsed.data.estoque, parsed.data.vendas, idAgente, existente.id_coleta],
       );
     } catch {
       return { ok: false, erro: "Não foi possível atualizar a coleta." };
@@ -190,7 +181,7 @@ export async function salvarColeta(input: {
     await pool.query(
       `insert into coletas_mensais (id_agente, id_concorrente, mes_ano, estoque, vendas)
        values ($1, $2, $3, $4, $5)`,
-      [parsed.data.id_agente, parsed.data.id_concorrente, mes_ano, parsed.data.estoque, parsed.data.vendas],
+      [idAgente, parsed.data.id_concorrente, mes_ano, parsed.data.estoque, parsed.data.vendas],
     );
   } catch (e) {
     const erro = e as { code?: string };

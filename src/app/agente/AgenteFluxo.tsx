@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import { formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import {
-  identificarAgente,
+  sairAgente,
   actRegionais,
   actCidades,
   actEmpreendimentos,
@@ -14,68 +14,23 @@ import {
   type AgenteSessao,
   type ResumoColeta,
 } from "./actions";
+import CampoData from "@/components/CampoData";
 
 type Opcao = { valor: string; texto: string };
 
-export default function AgenteFluxo({ competenciaInicial }: { competenciaInicial: string }) {
-  const [agente, setAgente] = useState<AgenteSessao | null>(null);
-
-  if (!agente) {
-    return <Login onOk={setAgente} />;
-  }
+export default function AgenteFluxo({
+  competenciaInicial,
+  agenteInicial,
+}: {
+  competenciaInicial: string;
+  agenteInicial: AgenteSessao;
+}) {
   return (
     <Formulario
-      agente={agente}
+      agente={agenteInicial}
       competenciaInicial={competenciaInicial}
-      onTrocarAgente={() => setAgente(null)}
+      onTrocarAgente={async () => { await sairAgente(); window.location.href = "/entrar"; }}
     />
-  );
-}
-
-/* ------------------------------- Login ------------------------------- */
-function Login({ onOk }: { onOk: (a: AgenteSessao) => void }) {
-  const [telefone, setTelefone] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(false);
-
-  async function continuar() {
-    setErro(null);
-    setCarregando(true);
-    const r = await identificarAgente(telefone);
-    setCarregando(false);
-    if (r.ok) onOk(r.data);
-    else setErro(r.erro);
-  }
-
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-widest text-brand">
-          Identificação do agente
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-ink">Informe seu telefone</h1>
-      </div>
-      <div>
-        <label className="rotulo" htmlFor="tel">Telefone</label>
-        <input
-          id="tel"
-          className="campo"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="(00) 00000-0000"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && continuar()}
-        />
-      </div>
-      {erro && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
-      <button className="btn-primary" onClick={continuar} disabled={carregando || !telefone}>
-        {carregando ? "Verificando…" : "Continuar"}
-      </button>
-      <p className="text-center text-xs text-ink/40">
-        O acesso é liberado apenas para telefones cadastrados pelo gestor.
-      </p>
-    </main>
   );
 }
 
@@ -159,7 +114,6 @@ function Formulario({
     }
     setSalvando(true);
     const r = await salvarColeta({
-      id_agente: agente.id_agente,
       id_concorrente: Number(idConc),
       estoque: Number(estoque),
       vendas: Number(vendas),
@@ -210,18 +164,12 @@ function Formulario({
           <p className="text-xs uppercase tracking-widest text-brand">Agente</p>
           <p className="text-lg font-semibold text-ink">{agente.nome}</p>
         </div>
-        <button className="btn-ghost" onClick={onTrocarAgente}>Trocar agente</button>
+        <button className="btn-ghost" onClick={onTrocarAgente}>Sair</button>
       </div>
 
       <div className="mb-4 rounded-xl bg-brand/5 px-4 py-3">
         <label className="rotulo" htmlFor="competencia">Competência</label>
-        <input
-          id="competencia"
-          type="month"
-          className="campo !px-2 !py-2 !text-sm"
-          value={competencia}
-          onChange={(e) => setCompetencia(e.target.value)}
-        />
+        <CampoData id="competencia" tipo="mes" value={competencia} onChange={setCompetencia} />
         <p className="mt-1 text-xs text-brand">{competenciaLabel}</p>
       </div>
 
@@ -341,7 +289,7 @@ function ModalNovoConcorrente({
   }
 
   return (
-    <Modal titulo="Cadastrar novo concorrente" onFechar={onFechar} alinhamento="base">
+    <Modal titulo="Cadastrar novo concorrente" onFechar={onFechar} alinhamento="base" largura="estreita">
       <h2 className="text-lg font-semibold text-ink">Cadastrar novo concorrente</h2>
       <p className="mt-1 text-sm text-ink/60">Informe apenas o nome. O código é gerado automaticamente.</p>
       {/* Contexto já definido pela seleção em cascata (seção 13: exibir
@@ -358,7 +306,7 @@ function ModalNovoConcorrente({
       </div>
       {erro && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>
           Cancelar
         </button>
         <button className="btn-primary flex-1" onClick={salvar} disabled={salvando || !nome.trim()}>
@@ -375,13 +323,13 @@ function Confirmacao({
   competencia: string; onCancelar: () => void; onAtualizar: () => void; ocupado: boolean;
 }) {
   return (
-    <Modal titulo="Coleta já existente" onFechar={onCancelar} alinhamento="base">
+    <Modal titulo="Coleta já existente" onFechar={onCancelar} alinhamento="base" largura="estreita">
       <h2 className="text-lg font-semibold text-ink">Coleta já existente</h2>
       <p className="mt-2 text-sm text-ink/70">
         Já existe uma coleta para este concorrente em <strong>{competencia}</strong>. Deseja atualizar?
       </p>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onCancelar}>
+        <button className="btn-secundario flex-1" onClick={onCancelar}>
           Cancelar
         </button>
         <button className="btn-primary flex-1" onClick={onAtualizar} disabled={ocupado}>

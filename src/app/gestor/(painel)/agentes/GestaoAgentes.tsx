@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import type { LinhaAgente } from "@/lib/data/gestor";
-import { criarAgente, editarAgente, definirStatusAgente } from "../../actions";
+import { criarAgente, editarAgente, definirStatusAgente, excluirAgente } from "../../actions";
+import { confirmar, avisar } from "@/lib/cliente/dialogo";
 
 export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
   const router = useRouter();
@@ -17,7 +19,7 @@ export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink">Agentes de campo</h1>
-        <button className="btn-primary !w-auto !py-2.5 !text-base" onClick={() => setCriando(true)}>
+        <button className="btn-primary btn-cabecalho" onClick={() => setCriando(true)}>
           Cadastrar agente
         </button>
       </div>
@@ -46,7 +48,7 @@ export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
                 <td className="px-4 py-3 tabular-nums">{a.telefone}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    a.ativo ? "bg-brand/15 text-brand" : "bg-black/10 text-ink/50"
+                    a.ativo ? "bg-[var(--good-tint)] text-[var(--good-ink)]" : "bg-black/10 text-ink/50"
                   }`}>
                     {a.ativo ? "Ativo" : "Inativo"}
                   </span>
@@ -57,15 +59,31 @@ export default function GestaoAgentes({ inicial }: { inicial: LinhaAgente[] }) {
                 <td className="px-4 py-3 text-ink/60">
                   {a.ultima_coleta ? new Date(a.ultima_coleta).toLocaleDateString("pt-BR") : "—"}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="btn-ghost" onClick={() => setEditando(a)}>Editar</button>
-                  <button className="btn-ghost"
+                <td className="px-4 py-3"><div className="acoes-linha">
+                  <button className="btn-acao" onClick={() => setEditando(a)}><Pencil size={13} aria-hidden="true" />Editar</button>
+                  <button className="btn-acao btn-acao--neutro"
                     onClick={async () => {
                       await definirStatusAgente(a.id_agente, !a.ativo);
                       recarregar();
                     }}>
                     {a.ativo ? "Inativar" : "Ativar"}
                   </button>
+                  <button className="btn-acao btn-acao--perigo"
+                    onClick={async () => {
+                      const ok = await confirmar({
+                        titulo: `Excluir ${a.nome}?`,
+                        mensagem: "O agente sai da lista e perde o acesso. As coletas que ele já fez continuam na pesquisa, com o nome dele.",
+                        textoConfirmar: "Excluir agente",
+                        perigo: true,
+                      });
+                      if (!ok) return;
+                      const r = await excluirAgente(a.id_agente);
+                      if (!r.ok) await avisar(r.erro);
+                      recarregar();
+                    }}>
+                    Excluir
+                  </button>
+                </div>
                 </td>
               </tr>
             ))}
@@ -93,13 +111,14 @@ function FormAgente({
 }) {
   const [nome, setNome] = useState(agente?.nome ?? "");
   const [telefone, setTelefone] = useState(agente?.telefone ?? "");
+  const [email, setEmail] = useState(agente?.email ?? "");
   const [ativo, setAtivo] = useState(agente?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   async function salvar() {
     setErro(null); setSalvando(true);
-    const payload = { nome, telefone, ativo };
+    const payload = { nome, telefone, email, ativo };
     const r = agente
       ? await editarAgente(agente.id_agente, payload)
       : await criarAgente(payload);
@@ -123,6 +142,12 @@ function FormAgente({
               onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
             <p className="mt-1 text-xs text-ink/40">Será normalizado (somente dígitos) e deve ser único.</p>
           </div>
+          <div>
+            <label className="rotulo" htmlFor="ag-email">E-mail</label>
+            <input id="ag-email" type="email" className="campo !text-base !py-2" value={email}
+              onChange={(e) => setEmail(e.target.value)} />
+            <p className="mt-1 text-xs text-ink/40">Obrigatório: o agente entra com este e-mail e recebe nele o código de acesso.</p>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
             Agente ativo
@@ -130,10 +155,10 @@ function FormAgente({
           {erro && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{erro}</p>}
         </div>
         <div className="mt-5 flex gap-3">
-          <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+          <button className="btn-secundario flex-1" onClick={onFechar}>
             Cancelar
           </button>
-          <button className="btn-primary flex-1 !py-3" onClick={salvar}
+          <button className="btn-primary flex-1" onClick={salvar}
             disabled={salvando || !nome.trim() || !telefone.trim()}>
             {salvando ? "Salvando…" : "Salvar"}
           </button>

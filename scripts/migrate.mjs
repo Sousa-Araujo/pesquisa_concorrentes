@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Aplica as migrations em db/migrations (idempotente, controlada por uma
- * tabela `_migrations`) e garante o primeiro Gestor a partir de
- * GESTOR_EMAIL / GESTOR_SENHA / GESTOR_NOME, se definidos.
+ * tabela `_migrations`) e garante o primeiro Administrador a partir de
+ * ADMIN_EMAIL / ADMIN_NOME, se definidos.
  *
  * Roda automaticamente antes de `next start` (ver "start" em package.json),
  * então basta cadastrar as variáveis no Railway e o primeiro deploy já sobe
@@ -16,7 +16,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import pg from "pg";
-import bcrypt from "bcryptjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "..", "db", "migrations");
@@ -68,31 +67,35 @@ async function aplicarMigrations(client) {
   }
 }
 
-async function bootstrapGestor(client) {
-  const email = process.env.GESTOR_EMAIL;
-  const senha = process.env.GESTOR_SENHA;
-  const nome = process.env.GESTOR_NOME ?? "Gestor Padrão";
+/**
+ * Garante o primeiro Administrador a partir de ADMIN_EMAIL / ADMIN_NOME
+ * (aceita também os nomes antigos GESTOR_EMAIL / GESTOR_NOME). Não há
+ * senha: o administrador entra pela tela /entrar com o código enviado
+ * ao e-mail.
+ */
+async function bootstrapAdmin(client) {
+  const email = process.env.ADMIN_EMAIL ?? process.env.GESTOR_EMAIL;
+  const nome = process.env.ADMIN_NOME ?? process.env.GESTOR_NOME ?? "Administrador";
 
-  if (!email || !senha) {
-    console.log("[migrate] GESTOR_EMAIL/GESTOR_SENHA não definidos — pulando bootstrap do gestor.");
+  if (!email) {
+    console.log("[migrate] ADMIN_EMAIL não definido — pulando bootstrap do administrador.");
     return;
   }
 
   const { rows } = await client.query(
-    `select id_gestor from gestores where lower(email) = lower($1)`,
+    `select id_usuario from usuarios where lower(email) = lower($1)`,
     [email],
   );
   if (rows.length) {
-    console.log(`[migrate] gestor ${email} já existe, pulando bootstrap.`);
+    console.log(`[migrate] usuário ${email} já existe, pulando bootstrap.`);
     return;
   }
 
-  const senhaHash = await bcrypt.hash(senha, 12);
   await client.query(
-    `insert into gestores (nome, email, senha_hash, perfil, ativo) values ($1, $2, $3, 'gestor', true)`,
-    [nome, email, senhaHash],
+    `insert into usuarios (nome, email, perfis, ativo) values ($1, $2, '{admin}', true)`,
+    [nome, email],
   );
-  console.log(`[migrate] gestor ${email} criado.`);
+  console.log(`[migrate] administrador ${email} criado.`);
 }
 
 async function main() {
@@ -110,7 +113,7 @@ async function main() {
   const client = await pool.connect();
   try {
     await aplicarMigrations(client);
-    await bootstrapGestor(client);
+    await bootstrapAdmin(client);
   } finally {
     client.release();
     await pool.end();

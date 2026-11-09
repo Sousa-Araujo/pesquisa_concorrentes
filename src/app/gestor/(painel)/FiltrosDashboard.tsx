@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import CampoData from "@/components/CampoData";
 
 type Item = { id: number; nome: string };
 type EmpDireto = { id: number; nome: string; idCidade: number; cidade: string; regional: string };
@@ -69,8 +70,8 @@ export default function FiltrosDashboard({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="rotulo">Competência</label>
-          <input type="month" className="campo !px-2 !py-2 !text-sm" value={mesInput}
-            onChange={(e) => navegar({ mes: `${e.target.value}-01` })} />
+          <CampoData tipo="mes" value={mesInput}
+            onChange={(v) => v && navegar({ mes: `${v}-01` })} />
         </div>
         <div>
           <label className="rotulo">Regional</label>

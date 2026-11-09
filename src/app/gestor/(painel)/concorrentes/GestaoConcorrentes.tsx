@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
+import CampoData from "@/components/CampoData";
 import type { LinhaConcorrente } from "@/lib/data/gestor";
 import { actCidades, actEmpreendimentos } from "@/app/agente/actions";
 import {
@@ -46,7 +48,7 @@ export default function GestaoConcorrentes({
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink">Concorrentes</h1>
-        <button className="btn-primary !w-auto !py-2.5 !text-base" onClick={() => setCriando(true)}>
+        <button className="btn-primary btn-cabecalho" onClick={() => setCriando(true)}>
           Cadastrar concorrente
         </button>
       </div>
@@ -87,13 +89,14 @@ export default function GestaoConcorrentes({
               <th className="px-4 py-3 font-medium">Empreendimento</th>
               <th className="px-4 py-3 font-medium">Cidade</th>
               <th className="px-4 py-3 font-medium">Regional</th>
+              <th className="px-4 py-3 font-medium">Lançamento</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 text-right font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
             {itens.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-ink/50">
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-ink/50">
                 Nenhum concorrente encontrado.
               </td></tr>
             )}
@@ -104,22 +107,24 @@ export default function GestaoConcorrentes({
                 <td className="px-4 py-3">{c.empreendimento}</td>
                 <td className="px-4 py-3">{c.cidade}</td>
                 <td className="px-4 py-3">{c.regional}</td>
+                <td className="px-4 py-3 tabular-nums text-ink/70">{c.data_lancamento ? `${c.data_lancamento.slice(8, 10)}/${c.data_lancamento.slice(5, 7)}/${c.data_lancamento.slice(0, 4)}` : "—"}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    c.ativo ? "bg-brand/15 text-brand" : "bg-black/10 text-ink/50"
+                    c.ativo ? "bg-[var(--good-tint)] text-[var(--good-ink)]" : "bg-black/10 text-ink/50"
                   }`}>
                     {c.ativo ? "Ativo" : "Inativo"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="btn-ghost" onClick={() => setEditando(c)}>Editar</button>
-                  <button className="btn-ghost"
+                <td className="px-4 py-3"><div className="acoes-linha">
+                  <button className="btn-acao" onClick={() => setEditando(c)}><Pencil size={13} aria-hidden="true" />Editar</button>
+                  <button className="btn-acao btn-acao--neutro"
                     onClick={async () => {
                       await definirStatusConcorrente(c.id_concorrente, !c.ativo);
                       recarregar();
                     }}>
                     {c.ativo ? "Inativar" : "Ativar"}
                   </button>
+                </div>
                 </td>
               </tr>
             ))}
@@ -150,6 +155,7 @@ function FormConcorrente({
   const editandoExistente = Boolean(concorrente);
   const [nome, setNome] = useState(concorrente?.concorrente ?? "");
   const [ativo, setAtivo] = useState(concorrente?.ativo ?? true);
+  const [lancamento, setLancamento] = useState(concorrente?.data_lancamento ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -182,8 +188,8 @@ function FormConcorrente({
 
     setSalvando(true);
     const r = editandoExistente
-      ? await editarConcorrente(concorrente!.id_concorrente, { concorrente: nome, ativo })
-      : await criarConcorrenteGestor({ id_empreendimento: Number(idEmp), nome });
+      ? await editarConcorrente(concorrente!.id_concorrente, { concorrente: nome, ativo, data_lancamento: lancamento || null })
+      : await criarConcorrenteGestor({ id_empreendimento: Number(idEmp), nome, data_lancamento: lancamento || null });
     setSalvando(false);
     if (r.ok) onSalvo();
     else setErro(r.erro);
@@ -238,6 +244,11 @@ function FormConcorrente({
             <p className="mt-1 text-xs text-ink/40">O código é gerado automaticamente.</p>
           )}
         </div>
+        <div>
+          <label className="rotulo" htmlFor="conc-lancamento">Data de lançamento</label>
+          <CampoData tipo="data" id="conc-lancamento" className="campo !text-base !py-2" value={lancamento} onChange={setLancamento} />
+          <p className="mt-1 text-xs text-ink/40">Opcional.</p>
+        </div>
         {editandoExistente && (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
@@ -247,10 +258,10 @@ function FormConcorrente({
         {erro && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{erro}</p>}
       </div>
       <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-xl border border-black/10 py-3 font-medium" onClick={onFechar}>
+        <button className="btn-secundario flex-1" onClick={onFechar}>
           Cancelar
         </button>
-        <button className="btn-primary flex-1 !py-3" onClick={salvar} disabled={salvando || !nome.trim()}>
+        <button className="btn-primary flex-1" onClick={salvar} disabled={salvando || !nome.trim()}>
           {salvando ? "Salvando…" : "Salvar"}
         </button>
       </div>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cliente Oculto — Registrar visita</title>
+<link rel="icon" href="/design/icone-sousa-araujo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="/design/vendor/flatpickr.min.css">
+<link rel="stylesheet" href="/design/vendor/flatpickr-monthselect.css">
+<script src="/design/vendor/lucide.min.js"></script>
+<script src="/design/vendor/flatpickr.min.js"></script>
+<script src="/design/vendor/flatpickr-pt.js"></script>
+<script src="/design/vendor/flatpickr-monthselect.js"></script>
+<link rel="stylesheet" href="/design/tokens.css">
+<link rel="stylesheet" href="/design/ms.css">
+<link rel="stylesheet" href="/design/legado.css">
+<script src="/design/shell.js"></script>
+<script src="/design/datas.js"></script>
+<script src="/design/etapas.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/inicio">
+    <div class="brand-mark">CO</div>
+    <div class="brand-text">
+      <h1>Cliente Oculto — Sousa Araujo</h1>
+      <p id="topSub">Registro da visita</p>
+    </div>
+  </a>
+  <div class="top-actions">
+    <span class="profile-chip" id="idChip" style="display:none;"></span>
+    <span class="profile-chip" id="userChipName" style="display:none;"></span>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" type="button" style="display:none;">Sair</button>
+    <button class="icon-btn" id="themeToggle" title="Alternar tema">◐</button>
+  </div>
+</header>
+
+<main>
+  <div class="app" id="loadingState">
+    <div class="report-empty">Carregando avaliação…</div>
+  </div>
+
+  <div class="app" id="lockedState" style="display:none;">
+    <div class="confirm-wrap">
+      <div class="big-check">✔</div>
+      <h1>Avaliação enviada</h1>
+      <p>Sua avaliação foi registrada e está com o Coordenador de Market Share para calibragem. Os dados que você preencheu ficam preservados como o registro original da visita.</p>
+      <div class="confirm-id" id="lockedIdText">—</div>
+      <p><span class="status-badge tone-abaixo" id="lockedStatusBadge">Aguardando Calibragem</span></p>
+      <p style="margin-top:22px;">Para receber o pagamento, preencha e assine o recibo.</p>
+      <p style="margin-top:10px;"><a class="btn btn-primary" id="reciboLink" href="#">Preencher recibo de pagamento</a></p>
+      <p style="margin-top:14px;"><a class="btn btn-ghost" href="cliente-oculto.html">+ Iniciar nova avaliação</a></p>
+    </div>
+  </div>
+
+  <div class="app" id="formState" style="display:none;">
+
+    <div class="panel" id="panel-previa">
+      <div class="panel-head"><h2>Atendimento Prévio Online</h2></div>
+      <p class="panel-hint">Empreendimento avaliado e os contatos feitos pelos canais online antes da visita (site, WhatsApp, redes sociais, portais).</p>
+      <div class="grid" id="previaIdFields"></div>
+      <div class="grid" id="previaFields"></div>
+    </div>
+
+    <div class="panel" id="panel-identificacao">
+      <div class="panel-head"><h2>Condições</h2></div>
+      <p class="panel-hint">Dados da visita e condições comerciais informadas. Não interferem nas notas.</p>
+      <div class="grid" id="idFields"></div>
+    </div>
+
+    <div id="pillarPanels"></div>
+
+    <div class="panel" id="panel-jornada">
+      <div class="panel-head"><h2><span class="panel-num">7</span>Jornada Comercial</h2></div>
+      <p class="panel-hint">Indique o status de cada etapa observada durante a visita.</p>
+      <div class="journey-form" id="journeyFields"></div>
+    </div>
+
+    <div class="panel ms-step-fora" id="panel-observacoes">
+      <div class="panel-head"><h2><span class="panel-num">8</span>Observações gerais da visita</h2></div>
+      <p class="panel-hint">Impressões gerais, fatos relevantes que não couberam nos critérios ou algo que o Coordenador precise saber.</p>
+      <div class="field">
+        <textarea rows="5" id="observacoesGerais" placeholder="Ex.: o decorado estava fechado para manutenção; o corretor ligou no dia seguinte oferecendo nova condição."></textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <span class="field-help" id="saveIndicator">&nbsp;</span>
+      <div class="form-actions-right">
+        <button class="btn btn-primary" id="finalizeBtn">Finalizar e enviar avaliação →</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/cliente-oculto.js"></script>
+</body>
+</html>

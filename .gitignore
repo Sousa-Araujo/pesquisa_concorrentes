@@ -19,3 +19,6 @@ Thumbs.db
 # Logs
 npm-debug.log*
 *.log
+
+# Configuração local do Claude Code
+.claude/

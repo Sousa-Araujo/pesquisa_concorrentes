@@ -11,7 +11,7 @@
  *   - Estoque / Oferta        = soma dos estoques (seção 29)
  *   - Vendas                   = soma das vendas   (seção 30)
  *   - Representatividade       = estoque_lado / oferta_total (seção 31)
- *   - VSO                      = vendas_lado / estoque_lado  (seção 32)
+ *   - VSO                      = vendas_lado / (estoque_lado + vendas_lado)
  *
  * Isto NÃO é o "VSO consolidado de 15,71%" da seção 34 (regra desconhecida,
  * proibida): é uma agregação transparente pedida pela gestão para comparar a
@@ -35,7 +35,7 @@ export interface LadoConsolidado {
   vendas: number;
   /** Fração 0..1 do estoque total (próprio + concorrentes). */
   representatividade: number;
-  /** Fração 0..1: vendas / estoque do próprio lado; 0 quando estoque = 0. */
+  /** Fração 0..1: vendas / (estoque + vendas) do próprio lado; 0 sem estoque nem vendas. */
   vso: number;
 }
 
@@ -46,7 +46,7 @@ export interface ResultadoConsolidado {
   ofertaTotal: number;
   /** Vendas totais = vendas próprias + vendas concorrentes. */
   vendasTotais: number;
-  /** VSO de mercado = vendas totais / oferta total; 0 quando oferta = 0. */
+  /** VSO de mercado = vendas totais / (oferta total + vendas totais). */
   vsoMercado: number;
 }
 
