@@ -40,7 +40,7 @@ export async function lerEmpreendimentosCV(): Promise<EmpreendimentoCV[]> {
 
 export interface EstoqueCV {
   id: number; disponiveis: number; reservadas: number; bloqueadas: number; vendidas: number;
-  /** Ticket de tabela vigente das unidades não vendidas, em centavos. */
+  /** Ticket de tabela vigente das unidades em estoque (disponíveis e reservadas), em centavos. */
   ticketTabelaCentavos: number | null;
 }
 
@@ -57,9 +57,13 @@ export async function lerEstoqueAtual(ids: number[]): Promise<EstoqueCV[]> {
       group by empreendimento_id`,
     [ids],
   );
+  // Ticket só das unidades que contam no estoque (disponível e reservada). A visão
+  // kpi_ticket_tabela_vigente inclui as bloqueadas, que ficam fora da contagem.
   const { rows: tickets } = await cvDb().query(
-    `select empreendimento_id, ticket_tabela_vigente as ticket
-       from bi_mcp_comercial.kpi_ticket_tabela_vigente where empreendimento_id = any($1)`,
+    `select empreendimento_id, avg(valor_tabela_vigente) as ticket
+       from bi_mcp_comercial.fato_estoque_detalhado
+      where empreendimento_id = any($1) and situacao_para_venda in (1, 2) and valor_tabela_vigente is not null
+      group by empreendimento_id`,
     [ids],
   );
   const ticketDe = new Map(tickets.map((t) => [Number(t.empreendimento_id), t.ticket]));
