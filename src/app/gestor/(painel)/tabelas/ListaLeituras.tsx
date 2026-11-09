@@ -46,7 +46,12 @@ export default function ListaLeituras({ leituras, filtro, titulo = "Leituras env
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-bold text-ink">{titulo}</h2>
-        {filtro !== null && <select className="campo !w-auto" value={filtro} onChange={(e) => router.push(e.target.value ? `/gestor/tabelas?status=${e.target.value}` : "/gestor/tabelas")}>
+        {filtro !== null && <select className="campo !w-auto" value={filtro} onChange={(e) => {
+          // Mantém a competência escolhida no acompanhamento de envios.
+          const p = new URLSearchParams(window.location.search);
+          if (e.target.value) p.set("status", e.target.value); else p.delete("status");
+          router.push(p.size ? `/gestor/tabelas?${p}` : "/gestor/tabelas");
+        }}>
           <option value="">Todas</option>
           <option value="para_conferir">Para conferir</option>
           <option value="aprovada">Aprovadas</option>
