@@ -75,6 +75,38 @@ export async function lerEstoqueAtual(ids: number[]): Promise<EstoqueCV[]> {
   }));
 }
 
+/** Vendas feitas a partir de `desde` (YYYY-MM-DD, inclusive), por empreendimento. */
+export async function lerVendasDesde(ids: number[], desde: string): Promise<Map<number, number>> {
+  if (!ids.length) return new Map();
+  const { rows } = await cvDb().query(
+    `select _empreendimento_id as id, count(*)::int as vendas
+       from bi_mcp_comercial.fato_venda
+      where _empreendimento_id = any($1) and _data_venda >= $2::date
+      group by 1`,
+    [ids, desde],
+  );
+  return new Map(rows.map((r) => [Number(r.id), Number(r.vendas)]));
+}
+
+/**
+ * Ticket de tabela, em centavos, das unidades em estoque (disponível e
+ * reservada) cuja tabela já valia antes de `antesDe` (YYYY-MM-DD, exclusive).
+ * O CV só guarda a tabela vigente: sem data de vigência ou com vigência
+ * posterior, o empreendimento fica fora (sem valor).
+ */
+export async function lerTicketTabelaVigenteAntes(ids: number[], antesDe: string): Promise<Map<number, number>> {
+  if (!ids.length) return new Map();
+  const { rows } = await cvDb().query(
+    `select _empreendimento_id as id, avg(valor) as ticket
+       from bi_mcp_comercial.fato_unidade_perfil
+      where _empreendimento_id = any($1) and situacao_para_venda in (1, 2) and valor is not null
+        and valor_data_vigencia_de is not null and valor_data_vigencia_de < $2::date
+      group by 1`,
+    [ids, antesDe],
+  );
+  return new Map(rows.filter((r) => r.ticket !== null).map((r) => [Number(r.id), Math.round(Number(r.ticket) * 100)]));
+}
+
 export interface VendasMesCV {
   id: number; mesAno: string; vendas: number;
   /** Média do valor de contrato (já com desconto), em centavos. */

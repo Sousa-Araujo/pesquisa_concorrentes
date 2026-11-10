@@ -10,8 +10,14 @@
  */
 import "server-only";
 import { db } from "@/lib/db/pool";
-import { cvConfigurado, lerEmpreendimentosCV, lerEstoqueAtual, lerVendasMensais, type EmpreendimentoCV } from "@/lib/db/cv";
+import {
+  cvConfigurado, lerEmpreendimentosCV, lerEstoqueAtual, lerTicketTabelaVigenteAntes, lerVendasDesde, lerVendasMensais,
+  type EmpreendimentoCV,
+} from "@/lib/db/cv";
 import { nomeComparavel, nomeNucleo } from "@/lib/domain/comparativo";
+import {
+  classificarPreenchimento, estoqueDoFimDoMes, lerMesPreenchivel, mesSeguinte, type SituacaoPreenchimento,
+} from "@/lib/domain/preenchimentoCV";
 
 /** Primeiro dia do mês atual no horário de Brasília (YYYY-MM-01). */
 function mesAtual(agora = new Date()): string {
@@ -65,6 +71,74 @@ export async function vendasCVDoMes(idEmpreendimento: number, mesAno: string): P
   }
 }
 
+export interface ItemPreenchimento {
+  idEmpreendimento: number;
+  nome: string;
+  situacao: SituacaoPreenchimento;
+  /** O que o Hub tem hoje no mês (null = sem linha). */
+  existente: { origem: "manual" | "cv"; estoque: number; vendas: number } | null;
+  /** O que o CV permite montar (null = sem dado no CV). */
+  cv: {
+    estoque: number; vendas: number; vendasDepois: number;
+    ticketTabelaCentavos: number | null; ticketDescontoCentavos: number | null; descontoPct: number | null;
+  } | null;
+}
+
+/** Monta, sem gravar, o que o CV permite preencher num mês que já fechou. */
+export async function previaPreenchimento(mes: string): Promise<ItemPreenchimento[]> {
+  if (!lerMesPreenchivel(mes, mesAtual())) throw new Error("Escolha um mês já fechado.");
+  if (!cvConfigurado()) throw new Error("CV_DATABASE_URL não configurada.");
+  const { rows: emps } = await db().query<{ id_empreendimento: number; empreendimento: string; id_cv: number | null }>(
+    `select id_empreendimento, empreendimento, id_cv from empreendimentos where ativo order by empreendimento`,
+  );
+  const { rows: existentes } = await db().query<{ id_empreendimento: number; origem: "manual" | "cv"; estoque: number; vendas: number }>(
+    `select id_empreendimento, origem, estoque, vendas from dados_proprios_mensais where mes_ano = $1`, [mes],
+  );
+  const ids = emps.map((e) => e.id_cv).filter((x): x is number => x !== null);
+  const seguinte = mesSeguinte(mes);
+  const [estoques, vendas, depois, tabelas] = await Promise.all([
+    lerEstoqueAtual(ids), lerVendasMensais(ids, mes), lerVendasDesde(ids, seguinte), lerTicketTabelaVigenteAntes(ids, seguinte),
+  ]);
+  return emps.map((e) => {
+    const existente = existentes.find((x) => x.id_empreendimento === e.id_empreendimento) ?? null;
+    const est = e.id_cv === null ? undefined : estoques.find((s) => s.id === e.id_cv);
+    let cv: ItemPreenchimento["cv"] = null;
+    if (est && e.id_cv !== null) {
+      const v = vendas.find((x) => x.id === e.id_cv && x.mesAno === mes);
+      const vendasDepois = depois.get(e.id_cv) ?? 0;
+      cv = {
+        estoque: estoqueDoFimDoMes(est.disponiveis + est.reservadas, vendasDepois),
+        vendas: v?.vendas ?? 0, vendasDepois,
+        ticketTabelaCentavos: tabelas.get(e.id_cv) ?? null,
+        ticketDescontoCentavos: v?.ticketDescontoCentavos ?? null,
+        descontoPct: v?.descontoPct ?? null,
+      };
+    }
+    return {
+      idEmpreendimento: e.id_empreendimento, nome: e.empreendimento,
+      situacao: classificarPreenchimento(existente, cv ? { estoque: cv.estoque, vendas: cv.vendas } : null),
+      existente: existente ? { origem: existente.origem, estoque: existente.estoque, vendas: existente.vendas } : null,
+      cv,
+    };
+  });
+}
+
+/** Grava só os meses sem linha ("novo"), marcados como origem CV e estimados. Nada digitado é tocado. */
+export async function gravarPreenchimento(mes: string): Promise<number> {
+  const itens = (await previaPreenchimento(mes)).filter((i) => i.situacao === "novo" && i.cv);
+  for (const i of itens) {
+    const c = i.cv!;
+    await db().query(
+      `insert into dados_proprios_mensais (id_empreendimento, mes_ano, estoque, vendas, origem, estimado,
+                                           ticket_tabela_centavos, ticket_desconto_centavos, desconto_pct, atualizado_em)
+       values ($1, $2, $3, $4, 'cv', true, $5, $6, $7, now())
+       on conflict (id_empreendimento, mes_ano) do nothing`,
+      [i.idEmpreendimento, mes, c.estoque, c.vendas, c.ticketTabelaCentavos, c.ticketDescontoCentavos, c.descontoPct],
+    );
+  }
+  return itens.length;
+}
+
 let rodando: Promise<SincronizacaoCV> | null = null;
 
 export interface SincronizacaoCV { ok: boolean; mensagem: string }
@@ -101,7 +175,7 @@ async function executar(): Promise<SincronizacaoCV> {
              estoque = excluded.estoque, vendas = excluded.vendas, reservadas = excluded.reservadas,
              bloqueadas = excluded.bloqueadas, ticket_tabela_centavos = excluded.ticket_tabela_centavos,
              ticket_desconto_centavos = excluded.ticket_desconto_centavos, desconto_pct = excluded.desconto_pct,
-             atualizado_em = now()
+             estimado = false, atualizado_em = now()
            where dados_proprios_mensais.origem = 'cv'`,
           [l.id_empreendimento, mes, est.disponiveis + est.reservadas, vMes?.vendas ?? 0, est.reservadas, est.bloqueadas,
             est.ticketTabelaCentavos, vMes?.ticketDescontoCentavos ?? null, vMes?.descontoPct ?? null],

@@ -9,6 +9,11 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.5.1] - 2026-11-10
+
+### Adicionado
+- Dados do CV › "Preencher mês anterior com os dados do CV" (só administrador): mostra uma prévia e, ao confirmar, cria as linhas de Dados próprios que faltam num mês já fechado. Vendas e ticket com desconto vêm exatos do CV; o estoque é estimado (estoque de hoje mais as vendas feitas depois do mês) e fica marcado; o ticket de tabela só entra quando a tabela vigente já valia no mês. O que foi digitado à mão não é alterado, e as diferenças aparecem só para conferência.
+
 ## [1.5.0] - 2026-11-10
 
 ### Adicionado
@@ -111,7 +116,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.0...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.0...v1.3.1
