@@ -8,6 +8,7 @@ import { db } from "@/lib/db/pool";
 import { cvConfigurado, lerEmpreendimentosCV, type EmpreendimentoCV } from "@/lib/db/cv";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import DadosCV, { type LinhaCV } from "./DadosCV";
+import PreencherMeses from "./PreencherMeses";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,11 @@ export default async function DadosCVPage() {
     origem: r.origem ?? null,
   }));
 
+  const [a, m] = mes.split("-").map(Number);
+  const mesPadrao = new Date(Date.UTC(a, m - 2, 1)).toISOString().slice(0, 7);
+
   return (
+    <div className="grid gap-6">
     <DadosCV
       linhas={linhas}
       opcoes={cv.map((c) => ({ id: c.id, nome: c.nome, regiao: c.regiao }))}
@@ -57,5 +62,7 @@ export default async function DadosCVPage() {
       mesRotulo={formatarCompetenciaLonga(mes)}
       sincronizacao={sync ? { em: sync.ultima_em ? new Date(sync.ultima_em).toISOString() : null, ok: sync.ok, mensagem: sync.mensagem } : null}
     />
+    <PreencherMeses mesPadrao={mesPadrao} />
+    </div>
   );
 }
