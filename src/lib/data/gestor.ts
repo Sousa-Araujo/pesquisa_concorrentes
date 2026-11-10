@@ -218,6 +218,8 @@ export interface LinhaConcorrente {
   regional: string;
   /** AAAA-MM-DD */
   data_lancamento: string | null;
+  /** Link do Google Maps com a localização. */
+  link_maps: string | null;
 }
 
 /**
@@ -239,7 +241,7 @@ export async function listarConcorrentesAdmin(
 
   const { rows } = await db().query<LinhaConcorrente>(
     `select c.id_concorrente, c.id_empreendimento, c.concorrente, c.ativo,
-            emp.empreendimento, cid.cidade, cid.regional, to_char(c.data_lancamento, 'YYYY-MM-DD') as data_lancamento
+            emp.empreendimento, cid.cidade, cid.regional, to_char(c.data_lancamento, 'YYYY-MM-DD') as data_lancamento, c.link_maps
        from concorrentes c
        join empreendimentos emp on emp.id_empreendimento = c.id_empreendimento
        join cidades cid         on cid.id_cidade = emp.id_cidade

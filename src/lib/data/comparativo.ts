@@ -2,16 +2,20 @@
  * Dados do Comparativo Sousa x concorrentes (dashboard da Diretoria), para
  * um empreendimento Sousa e uma competência:
  *  - preço, entrada, fluxo, área e entrega: da visita do Cliente Oculto
- *    concluída mais recente até o fim da competência;
+ *    concluída mais recente DENTRO da competência (sem visita no mês, n/i);
  *  - estoque e vendas: dados próprios (vindos do BI do CV ou digitados) e
  *    coletas da Pesquisa no mês;
  *  - Sousa com dados do CV: ticket de tabela do estoque e ticket com desconto
  *    (valor de contrato) das vendas do mês substituem os preços da visita;
+ *  - Sousa com Comitê de vendas aprovado para a competência: desconto %,
+ *    parcelas pré e pós-chaves, prazo e entrega vêm do comitê;
  *  - atendimento: nota geral calibrada da mesma visita.
  * Visitas antigas, de antes da ligação com o cadastro, são reconhecidas pelo
  * nome do empreendimento/concorrente.
  */
 import { db } from "@/lib/db/pool";
+import { condicaoDoComite } from "@/lib/data/comite";
+import { aplicarComite, type CondicaoComite } from "@/lib/domain/comite";
 import {
   calcularGiro, calcularPreco, lerEntrega, lerParcelas, mesesAteEntrega, nomeComparavel, resumoAtendimento,
   rotuloEntrega, type Giro, type Preco,
@@ -37,6 +41,10 @@ export interface ColunaComparativo {
   giro: Giro;
   notaGeral: number | null;
   resumo: string | null;
+  /** Vigência do Comitê de vendas de onde vieram desconto, parcelas, prazo e entrega (só a coluna da Sousa). */
+  comite: { vigenciaInicio: string; vigenciaFim: string } | null;
+  /** Link do Google Maps do concorrente (a coluna da Sousa não tem). */
+  linkMaps: string | null;
 }
 
 export interface Comparativo {
@@ -53,9 +61,9 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
   );
   if (!emp) return null;
 
-  const [{ rows: concorrentes }, { rows: [proprio] }, { rows: coletas }, { rows: visitas }] = await Promise.all([
-    pool.query<{ id_concorrente: number; concorrente: string }>(
-      `select id_concorrente, concorrente from concorrentes
+  const [{ rows: concorrentes }, { rows: [proprio] }, { rows: coletas }, { rows: visitas }, comiteSousa] = await Promise.all([
+    pool.query<{ id_concorrente: number; concorrente: string; link_maps: string | null }>(
+      `select id_concorrente, concorrente, link_maps from concorrentes
         where id_empreendimento = $1 and ativo order by concorrente`, [idEmpreendimento]),
     // Sem dado no mês escolhido, usa o último mês anterior com dado (e mostra qual).
     pool.query<{ estoque: number; vendas: number; ticket_tabela_centavos: string | null; ticket_desconto_centavos: string | null; mes: string }>(
@@ -69,7 +77,7 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
          join concorrentes c on c.id_concorrente = cm.id_concorrente
         where c.id_empreendimento = $1 and cm.mes_ano <= $2
         order by cm.id_concorrente, cm.mes_ano desc`, [idEmpreendimento, mesAno]),
-    // Visitas concluídas até o fim da competência, a mais recente primeiro.
+    // Visitas concluídas na competência (data da visita; sem ela, a da conclusão), a mais recente primeiro.
     pool.query(
       `select id, tipo_empreendimento, id_empreendimento, id_concorrente, empreendimento_texto, construtora_texto,
               to_char(data_visita, 'YYYY-MM-DD') as data_visita, valor_unidade_centavos, valor_ato_centavos,
@@ -77,8 +85,10 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
               qtd_pre_chaves, qtd_pos_chaves, previsao_entrega
          from co_avaliacoes
         where status = 'Concluída' and not excluida and not coalesce(somente_previa, false)
-          and (data_visita is null or data_visita < ($1::date + interval '1 month'))
+          and coalesce(data_visita, (concluida_em at time zone 'America/Sao_Paulo')::date) >= $1::date
+          and coalesce(data_visita, (concluida_em at time zone 'America/Sao_Paulo')::date) < ($1::date + interval '1 month')
         order by data_visita desc nulls last, concluida_em desc`, [mesAno]),
+    condicaoDoComite(idEmpreendimento, mesAno),
   ]);
 
   const nomeEmp = nomeComparavel(emp.empreendimento);
@@ -97,7 +107,7 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
 
   function coluna(
     nome: string, proprio: boolean, v: Record<string, unknown> | undefined, estoque: number | null, vendas: number | null,
-    mesDados: string | null, precoCV?: { tabela: number | null; desconto: number | null },
+    mesDados: string | null, precoCV?: { tabela: number | null; desconto: number | null }, comite?: CondicaoComite | null,
   ): ColunaComparativo {
     let preco = calcularPreco({
       valorTabelaCentavos: v?.valor_unidade_centavos ? Number(v.valor_unidade_centavos) : null,
@@ -124,6 +134,15 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
       };
     }
     const entrega = lerEntrega(v?.previsao_entrega as string | null);
+    // Onde o comitê traz o dado, ele vale; no resto fica o da visita/CV.
+    const ind = aplicarComite({
+      descontoPct: preco.descontoPct,
+      parcelasPre: lerParcelas(v?.qtd_pre_chaves as string | null),
+      parcelasPos: lerParcelas(v?.qtd_pos_chaves as string | null),
+      prazoEntregaMeses: mesesAteEntrega(mesAno, entrega),
+      entrega: rotuloEntrega(entrega),
+    }, comite ?? null, mesAno);
+    preco = { ...preco, descontoPct: ind.descontoPct };
     const giro = calcularGiro(estoque, vendas);
     const meus = v ? pilares.filter((p) => p.avaliacao_id === v.id && p.avaliado) : [];
     const notas = meus.map((p) => (p.nota_calibrada === null ? null : Number(p.nota_calibrada)));
@@ -136,10 +155,10 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
       proprio,
       visita: v ? { id: String(v.id), data: (v.data_visita as string | null) ?? null } : null,
       preco,
-      parcelasPre: lerParcelas(v?.qtd_pre_chaves as string | null),
-      parcelasPos: lerParcelas(v?.qtd_pos_chaves as string | null),
-      prazoEntregaMeses: mesesAteEntrega(mesAno, entrega),
-      entrega: rotuloEntrega(entrega),
+      parcelasPre: ind.parcelasPre,
+      parcelasPos: ind.parcelasPos,
+      prazoEntregaMeses: ind.prazoEntregaMeses,
+      entrega: ind.entrega,
       areaM2: v?.area_unidade_m2 ? Number(v.area_unidade_m2) : null,
       estoque,
       vendas,
@@ -152,6 +171,8 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
         ? resumoAtendimento(meus.map((p) => ({ key: String(p.pilar_key), nota: p.nota_calibrada === null ? null : Number(p.nota_calibrada) })),
           gap ? String(gap.gap) : null)
         : null,
+      comite: comite ? { vigenciaInicio: comite.vigenciaInicio, vigenciaFim: comite.vigenciaFim } : null,
+      linkMaps: null,
     };
   }
 
@@ -159,10 +180,10 @@ export async function montarComparativo(idEmpreendimento: number, mesAno: string
     coluna(emp.empreendimento, true, visitaSousa, proprio?.estoque ?? null, proprio?.vendas ?? null, proprio?.mes ?? null, {
       tabela: proprio?.ticket_tabela_centavos ? Number(proprio.ticket_tabela_centavos) / 100 : null,
       desconto: proprio?.ticket_desconto_centavos ? Number(proprio.ticket_desconto_centavos) / 100 : null,
-    }),
+    }, comiteSousa),
     ...concorrentes.map((c) => {
       const col = coletas.find((x) => x.id_concorrente === c.id_concorrente);
-      return coluna(c.concorrente, false, visitaDe(c), col?.estoque ?? null, col?.vendas ?? null, col?.mes ?? null);
+      return { ...coluna(c.concorrente, false, visitaDe(c), col?.estoque ?? null, col?.vendas ?? null, col?.mes ?? null), linkMaps: c.link_maps };
     }),
   ];
   return { empreendimento: emp.empreendimento, colunas };

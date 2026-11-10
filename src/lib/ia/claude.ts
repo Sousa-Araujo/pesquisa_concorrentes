@@ -53,6 +53,18 @@ export function claudeConfigurado(): boolean {
 const IMAGENS = ["image/png", "image/jpeg", "image/webp"] as const;
 
 export async function lerTabelaComClaude(arquivo: Buffer, mime: string, prazoMs: number): Promise<ResultadoIA> {
+  const { json, modelo } = await lerJsonComClaude(arquivo, mime, prazoMs, INSTRUCOES, ESQUEMA, "a lista de unidades");
+  return { unidades: json.unidades ?? [], observacoes: typeof json.observacoes === "string" ? json.observacoes : "", modelo };
+}
+
+/**
+ * Manda o documento com as instruções e devolve o JSON no esquema pedido.
+ * Usado pela leitura de tabelas e pela do comitê de vendas. `oQue` entra nas
+ * mensagens de erro ("não devolveu a lista de unidades").
+ */
+export async function lerJsonComClaude(
+  arquivo: Buffer, mime: string, prazoMs: number, instrucoes: string, esquema: object, oQue: string,
+): Promise<{ json: Record<string, unknown>; modelo: string }> {
   if (!claudeConfigurado()) throw new ErroIA("A leitura pelo Claude não está configurada (ANTHROPIC_API_KEY).");
   const modelo = process.env.CLAUDE_MODELO || MODELO_PADRAO;
   // Uma nova tentativa automática do SDK (429/5xx/conexão) dentro do prazo.
@@ -69,8 +81,8 @@ export async function lerTabelaComClaude(arquivo: Buffer, mime: string, prazoMs:
       max_tokens: 32000,
       // Se o modelo recusar por política, a API tenta o modelo indicado por ela.
       ...(ACEITA_FALLBACK.test(modelo) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-      output_config: { effort: "medium", format: { type: "json_schema", schema: ESQUEMA } },
-      messages: [{ role: "user", content: [documento, { type: "text", text: INSTRUCOES }] }],
+      output_config: { effort: "medium", format: { type: "json_schema", schema: esquema as Record<string, unknown> } },
+      messages: [{ role: "user", content: [documento, { type: "text", text: instrucoes }] }],
     });
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
@@ -89,12 +101,11 @@ export async function lerTabelaComClaude(arquivo: Buffer, mime: string, prazoMs:
   }
 
   if (resposta.stop_reason === "refusal") throw new ErroClaudePassageiro("O Claude não aceitou ler este documento.");
-  if (resposta.stop_reason === "max_tokens") throw new ErroClaudePassageiro("A lista de unidades ficou grande demais para uma leitura.");
+  if (resposta.stop_reason === "max_tokens") throw new ErroClaudePassageiro(`${oQue[0].toUpperCase()}${oQue.slice(1)} ficou grande demais para uma leitura.`);
   const texto = resposta.content.map((b) => (b.type === "text" ? b.text : "")).join("");
   try {
-    const json = JSON.parse(texto) as { unidades?: unknown; observacoes?: string };
-    return { unidades: json.unidades ?? [], observacoes: json.observacoes ?? "", modelo: resposta.model };
+    return { json: JSON.parse(texto) as Record<string, unknown>, modelo: resposta.model };
   } catch {
-    throw new ErroClaudePassageiro("O Claude não devolveu a lista de unidades.");
+    throw new ErroClaudePassageiro(`O Claude não devolveu ${oQue}.`);
   }
 }

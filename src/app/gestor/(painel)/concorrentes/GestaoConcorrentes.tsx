@@ -156,6 +156,7 @@ function FormConcorrente({
   const [nome, setNome] = useState(concorrente?.concorrente ?? "");
   const [ativo, setAtivo] = useState(concorrente?.ativo ?? true);
   const [lancamento, setLancamento] = useState(concorrente?.data_lancamento ?? "");
+  const [linkMaps, setLinkMaps] = useState(concorrente?.link_maps ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -188,8 +189,8 @@ function FormConcorrente({
 
     setSalvando(true);
     const r = editandoExistente
-      ? await editarConcorrente(concorrente!.id_concorrente, { concorrente: nome, ativo, data_lancamento: lancamento || null })
-      : await criarConcorrenteGestor({ id_empreendimento: Number(idEmp), nome, data_lancamento: lancamento || null });
+      ? await editarConcorrente(concorrente!.id_concorrente, { concorrente: nome, ativo, data_lancamento: lancamento || null, link_maps: linkMaps || null })
+      : await criarConcorrenteGestor({ id_empreendimento: Number(idEmp), nome, data_lancamento: lancamento || null, link_maps: linkMaps || null });
     setSalvando(false);
     if (r.ok) onSalvo();
     else setErro(r.erro);
@@ -248,6 +249,12 @@ function FormConcorrente({
           <label className="rotulo" htmlFor="conc-lancamento">Data de lançamento</label>
           <CampoData tipo="data" id="conc-lancamento" className="campo !text-base !py-2" value={lancamento} onChange={setLancamento} />
           <p className="mt-1 text-xs text-ink/40">Opcional.</p>
+        </div>
+        <div>
+          <label className="rotulo" htmlFor="conc-maps">Link do Google Maps</label>
+          <input id="conc-maps" className="campo !text-base !py-2" type="url" inputMode="url" placeholder="https://maps.app.goo.gl/…"
+            value={linkMaps} onChange={(e) => setLinkMaps(e.target.value)} />
+          <p className="mt-1 text-xs text-ink/40">Opcional. Cole o link da localização copiado do Google Maps; ele aparece no card do concorrente no Comparativo.</p>
         </div>
         {editandoExistente && (
           <label className="flex items-center gap-2 text-sm">

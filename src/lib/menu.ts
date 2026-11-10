@@ -116,10 +116,13 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
     const { rows: [pc] } = await db().query<{ n: number }>(`select count(*)::int as n from leituras_tabela where status = 'para_conferir'`);
     const itens: ItemMenu[] = [{ nome: "Enviar e acompanhar", href: "/gestor/tabelas" }];
     if (temPermissao(p, "tabelasConferir")) itens.push({ nome: "Para conferir", href: "/gestor/tabelas/conferir", contador: pc.n || undefined });
+    const grupos: GrupoMenu[] = [{ nome: "Leitura por IA", itens }];
+    // Comitê de vendas: só o administrador.
+    if (temPermissao(p, "comiteVendas")) grupos.push({ nome: "Comitê", itens: [{ nome: "Comitê de vendas", href: "/gestor/tabelas/comite" }] });
     modulos.push({
       id: "tabelas", nome: "Tabelas e espelhos", curto: "Tabelas", icone: "doc",
       resumo: pc.n ? `${pc.n} leitura(s) para conferir` : "Leitura de tabelas por IA",
-      grupos: [{ nome: "Leitura por IA", itens }],
+      grupos,
     });
   }
 

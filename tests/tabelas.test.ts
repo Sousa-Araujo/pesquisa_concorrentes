@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizarUnidades, resumirUnidades, type Unidade } from "@/lib/domain/tabelas";
+import { lerEdicaoAprovada, normalizarUnidades, resumirUnidades, type Unidade } from "@/lib/domain/tabelas";
 
 const u = (unidade: string, status: Unidade["status"], reais: number | null = null): Unidade =>
   ({ unidade, status, valorCentavos: reais === null ? null : reais * 100 });
@@ -79,5 +79,21 @@ describe("normalizarUnidades", () => {
     expect(r.map((x) => [x.valorCentavos, x.valorDescontoCentavos])).toEqual([
       [37440000, 34640000], [34640000, null], [37440000, null],
     ]);
+  });
+});
+
+describe("lerEdicaoAprovada", () => {
+  it("aceita mês, estoque e vendas válidos", () => {
+    expect(lerEdicaoAprovada({ mes: "2026-10", estoque: "42", vendas: 5 })).toEqual({ ok: true, valor: { mes: "2026-10-01", estoque: 42, vendas: 5 } });
+    expect(lerEdicaoAprovada({ mes: "2026-01", estoque: 0, vendas: "0" })).toMatchObject({ ok: true });
+  });
+  it("recusa mês inválido", () => {
+    for (const mes of ["", "2026-13", "2026-00", "10/2026", "2026-10-01", null]) expect(lerEdicaoAprovada({ mes, estoque: 1, vendas: 1 }).ok).toBe(false);
+  });
+  it("recusa estoque ou vendas que não são inteiros de 0 a 100000", () => {
+    for (const v of ["", "abc", "-1", "1.5", "100001", null, -3, 2.5]) {
+      expect(lerEdicaoAprovada({ mes: "2026-10", estoque: v, vendas: 1 }).ok).toBe(false);
+      expect(lerEdicaoAprovada({ mes: "2026-10", estoque: 1, vendas: v }).ok).toBe(false);
+    }
   });
 });
