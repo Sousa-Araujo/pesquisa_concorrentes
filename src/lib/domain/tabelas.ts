@@ -129,3 +129,22 @@ export function normalizarUnidades(brutas: unknown): Unidade[] {
       };
     });
 }
+
+export interface EdicaoAprovada { mes: string; estoque: number; vendas: number }
+
+/**
+ * Correção, pelo administrador, de uma leitura já aprovada. `mes` vem como
+ * "AAAA-MM" (o seletor de mês) e vira "AAAA-MM-01"; estoque e vendas são
+ * inteiros de 0 a 100000.
+ */
+export function lerEdicaoAprovada(e: { mes: unknown; estoque: unknown; vendas: unknown }):
+  { ok: true; valor: EdicaoAprovada } | { ok: false; erro: string } {
+  const mes = String(e.mes ?? "");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return { ok: false, erro: "Informe a data de referência (mês)." };
+  const inteiro = (v: unknown) => (typeof v === "number" ? v : /^\d+$/.test(String(v ?? "").trim()) ? Number(String(v).trim()) : NaN);
+  const estoque = inteiro(e.estoque);
+  const vendas = inteiro(e.vendas);
+  if (!Number.isInteger(estoque) || estoque < 0 || estoque > 100000) return { ok: false, erro: "Informe o estoque (número inteiro, de 0 a 100000)." };
+  if (!Number.isInteger(vendas) || vendas < 0 || vendas > 100000) return { ok: false, erro: "Informe as vendas (número inteiro, de 0 a 100000)." };
+  return { ok: true, valor: { mes: `${mes}-01`, estoque, vendas } };
+}

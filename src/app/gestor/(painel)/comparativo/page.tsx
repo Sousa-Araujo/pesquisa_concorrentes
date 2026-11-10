@@ -162,9 +162,16 @@ export default async function ComparativoPage({
               </table>
             </div>
             <p className="text-xs text-ink/50">
-              Preço, entrada, fluxo, área e entrega: última visita do Cliente Oculto concluída até a competência.
+              Preço, entrada, fluxo, área e entrega: visita do Cliente Oculto concluída na competência (a mais recente do mês); sem visita no mês, n/i.
               Estoque e VSO: dados próprios (CV) e coletas da Pesquisa no mês; sem dado no mês, o último mês disponível, indicado abaixo do valor. n/i = não informado.
             </p>
+            {cols[0]?.comite && (
+              <p className="text-xs text-ink/50">
+                {cols[0].nome}: desconto (máximo por venda financiada), parcelas pré e pós-chaves, prazo e entrega vêm do Comitê de Vendas
+                (vigência {cols[0].comite.vigenciaInicio.split("-").reverse().join("/")} a {cols[0].comite.vigenciaFim.split("-").reverse().join("/")}).
+                O desconto dos concorrentes é o praticado na visita.
+              </p>
+            )}
           </section>
 
           <section className="grid gap-3">
@@ -181,6 +188,16 @@ export default async function ComparativoPage({
                     <dt className="text-ink/60">Vendas no mês</dt><dd className="text-right font-semibold tabular-nums">{c.vendas !== null ? `${c.vendas} UHs` : NI}</dd>
                     <dt className="text-ink/60">VSO</dt><dd className="text-right font-semibold tabular-nums">{pct(c.vso) ?? "—"}</dd>
                     <dt className="text-ink/60">Meses p/ zerar</dt><dd className="text-right font-semibold tabular-nums">{c.mesesZerar !== null ? `~${num(c.mesesZerar)}` : c.giro === "sem_vendas" ? "sem giro" : "—"}</dd>
+                    {!c.proprio && (
+                      <>
+                        <dt className="text-ink/60">Localização</dt>
+                        <dd className="text-right font-semibold">
+                          {c.linkMaps
+                            ? <a href={c.linkMaps} target="_blank" rel="noopener noreferrer" className="text-[var(--brand-text)] underline">Ver no Google Maps</a>
+                            : NI}
+                        </dd>
+                      </>
+                    )}
                   </dl>
                 </div>
               ))}
@@ -193,7 +210,7 @@ export default async function ComparativoPage({
               <p className="text-xs text-ink/50">Contexto secundário. Nota geral calibrada pelo Coordenador de Market Share.</p>
             </div>
             {comAtendimento.length === 0 ? (
-              <p className="card text-sm text-ink/60">Nenhuma visita de cliente oculto concluída para os concorrentes deste empreendimento até a competência.</p>
+              <p className="card text-sm text-ink/60">Nenhuma visita de cliente oculto concluída na competência para os concorrentes deste empreendimento.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {comAtendimento.map((c) => {

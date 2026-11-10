@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { exigirPermissao, usuarioAtual } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
-import { aprovarLeitura, excluirLeitura, obterLeitura, processarLeitura, recusarLeitura, salvarConferencia, type Conferencia, type Leitura } from "@/lib/data/tabelas";
+import { aprovarLeitura, editarLeituraAprovada, excluirLeitura, obterLeitura, processarLeitura, recusarLeitura, salvarConferencia, type Conferencia, type Leitura } from "@/lib/data/tabelas";
 
 export async function salvar(id: string, c: Conferencia): Promise<Leitura | null> {
   await exigirPermissao("tabelasConferir");
@@ -45,5 +45,17 @@ export async function excluir(id: string): Promise<{ ok: true } | { ok: false; e
   const r = await excluirLeitura(id);
   revalidatePath("/gestor/tabelas");
   revalidatePath("/gestor/tabelas/conferir");
+  return r;
+}
+
+/** Depois de aprovada, o administrador corrige data de referência (mês), estoque e vendas. */
+export async function editarAprovada(
+  id: string, dados: { mes: string; estoque: string; vendas: string },
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const eu = await exigirPermissao("tabelasEditarAprovada");
+  const r = await editarLeituraAprovada(id, dados, eu.id_usuario, eu.nome);
+  revalidatePath("/gestor/tabelas");
+  revalidatePath(`/gestor/tabelas/${id}`);
+  revalidatePath("/gestor/comparativo");
   return r;
 }

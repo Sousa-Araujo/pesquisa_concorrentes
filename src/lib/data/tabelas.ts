@@ -7,7 +7,7 @@
 import "server-only";
 import { db } from "@/lib/db/pool";
 import { classificarEnvio, type LinhaEnvio } from "@/lib/domain/acompanhamento";
-import { normalizarUnidades, resumirUnidades, type Resumo, type Unidade } from "@/lib/domain/tabelas";
+import { lerEdicaoAprovada, normalizarUnidades, resumirUnidades, type Resumo, type Unidade } from "@/lib/domain/tabelas";
 import { ErroIA, lerTabela } from "@/lib/ia/leitura";
 
 export type StatusLeitura = "lendo" | "para_conferir" | "aprovada" | "recusada";
@@ -35,6 +35,16 @@ export interface Leitura {
   conferidoEm: string | null;
   motivoRecusa: string | null;
   coletaSubstituida: { estoque: number; vendas: number; agente: string | null } | null;
+  /** Correções feitas pelo administrador depois da aprovação, da mais antiga para a mais recente. */
+  edicoesAdmin: EdicaoRegistrada[];
+}
+
+export interface EdicaoRegistrada {
+  em: string;
+  por: string;
+  idUsuario: string;
+  antes: { mes: string; estoque: number; vendas: number | null };
+  depois: { mes: string; estoque: number; vendas: number };
 }
 
 const q = (t: string, p: unknown[] = []) => db().query(t, p);
@@ -46,7 +56,7 @@ const SELECT = `
          l.reservadas, l.vendidas_total, l.vendas_mes, l.vendas_metodo, l.valor_min_centavos,
          l.valor_max_centavos, l.ticket_medio_centavos, l.unidade_min, l.unidade_max,
          l.desconto_min_centavos, l.desconto_max_centavos, l.ticket_desconto_centavos,
-         l.conferido_por, l.conferido_em, l.motivo_recusa, l.coleta_substituida,
+         l.conferido_por, l.conferido_em, l.motivo_recusa, l.coleta_substituida, l.edicoes_admin,
          c.concorrente, e.empreendimento, cid.regional, to_char(l.mes_ano, 'YYYY-MM-DD') as mes,
          ue.nome as enviado_nome, uc.nome as conferido_nome
     from leituras_tabela l
@@ -97,6 +107,7 @@ function paraLeitura(r: Record<string, unknown>): Leitura {
     conferidoEm: r.conferido_em ? new Date(r.conferido_em as string).toISOString() : null,
     motivoRecusa: (r.motivo_recusa as string) ?? null,
     coletaSubstituida: (r.coleta_substituida as Leitura["coletaSubstituida"]) ?? null,
+    edicoesAdmin: (r.edicoes_admin as EdicaoRegistrada[]) ?? [],
   };
 }
 
@@ -365,6 +376,74 @@ export async function excluirLeitura(id: string): Promise<{ ok: true } | { ok: f
     await cliente.query("rollback");
     console.error("[tabelas] excluir:", e);
     return { ok: false, erro: "Não foi possível excluir a leitura." };
+  } finally {
+    cliente.release();
+  }
+}
+
+const mesBR = (m: string) => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
+
+/**
+ * Correção, pelo administrador, da data de referência (mês), do estoque e das
+ * vendas de uma leitura já aprovada. Acompanha o que a aprovação gravou: a
+ * coleta do mês na Pesquisa (origem "tabela") e os preços do mês. Mudar o mês
+ * é recusado se o mês de destino já tem coleta ou preços de outra origem (nada
+ * é apagado sem o administrador decidir). Fica registrado em edicoes_admin.
+ */
+export async function editarLeituraAprovada(
+  id: string, dados: { mes: unknown; estoque: unknown; vendas: unknown }, idUsuario: string, nomeUsuario: string,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const e = lerEdicaoAprovada(dados);
+  if (!e.ok) return e;
+  const { mes, estoque, vendas } = e.valor;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, erro: "Leitura não encontrada." };
+  const cliente = await db().connect();
+  const recusar = async (erro: string) => { await cliente.query("rollback"); return { ok: false as const, erro }; };
+  try {
+    await cliente.query("begin");
+    const { rows: [l] } = await cliente.query(
+      `select id_concorrente, to_char(mes_ano, 'YYYY-MM-DD') as mes, status, estoque, vendas_mes from leituras_tabela where id = $1 for update`, [id],
+    );
+    if (!l) return await recusar("Leitura não encontrada.");
+    if (l.status !== "aprovada") return await recusar("Só dá para corrigir uma leitura já aprovada.");
+    const { rows: [outraColeta] } = await cliente.query(
+      `select origem from coletas_mensais where id_concorrente = $1 and mes_ano = $2 and id_leitura is distinct from $3`, [l.id_concorrente, mes, id],
+    );
+    if (outraColeta) {
+      return await recusar(`Já existe ${outraColeta.origem === "tabela" ? "outra leitura aprovada" : "uma coleta do agente"} deste concorrente em ${mesBR(mes)}. Exclua-a antes de usar este mês.`);
+    }
+    const { rows: [outroPreco] } = await cliente.query(
+      `select 1 from precos_mensais where id_concorrente = $1 and mes_ano = $2 and id_leitura is distinct from $3`, [l.id_concorrente, mes, id],
+    );
+    if (outroPreco) return await recusar(`Já existem preços de outra leitura deste concorrente em ${mesBR(mes)}. Exclua essa leitura antes de usar este mês.`);
+
+    const registro: EdicaoRegistrada = {
+      em: new Date().toISOString(), por: nomeUsuario, idUsuario,
+      antes: { mes: String(l.mes).slice(0, 7), estoque: Number(l.estoque ?? 0), vendas: l.vendas_mes === null ? null : Number(l.vendas_mes) },
+      depois: { mes: mes.slice(0, 7), estoque, vendas },
+    };
+    await cliente.query(
+      `update leituras_tabela set mes_ano = $2, estoque = $3, reservadas = least(coalesce(reservadas, 0), $3::int),
+              vendas_metodo = case when vendas_mes is distinct from $4::int then null else vendas_metodo end, vendas_mes = $4::int,
+              edicoes_admin = edicoes_admin || $5::jsonb
+        where id = $1`,
+      [id, mes, estoque, vendas, JSON.stringify([registro])],
+    );
+    const { rowCount } = await cliente.query(
+      `update coletas_mensais set mes_ano = $2, estoque = $3, vendas = $4 where id_leitura = $1 and origem = 'tabela'`, [id, mes, estoque, vendas],
+    );
+    // Se a coleta foi apagada em Pesquisas depois da aprovação, a correção a recria.
+    if (!rowCount) await cliente.query(
+      `insert into coletas_mensais (id_agente, id_concorrente, mes_ano, estoque, vendas, origem, id_leitura) values (null, $1, $2, $3, $4, 'tabela', $5)`,
+      [l.id_concorrente, mes, estoque, vendas, id],
+    );
+    await cliente.query(`update precos_mensais set mes_ano = $2, atualizado_em = now() where id_leitura = $1 and mes_ano <> $2`, [id, mes]);
+    await cliente.query("commit");
+    return { ok: true };
+  } catch (err) {
+    await cliente.query("rollback").catch(() => {});
+    console.error("[tabelas] corrigir aprovada:", err);
+    return { ok: false, erro: "Não foi possível salvar a correção." };
   } finally {
     cliente.release();
   }

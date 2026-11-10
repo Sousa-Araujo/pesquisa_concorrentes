@@ -117,7 +117,7 @@ export async function definirStatusAgente(id: string, ativo: boolean): Promise<R
  * assina como created_by.
  */
 export async function criarConcorrenteGestor(input: {
-  id_empreendimento: number; nome: string; data_lancamento?: string | null;
+  id_empreendimento: number; nome: string; data_lancamento?: string | null; link_maps?: string | null;
 }): Promise<R<{ id_concorrente: number }>> {
   const g = await exigirPermissao("cadastros");
   const parsed = novoConcorrenteSchema.safeParse(input);
@@ -128,9 +128,9 @@ export async function criarConcorrenteGestor(input: {
       `select id_concorrente from inserir_concorrente($1, $2, $3)`,
       [parsed.data.id_empreendimento, parsed.data.nome, g.id_usuario],
     );
-    if (parsed.data.data_lancamento) {
-      await db().query(`update concorrentes set data_lancamento = $1 where id_concorrente = $2`,
-        [parsed.data.data_lancamento, rows[0].id_concorrente]);
+    if (parsed.data.data_lancamento || parsed.data.link_maps) {
+      await db().query(`update concorrentes set data_lancamento = $1, link_maps = $2 where id_concorrente = $3`,
+        [parsed.data.data_lancamento, parsed.data.link_maps, rows[0].id_concorrente]);
     }
     return { ok: true, data: { id_concorrente: rows[0].id_concorrente } };
   } catch (e) {
@@ -148,7 +148,7 @@ export async function criarConcorrenteGestor(input: {
  */
 export async function editarConcorrente(
   id: number,
-  input: { concorrente: string; ativo: boolean; data_lancamento?: string | null },
+  input: { concorrente: string; ativo: boolean; data_lancamento?: string | null; link_maps?: string | null },
 ): Promise<R> {
   const g = await exigirPermissao("cadastros");
   const parsed = concorrenteEdicaoSchema.safeParse(input);
@@ -156,8 +156,8 @@ export async function editarConcorrente(
 
   try {
     await db().query(
-      `update concorrentes set concorrente = $1, ativo = $2, updated_by = $3, data_lancamento = $5 where id_concorrente = $4`,
-      [parsed.data.concorrente, parsed.data.ativo, g.id_usuario, id, parsed.data.data_lancamento],
+      `update concorrentes set concorrente = $1, ativo = $2, updated_by = $3, data_lancamento = $5, link_maps = $6 where id_concorrente = $4`,
+      [parsed.data.concorrente, parsed.data.ativo, g.id_usuario, id, parsed.data.data_lancamento, parsed.data.link_maps],
     );
   } catch (e) {
     const erro = e as { code?: string };

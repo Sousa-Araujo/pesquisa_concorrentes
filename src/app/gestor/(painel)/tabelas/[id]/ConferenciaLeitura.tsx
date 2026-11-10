@@ -16,6 +16,7 @@ import { STATUS_LEITURA } from "../ListaLeituras";
 import LendoComIA, { type EtapaLeitura } from "../LendoComIA";
 import ResumoUnidades from "./ResumoUnidades";
 import EditarUnidade from "./EditarUnidade";
+import EditarAprovada from "./EditarAprovada";
 import { confirmar } from "@/lib/cliente/dialogo";
 import { aprovar, excluir, lerDeNovo, recusar, salvar } from "./actions";
 
@@ -23,8 +24,8 @@ const brl = (c: number | null) => (c === null ? "—" : (c / 100).toLocaleString
 const paraCentavos = (txt: string) => { const d = txt.replace(/\D/g, ""); return d ? Number(d) * 100 : null; };
 const mesBR = (m: string) => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
 
-export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurada, podeExcluir }: {
-  leitura: Leitura; podeConferir: boolean; iaConfigurada: boolean; podeExcluir: boolean;
+export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurada, podeExcluir, podeEditarAprovada = false }: {
+  leitura: Leitura; podeConferir: boolean; iaConfigurada: boolean; podeExcluir: boolean; podeEditarAprovada?: boolean;
 }) {
   const router = useRouter();
   const [unidades, setUnidades] = useState<Unidade[]>(leitura.unidades);
@@ -114,7 +115,8 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
     iniciar(async () => { await recusar(leitura.id, motivo); router.push(podeConferir ? "/gestor/tabelas/conferir" : "/gestor/tabelas"); });
   }
 
-  const r = resumo ?? leitura.resumo;
+  // Fora da conferência vale o que está gravado (inclusive as correções do administrador).
+  const r = podeConferir ? (resumo ?? leitura.resumo) : leitura.resumo;
   // Só mostra os campos "com desconto" quando algum valor com desconto existe (ou dá para digitar).
   const temDesconto = r.ticketDesconto !== null || unidades.some((u) => u.valorDescontoCentavos != null);
   const st = STATUS_LEITURA[leitura.status];
@@ -182,7 +184,7 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
         <div className="grid content-start gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {[
-              semUnidades
+              semUnidades && podeConferir
                 ? ["Estoque", numeros.estoque ? `${numeros.estoque} UHs` : "—", `${numeros.reservadas || 0} reservadas`]
                 : ["Estoque", `${r.estoque} UHs`, `${r.disponiveis} disponíveis + ${r.reservadas} reservadas`],
               ["Vendas do mês", `${r.vendasMes ?? 0} UHs`,
@@ -202,6 +204,8 @@ export default function ConferenciaLeitura({ leitura, podeConferir, iaConfigurad
               </div>
             ))}
           </div>
+
+          {podeEditarAprovada && <EditarAprovada leitura={leitura} />}
 
           {podeConferir && (
             <div className="card grid gap-3">

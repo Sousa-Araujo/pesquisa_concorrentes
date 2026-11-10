@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import { normalizarTelefone, telefoneValido } from "@/lib/domain/telefone";
+import { lerLinkMaps, MENSAGEM_LINK_MAPS } from "@/lib/domain/linkMaps";
 import { DOMINIO_EMAIL_EMPRESA, PERFIS, emailPermitidoPara } from "@/lib/auth/perfis";
 
 /** Telefone: aceita qualquer formatação; normaliza e valida comprimento. */
@@ -41,11 +42,22 @@ const dataLancamento = z
   .nullish()
   .transform((v) => v || null);
 
+/** Link do Google Maps opcional; vazio vira null e só entram links do Google Maps. */
+const linkMaps = z
+  .string()
+  .nullish()
+  .transform((v, ctx) => {
+    const r = lerLinkMaps(v);
+    if (!r.ok) { ctx.addIssue({ code: z.ZodIssueCode.custom, message: MENSAGEM_LINK_MAPS }); return z.NEVER; }
+    return r.valor;
+  });
+
 /** Cadastro de novo concorrente (seção 13). ID é gerado no backend. */
 export const novoConcorrenteSchema = z.object({
   id_empreendimento: z.number().int().positive(),
   nome: z.string().trim().min(1, "Nome do concorrente é obrigatório"),
   data_lancamento: dataLancamento,
+  link_maps: linkMaps,
 });
 
 /**
@@ -58,6 +70,7 @@ export const concorrenteEdicaoSchema = z.object({
   concorrente: z.string().trim().min(1, "Nome do concorrente é obrigatório"),
   ativo: z.boolean().default(true),
   data_lancamento: dataLancamento,
+  link_maps: linkMaps,
 });
 
 /**

@@ -9,6 +9,13 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+### Adicionado
+- Tabelas e espelhos › Comitê de vendas (só administrador): envio do PDF mensal do comitê com a vigência das condições. A IA lê, por produto, o desconto máximo, as parcelas pré-chaves (Ato + Parc.), as parcelas pós-chaves (Pré-soluto) e a previsão de entrega; o administrador confere, liga cada produto ao empreendimento do cadastro (o sistema aprende os nomes para os meses seguintes) e aprova.
+- Quadro Comparativo: na coluna da Sousa, desconto (%), parcelas pré e pós-chaves, prazo até a entrega e entrega passam a vir do Comitê de vendas aprovado que cobre a competência. Sem comitê, continua valendo a visita do Cliente Oculto.
+- Concorrentes: campo opcional "Link do Google Maps" no cadastro (só aceita links do Google Maps). O link aparece como "Localização" no card de cada concorrente em Estoque e velocidade de vendas, no Comparativo.
+- Tabelas e espelhos: depois de aprovada, o administrador pode corrigir a data de referência, o estoque e as vendas da leitura. A Pesquisa e o Comparativo passam a usar os valores corrigidos; mudar o mês é recusado se o mês de destino já tem outro dado do concorrente, e cada correção fica registrada (quem, quando, antes e depois).
+- Quadro Comparativo: preço, ato, área, parcelas, prazo, entrega, desconto dos concorrentes e atendimento passam a vir só das visitas do Cliente Oculto feitas no mês escolhido; sem visita no mês, aparece "n/i" (antes valia a última visita de meses anteriores). Estoque e vendas continuam usando o último mês com dado, indicado no card.
+
 ## [1.4.0] - 2026-11-06
 
 ### Adicionado

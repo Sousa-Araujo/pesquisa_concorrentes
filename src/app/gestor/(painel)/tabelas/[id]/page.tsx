@@ -13,5 +13,9 @@ export default async function LeituraPage({ params }: { params: Promise<{ id: st
   const leitura = await obterLeitura(id);
   if (!leitura) notFound();
   const podeConferir = temPermissao(u.perfis, "tabelasConferir") && leitura.status === "para_conferir";
-  return <ConferenciaLeitura leitura={leitura} podeConferir={podeConferir} iaConfigurada={iaConfigurada()} podeExcluir={u.perfis.includes("admin")} />;
+  const podeEditarAprovada = leitura.status === "aprovada" && temPermissao(u.perfis, "tabelasEditarAprovada");
+  // A chave remonta a tela (e seus campos) quando uma correção muda os números.
+  const chave = `${leitura.mesAno}|${leitura.resumo.estoque}|${leitura.resumo.vendasMes}|${leitura.edicoesAdmin.length}`;
+  return <ConferenciaLeitura key={chave} leitura={leitura} podeConferir={podeConferir} iaConfigurada={iaConfigurada()}
+    podeExcluir={u.perfis.includes("admin")} podeEditarAprovada={podeEditarAprovada} />;
 }

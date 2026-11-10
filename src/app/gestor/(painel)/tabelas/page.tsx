@@ -2,6 +2,7 @@
  * Tabelas e espelhos: o Supervisor de Parcerias envia o PDF/print do
  * concorrente e acompanha as leituras; quem confere vê as que aguardam.
  */
+import Link from "next/link";
 import { exigirPagina } from "@/lib/auth/acesso";
 import { temPermissao } from "@/lib/auth/perfis";
 import { listarRegionais } from "@/lib/data/hierarquia";
@@ -23,11 +24,16 @@ export default async function TabelasPage({ searchParams: sp }: { searchParams: 
   const podeConferir = temPermissao(u.perfis, "tabelasConferir");
   return (
     <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Tabelas e espelhos</h1>
-        <p className="text-sm text-ink/50">
-          Envie o PDF da tabela ou o print do espelho de vendas do concorrente. A IA lê as unidades e a coordenação confere antes de entrar na Pesquisa.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">Tabelas e espelhos</h1>
+          <p className="text-sm text-ink/50">
+            Envie o PDF da tabela ou o print do espelho de vendas do concorrente. A IA lê as unidades e a coordenação confere antes de entrar na Pesquisa.
+          </p>
+        </div>
+        {temPermissao(u.perfis, "comiteVendas") && (
+          <Link href="/gestor/tabelas/comite" className="btn-secundario btn-cabecalho">Comitê de vendas</Link>
+        )}
       </div>
       {!iaConfigurada() && (
         <p className="ms-alert ms-alert--info">A leitura por IA ainda não está configurada neste ambiente. O envio funciona e os números podem ser preenchidos na conferência.</p>
