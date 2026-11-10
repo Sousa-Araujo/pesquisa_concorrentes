@@ -9,6 +9,8 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.5.0] - 2026-11-10
+
 ### Adicionado
 - Tabelas e espelhos › Comitê de vendas (só administrador): envio do PDF mensal do comitê com a vigência das condições. A IA lê, por produto, o desconto máximo, as parcelas pré-chaves (Ato + Parc.), as parcelas pós-chaves (Pré-soluto) e a previsão de entrega; o administrador confere, liga cada produto ao empreendimento do cadastro (o sistema aprende os nomes para os meses seguintes) e aprova.
 - Quadro Comparativo: na coluna da Sousa, desconto (%), parcelas pré e pós-chaves, prazo até a entrega e entrega passam a vir do Comitê de vendas aprovado que cobre a competência. Sem comitê, continua valendo a visita do Cliente Oculto.
@@ -109,7 +111,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.4.0...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.2.1...v1.3.0
