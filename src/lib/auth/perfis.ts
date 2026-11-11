@@ -28,8 +28,8 @@ export const ROTULO_PERFIL: Record<Perfil, string> = {
 export const PERMISSOES = {
   /** Ver dashboard e lista de pesquisas de concorrentes. */
   painelPesquisa: ["coordenador_produto", "coordenador_market_share", "diretoria"],
-  /** Cadastrar/editar concorrentes e empreendimentos. */
-  cadastros: ["coordenador_produto"],
+  /** Cadastrar/editar concorrentes e empreendimentos (o Coordenador de Market Share corrige os dados cadastrais). */
+  cadastros: ["coordenador_produto", "coordenador_market_share"],
   /** Corrigir/excluir coletas, dados próprios e gerir agentes de campo. */
   auditoriaPesquisa: ["coordenador_market_share"],
   /** Tela de usuários. O Coordenador de Market Share só gere avaliadores. */

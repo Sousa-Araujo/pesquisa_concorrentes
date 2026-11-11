@@ -72,6 +72,9 @@ describe("Perfis e permissões", () => {
     expect(temPermissao(["coordenador_produto"], "cadastros")).toBe(true);
     expect(temPermissao(["coordenador_produto"], "auditoriaPesquisa")).toBe(false);
     expect(temPermissao(["coordenador_market_share"], "auditoriaPesquisa")).toBe(true);
+    expect(temPermissao(["coordenador_market_share"], "cadastros")).toBe(true);
+    expect(temPermissao(["supervisor_parcerias"], "cadastros")).toBe(false);
+    expect(temPermissao(["avaliador"], "cadastros")).toBe(false);
     expect(temPermissao(["diretoria"], "painelPesquisa")).toBe(true);
     expect(temPermissao(["diretoria"], "cadastros")).toBe(false);
     expect(temPermissao(["avaliador"], "painelPesquisa")).toBe(false);

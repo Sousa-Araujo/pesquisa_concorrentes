@@ -320,6 +320,32 @@
     const centavos = parseInt(digits, 10);
     return { centavos, display: currencyFmt.format(centavos / 100) };
   }
+  // Valor escrito como se escreve em português: a vírgula separa os centavos e o
+  // ponto separa os milhares. Sem vírgula, o número é em reais ("235500" e
+  // "235.500" valem R$ 235.500,00). Não reescreve o campo: quem chama mostra o
+  // display quando a pessoa sai do campo. Retorna {centavos, display}.
+  function moneyFromText(raw) {
+    const t = (raw === null || raw === undefined ? '' : String(raw)).replace(/[^\d.,]/g, '');
+    if (!/\d/.test(t)) return { centavos: null, display: '' };
+    let inteiro = t;
+    let dec = '';
+    const iv = t.lastIndexOf(',');
+    if (iv >= 0) {
+      inteiro = t.slice(0, iv);
+      dec = t.slice(iv + 1);
+    } else {
+      const ip = t.lastIndexOf('.');
+      // "235.50" e "235.5": um único ponto seguido de 1 ou 2 dígitos são os centavos.
+      if (ip >= 0 && ip === t.indexOf('.') && /^\d{1,2}$/.test(t.slice(ip + 1))) {
+        inteiro = t.slice(0, ip);
+        dec = t.slice(ip + 1);
+      }
+    }
+    inteiro = inteiro.replace(/\D/g, '').slice(0, 10);
+    dec = dec.replace(/\D/g, '').slice(0, 2).padEnd(2, '0');
+    const centavos = (parseInt(inteiro || '0', 10) * 100) + parseInt(dec, 10);
+    return { centavos, display: currencyFmt.format(centavos / 100) };
+  }
   function centavosToDisplay(centavos) {
     if (centavos === null || centavos === undefined || isNaN(centavos)) return '';
     return currencyFmt.format(centavos / 100);
@@ -356,7 +382,7 @@
     regionalOptionsHtml, mesReferencia, validarCamposObrigatorios,
     PERGUNTA_ORIGEM, CANAIS_PREVIA, formatarDataHora, formatarDuracao, indicadoresPrevia, fotosHtml,
     CRITERIOS, mediaCriterios, criteriosHtml, abrirFotos,
-    moneyMaskFromDigits, centavosToDisplay, areaMaskFromInput, percentMaskFromInput,
+    moneyMaskFromDigits, moneyFromText, centavosToDisplay, areaMaskFromInput, percentMaskFromInput,
     escapeHtml, escapeAttr,
   };
 })(window);
