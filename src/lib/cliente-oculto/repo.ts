@@ -552,14 +552,17 @@ export async function opcoesVinculo(quem: Quem, id: string) {
   await exigirAcesso(quem, id);
   const { rows: [av] } = await q(`select regional, data_visita from co_avaliacoes where id = $1`, [id]);
   const mes = mesReferencia(av.data_visita);
-  let sql = `select id, empreendimento_texto, data_visita from co_avaliacoes
-              where tipo_empreendimento = 'sousa' and not excluida and id <> $1`;
-  const params: unknown[] = [id];
-  if (av.regional) { params.push(av.regional); sql += ` and regional = $${params.length}`; }
-  sql += " order by data_visita desc nulls last";
-  const { rows } = await q(sql, params);
-  return rows
-    .filter((r) => !mes || mesReferencia(r.data_visita) === mes)
+  const { rows } = await q(
+    `select id, empreendimento_texto, data_visita, regional from co_avaliacoes
+      where tipo_empreendimento = 'sousa' and not excluida and id <> $1
+      order by data_visita desc nulls last`,
+    [id],
+  );
+  const doMes = rows.filter((r) => !mes || mesReferencia(r.data_visita) === mes);
+  // Da mesma regional; se não houver nenhuma, todas as visitas Sousa do mês (a regional da visita
+  // pode estar vazia ou diferente, e a lista não pode ficar vazia).
+  const daRegional = av.regional ? doMes.filter((r) => r.regional === av.regional) : doMes;
+  return (daRegional.length ? daRegional : doMes)
     .map((r) => ({ id: r.id, label: `${r.empreendimento_texto || r.id} — ${r.data_visita || "s/ data"}` }));
 }
 

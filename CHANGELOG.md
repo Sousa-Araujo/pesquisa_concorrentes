@@ -9,6 +9,11 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.5.3] - 2026-11-11
+
+### Corrigido
+- Cliente Oculto › Correções (administrador): o campo "Empreendimento Sousa comparado" passa a ser uma lista de escolha, com "Sem vínculo" e as visitas Sousa do mês, em vez de um campo digitado (o autocompletar do navegador só mostrava o valor já preenchido). Se a regional da visita não tiver nenhuma visita Sousa no mês, a lista mostra todas as do mês.
+
 ## [1.5.2] - 2026-11-11
 
 ### Alterado
@@ -124,7 +129,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.2...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.3...HEAD
+[1.5.3]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.4.0...v1.5.0

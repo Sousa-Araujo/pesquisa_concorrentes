@@ -272,8 +272,8 @@
     vinculoDiv.style.display = tipoAtual === 'concorrente' ? '' : 'none';
     vinculoDiv.innerHTML = `
       <label>Empreendimento Sousa comparado</label>
-      <input type="text" list="adminVinculoOptions" value="${escapeAttr(av.vinculoSousaLabel || '')}" data-admin-vinculo>
-      <datalist id="adminVinculoOptions"></datalist>`;
+      <select data-admin-vinculo><option value="">Sem vínculo</option></select>
+      <p class="field-help" id="adminVinculoAjuda">Carregando as visitas Sousa do mês…</p>`;
     el.appendChild(vinculoDiv);
 
     const construtoraDiv = document.createElement('div');
@@ -318,10 +318,27 @@
     const adminVinculoField = document.getElementById('adminVinculoField');
     const adminConstrutoraField = document.getElementById('adminConstrutoraField');
     const adminVinculoInput = document.querySelector('[data-admin-vinculo]');
+    // Lista de escolha com as visitas Sousa do mesmo mês (da mesma regional, quando houver).
+    // O vínculo atual aparece selecionado, mesmo que não esteja mais na lista.
     api.opcoesVinculo(av.id).then(opcoes => {
-      const dl = document.getElementById('adminVinculoOptions');
-      if (dl) dl.innerHTML = opcoes.map(o => `<option value="${escapeAttr(o.label)}">`).join('');
-    }).catch(() => {});
+      const ajuda = document.getElementById('adminVinculoAjuda');
+      if (!adminVinculoInput) return;
+      const lista = opcoes.slice();
+      if (av.vinculoSousaId && !lista.some(o => o.id === av.vinculoSousaId)) {
+        lista.unshift({ id: av.vinculoSousaId, label: `${av.vinculoSousaLabel || av.vinculoSousaId} (vínculo atual)` });
+      }
+      adminVinculoInput.innerHTML = '<option value="">Sem vínculo</option>'
+        + lista.map(o => `<option value="${escapeAttr(o.id)}">${escapeHtml(o.label)}</option>`).join('');
+      adminVinculoInput.value = av.vinculoSousaId || '';
+      if (ajuda) {
+        ajuda.textContent = !opcoes.length
+          ? 'Não há visita Sousa neste mês para vincular.'
+          : (!av.vinculoSousaId && av.vinculoSousaLabel ? `Texto anterior, sem vínculo: ${av.vinculoSousaLabel}` : '');
+      }
+    }).catch(() => {
+      const ajuda = document.getElementById('adminVinculoAjuda');
+      if (ajuda) ajuda.textContent = 'Não foi possível carregar a lista agora.';
+    });
     if (adminTipoToggle) {
       adminTipoToggle.addEventListener('click', (e) => {
         const btn = e.target.closest('button'); if (!btn) return;
@@ -502,12 +519,10 @@
       const tipoSelecionado = adminTipoBtn ? adminTipoBtn.getAttribute('data-val') : 'sousa';
       idPayload.tipoEmpreendimento = tipoSelecionado;
       if (tipoSelecionado === 'concorrente') {
-        const vinculoInput = document.querySelector('[data-admin-vinculo]');
-        const typed = vinculoInput ? vinculoInput.value.trim() : '';
-        const opcoes = await api.opcoesVinculo(avId);
-        const match = opcoes.find(o => o.label === typed);
-        idPayload.vinculoSousaId = match ? match.id : null;
-        idPayload.vinculoSousaLabel = typed;
+        const vinculoSelect = document.querySelector('[data-admin-vinculo]');
+        const escolhida = vinculoSelect && vinculoSelect.selectedIndex > 0 ? vinculoSelect.options[vinculoSelect.selectedIndex] : null;
+        idPayload.vinculoSousaId = escolhida ? escolhida.value : null;
+        idPayload.vinculoSousaLabel = escolhida ? escolhida.textContent.replace(/ \(vínculo atual\)$/, '') : '';
       } else {
         idPayload.vinculoSousaId = null;
         idPayload.vinculoSousaLabel = '';
