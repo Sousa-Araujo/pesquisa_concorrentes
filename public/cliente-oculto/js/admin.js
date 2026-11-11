@@ -4,6 +4,8 @@
   if (!authUser) return;
 
   const CFG = window.COConfig;
+  // Campos de valor em reais da identificação (o texto e o número em centavos andam juntos).
+  const VALORES_REAIS = ['valorUnidadeDisplay', 'valorAtoDisplay', 'valorEntradaDisplay'];
   const { PILARES, JORNADA, STATUS_JORNADA, GRAVIDADES, STATUS_AVALIACAO,
           bandFor, toneColorVar, pilarLabel, tipoTagHtml, mesReferencia, regionalOptionsHtml,
           escapeHtml, escapeAttr } = CFG;
@@ -297,9 +299,16 @@
      ['qtdPreChaves', 'Qtd. pré-chaves', 'text'], ['qtdPosChaves', 'Qtd. pós-chaves', 'text'], ['descontoDisplay', 'Desconto informado', 'text'], ['previsaoEntrega', 'Previsão de entrega', 'text'], ['campanhaVigente', 'Campanha vigente', 'text']]
       .forEach(([key, label, type]) => {
         const div = document.createElement('div'); div.className = 'field';
-        div.innerHTML = `<label>${label}</label><input type="${type}" value="${escapeAttr(idz[key])}" data-admin-id="${key}">`;
+        // Valores em reais: mesma máscara da tela Nova avaliação (R$ 347.000,00). O texto já
+        // gravado (com ou sem centavos) é reformatado ao abrir a tela.
+        const ehValor = VALORES_REAIS.includes(key);
+        const valorInicial = ehValor ? CFG.moneyFromText(idz[key]).display : idz[key];
+        div.innerHTML = `<label>${label}</label><input type="${type}" value="${escapeAttr(valorInicial)}" data-admin-id="${key}"${ehValor ? ' data-admin-money inputmode="numeric" placeholder="Ex.: R$ 350.000,00"' : ''}>`;
         el.appendChild(div);
       });
+    el.querySelectorAll('[data-admin-money]').forEach(input => {
+      input.addEventListener('input', () => { input.value = CFG.moneyMaskFromDigits(input.value).display; });
+    });
     el.querySelectorAll('[data-admin-id]').forEach(input => {
       input.addEventListener('input', markAdminDirty);
       input.addEventListener('change', markAdminDirty);
@@ -481,6 +490,14 @@
     try {
       const idPayload = {};
       document.querySelectorAll('#adminIdFields [data-admin-id]').forEach(input => { idPayload[input.getAttribute('data-admin-id')] = input.value; });
+      // Os valores em reais valem pelo número (centavos), que é o que o Quadro Comparativo usa:
+      // o texto e o número são gravados juntos, vindos do mesmo campo.
+      VALORES_REAIS.forEach(chave => {
+        const campo = chave.replace(/Display$/, '');
+        const m = CFG.moneyMaskFromDigits(idPayload[chave]);
+        idPayload[`${campo}Centavos`] = m.centavos;
+        idPayload[chave] = m.display;
+      });
       const adminTipoBtn = document.querySelector('#adminTipoToggle button.active');
       const tipoSelecionado = adminTipoBtn ? adminTipoBtn.getAttribute('data-val') : 'sousa';
       idPayload.tipoEmpreendimento = tipoSelecionado;

@@ -9,6 +9,12 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+### Alterado
+- Pesquisa › Cadastros: o Coordenador de Market Share também pode cadastrar e corrigir os dados dos empreendimentos e dos concorrentes (antes só o Coordenador de Produto e o administrador).
+
+### Corrigido
+- Cliente Oculto › Correções (administrador): os campos valor da unidade, valor do ato e valor de entrada passam a ter a mesma máscara da tela Nova avaliação e a gravar o texto e o número juntos. Antes, corrigir o valor mudava só o texto, e o Quadro Comparativo seguia com o número antigo (ex.: R$ 347.000 aparecendo como R$ 3.470.000).
+
 ## [1.5.1] - 2026-11-10
 
 ### Adicionado
