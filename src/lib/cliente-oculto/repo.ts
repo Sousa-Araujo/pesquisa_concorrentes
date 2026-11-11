@@ -422,7 +422,7 @@ async function vincularAutomatico(id: string) {
     [id],
   );
   if (!a || a.excluida || !a.id_empreendimento || !a.data_visita) return;
-  const rotulo = `coalesce(empreendimento_texto, id) || ' — ' || coalesce(to_char(data_visita, 'YYYY-MM-DD'), 's/ data')`;
+  const rotulo = `coalesce(empreendimento_texto, id)`;
   if (a.tipo_empreendimento === "concorrente" && !a.vinculo_sousa_id) {
     await q(
       `update co_avaliacoes c set vinculo_sousa_id = s.id, vinculo_sousa_label = s.rotulo
@@ -562,8 +562,17 @@ export async function opcoesVinculo(quem: Quem, id: string) {
   // Da mesma regional; se não houver nenhuma, todas as visitas Sousa do mês (a regional da visita
   // pode estar vazia ou diferente, e a lista não pode ficar vazia).
   const daRegional = av.regional ? doMes.filter((r) => r.regional === av.regional) : doMes;
-  return (daRegional.length ? daRegional : doMes)
-    .map((r) => ({ id: r.id, label: `${r.empreendimento_texto || r.id} — ${r.data_visita || "s/ data"}` }));
+  const lista = (daRegional.length ? daRegional : doMes).map((r) => ({ id: String(r.id), label: String(r.empreendimento_texto || r.id) }));
+  // Só o nome do empreendimento; se o mesmo nome aparecer mais de uma vez, numera para continuar distinguindo.
+  const total = new Map<string, number>();
+  lista.forEach((o) => total.set(o.label, (total.get(o.label) ?? 0) + 1));
+  const visto = new Map<string, number>();
+  return lista.map((o) => {
+    if ((total.get(o.label) ?? 0) < 2) return o;
+    const n = (visto.get(o.label) ?? 0) + 1;
+    visto.set(o.label, n);
+    return { id: o.id, label: `${o.label} (${n})` };
+  });
 }
 
 export async function concorrentesVinculados(quem: Quem, sousaId: string) {
