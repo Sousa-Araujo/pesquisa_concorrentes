@@ -9,6 +9,9 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+### Corrigido
+- Cliente Oculto › Correções (administrador): o campo "Empreendimento Sousa comparado" passa a ser uma lista de escolha, com "Sem vínculo" e as visitas Sousa do mês, em vez de um campo digitado (o autocompletar do navegador só mostrava o valor já preenchido). Se a regional da visita não tiver nenhuma visita Sousa no mês, a lista mostra todas as do mês.
+
 ## [1.5.2] - 2026-11-11
 
 ### Alterado
