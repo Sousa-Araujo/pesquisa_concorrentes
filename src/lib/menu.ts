@@ -103,6 +103,7 @@ export async function montarMenu(u: UsuarioAtual): Promise<Menu> {
       const n = await aguardandoCalibragem();
       resumo = n ? `${n} aguardando calibragem` : "Nenhuma avaliação aguardando";
       itens.push({ nome: "Avaliações e calibragem", href: "/cliente-oculto/coordenador.html", contador: n || undefined });
+      itens.push({ nome: "Acompanhamento das visitas", href: "/gestor/acompanhamento-co" });
       if (ehAdmin) itens.push({ nome: "Correções (administrador)", href: "/cliente-oculto/admin.html" });
     }
     const grupos: GrupoMenu[] = [];

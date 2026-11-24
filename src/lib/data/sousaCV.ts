@@ -1,7 +1,8 @@
 /**
  * Dados dos empreendimentos Sousa vindos do BI do CV, gravados em
  * dados_proprios_mensais com origem 'cv' (regras combinadas em 2026-10-22):
- *  - estoque = disponível + reservada (bloqueadas ficam fora, como nos concorrentes);
+ *  - estoque = disponível + reservada + bloqueada (a unidade bloqueada, situacao_para_venda = 4
+ *    na base de unidades do CV, segue sendo estoque da empresa; regra de 2026-11-23);
  *  - o BI só tem a foto de hoje, então o mês atual é regravado a cada
  *    sincronização e o último retrato antes da virada vira a foto do mês;
  *  - no mês seguinte, só vendas e ticket com desconto do mês fechado são
@@ -16,7 +17,7 @@ import {
 } from "@/lib/db/cv";
 import { nomeComparavel, nomeNucleo } from "@/lib/domain/comparativo";
 import {
-  classificarPreenchimento, estoqueDoFimDoMes, lerMesPreenchivel, mesSeguinte, type SituacaoPreenchimento,
+  classificarPreenchimento, estoqueDoCV, estoqueDoFimDoMes, lerMesPreenchivel, mesSeguinte, type SituacaoPreenchimento,
 } from "@/lib/domain/preenchimentoCV";
 
 /** Primeiro dia do mês atual no horário de Brasília (YYYY-MM-01). */
@@ -107,7 +108,7 @@ export async function previaPreenchimento(mes: string): Promise<ItemPreenchiment
       const v = vendas.find((x) => x.id === e.id_cv && x.mesAno === mes);
       const vendasDepois = depois.get(e.id_cv) ?? 0;
       cv = {
-        estoque: estoqueDoFimDoMes(est.disponiveis + est.reservadas, vendasDepois),
+        estoque: estoqueDoFimDoMes(estoqueDoCV(est), vendasDepois),
         vendas: v?.vendas ?? 0, vendasDepois,
         ticketTabelaCentavos: tabelas.get(e.id_cv) ?? null,
         ticketDescontoCentavos: v?.ticketDescontoCentavos ?? null,
@@ -177,7 +178,7 @@ async function executar(): Promise<SincronizacaoCV> {
              ticket_desconto_centavos = excluded.ticket_desconto_centavos, desconto_pct = excluded.desconto_pct,
              estimado = false, atualizado_em = now()
            where dados_proprios_mensais.origem = 'cv'`,
-          [l.id_empreendimento, mes, est.disponiveis + est.reservadas, vMes?.vendas ?? 0, est.reservadas, est.bloqueadas,
+          [l.id_empreendimento, mes, estoqueDoCV(est), vMes?.vendas ?? 0, est.reservadas, est.bloqueadas,
             est.ticketTabelaCentavos, vMes?.ticketDescontoCentavos ?? null, vMes?.descontoPct ?? null],
         );
       }

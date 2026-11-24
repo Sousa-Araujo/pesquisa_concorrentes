@@ -57,8 +57,8 @@ export async function lerEstoqueAtual(ids: number[]): Promise<EstoqueCV[]> {
       group by empreendimento_id`,
     [ids],
   );
-  // Ticket só das unidades que contam no estoque (disponível e reservada). A visão
-  // kpi_ticket_tabela_vigente inclui as bloqueadas, que ficam fora da contagem.
+  // Ticket de tabela das unidades disponíveis e reservadas (situacao_para_venda 1 e 2); as
+  // bloqueadas (4) entram na contagem do estoque, mas ainda não no ticket.
   const { rows: tickets } = await cvDb().query(
     `select empreendimento_id, avg(valor_tabela_vigente) as ticket
        from bi_mcp_comercial.fato_estoque_detalhado

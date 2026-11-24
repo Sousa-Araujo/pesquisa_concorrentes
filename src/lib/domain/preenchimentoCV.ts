@@ -23,6 +23,17 @@ export function classificarPreenchimento(existente: ExistenteMes | null, cv: Cal
   return existente.estoque === cv.estoque && existente.vendas === cv.vendas ? "manual_igual" : "manual_diverge";
 }
 
+/**
+ * Estoque dos empreendimentos Sousa no CV: disponíveis + reservadas + bloqueadas.
+ * Na base de unidades do CV a unidade bloqueada tem situacao_para_venda = 4
+ * (bloqueado = true: fora de venda, estratégia comercial, diretoria, permuta);
+ * ela continua sendo estoque da empresa, então entra na contagem
+ * (300 disponíveis + 30 bloqueadas = 330).
+ */
+export function estoqueDoCV(e: { disponiveis: number; reservadas: number; bloqueadas: number }): number {
+  return Math.max(0, e.disponiveis) + Math.max(0, e.reservadas) + Math.max(0, e.bloqueadas);
+}
+
 /** Estoque do fim do mês: o de hoje mais o que foi vendido depois do mês. */
 export function estoqueDoFimDoMes(estoqueHoje: number, vendasDepoisDoMes: number): number {
   return Math.max(0, estoqueHoje) + Math.max(0, vendasDepoisDoMes);

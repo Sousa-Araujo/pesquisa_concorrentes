@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { classificarPreenchimento, estoqueDoFimDoMes, lerMesPreenchivel, mesSeguinte } from "@/lib/domain/preenchimentoCV";
+import { classificarPreenchimento, estoqueDoCV, estoqueDoFimDoMes, lerMesPreenchivel, mesSeguinte } from "@/lib/domain/preenchimentoCV";
+
+describe("estoqueDoCV", () => {
+  it("soma as bloqueadas ao estoque: 300 disponíveis + 30 bloqueadas = 330", () => {
+    expect(estoqueDoCV({ disponiveis: 300, reservadas: 0, bloqueadas: 30 })).toBe(330);
+  });
+  it("disponíveis + reservadas + bloqueadas", () => {
+    expect(estoqueDoCV({ disponiveis: 7, reservadas: 2, bloqueadas: 4 })).toBe(13);
+  });
+  it("sem bloqueadas continua igual ao de antes", () => {
+    expect(estoqueDoCV({ disponiveis: 10, reservadas: 3, bloqueadas: 0 })).toBe(13);
+  });
+});
 
 describe("classificarPreenchimento", () => {
   const cv = { estoque: 60, vendas: 4 };

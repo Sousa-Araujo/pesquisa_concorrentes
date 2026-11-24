@@ -41,6 +41,8 @@ export const PERMISSOES = {
   tabelasEnviar: ["supervisor_parcerias", "coordenador_market_share"],
   /** Tabelas e espelhos: conferir a leitura e aprovar (vai para a Pesquisa). */
   tabelasConferir: ["coordenador_market_share"],
+  /** Cliente Oculto › Acompanhamento: quais pesquisas do mês foram e não foram realizadas. */
+  acompanhamentoCO: ["coordenador_market_share"],
   /** Tabelas e espelhos › Comitê de vendas: enviar o PDF do comitê e conferir. Só o administrador (lista vazia: admin passa em tudo). */
   comiteVendas: [],
   /** Tabelas e espelhos: corrigir data de referência, estoque e vendas de uma leitura já aprovada. Só o administrador. */

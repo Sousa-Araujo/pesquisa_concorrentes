@@ -9,6 +9,14 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.6.0] - 2026-11-24
+
+### Adicionado
+- Cliente Oculto: tela "Acompanhamento das visitas" (Cliente Oculto › Acompanhamento das visitas, para o Coordenador de Market Share e o administrador) com as pesquisas do mês que foram e as que não foram realizadas, entre os empreendimentos Sousa e os concorrentes; filtros de mês, regional e tipo.
+
+### Alterado
+- Estoque dos empreendimentos Sousa (vindo do CV) passa a somar as unidades bloqueadas: disponíveis + reservadas + bloqueadas (ex.: 300 disponíveis e 30 bloqueadas = 330). Os meses fechados já gravados são ajustados pela migração 0028; o mês atual é regravado na próxima sincronização.
+
 ## [1.5.4] - 2026-11-11
 
 ### Alterado
@@ -134,7 +142,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.4...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.4...v1.6.0
 [1.5.4]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.1...v1.5.2
