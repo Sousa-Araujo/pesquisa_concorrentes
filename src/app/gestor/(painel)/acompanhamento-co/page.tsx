@@ -6,7 +6,9 @@
 import Link from "next/link";
 import { exigirPagina } from "@/lib/auth/acesso";
 import { acompanhamentoDoMes } from "@/lib/data/acompanhamentoCO";
-import { foiRealizada, resumirAcompanhamento, type ItemAcompanhamento, type SituacaoVisita } from "@/lib/domain/acompanhamentoCO";
+import {
+  foiRealizada, resumirAcompanhamento, type ItemAcompanhamento, type ResumoAcompanhamento, type SituacaoVisita,
+} from "@/lib/domain/acompanhamentoCO";
 import { competenciaVigente, formatarCompetenciaLonga } from "@/lib/domain/competencia";
 import FiltrosAcompanhamento from "./FiltrosAcompanhamento";
 
@@ -58,6 +60,41 @@ function Coluna({ titulo, itens, vazio }: { titulo: string; itens: ItemAcompanha
   );
 }
 
+const VERDE = "bg-[var(--good,#0ca30c)]";
+const VERMELHO = "bg-[var(--critical,#d03b3b)]";
+const AMARELO = "bg-[var(--warning,#fab219)]";
+
+function BarraSegmentada({ r }: { r: ResumoAcompanhamento }) {
+  const parte = (n: number) => `${r.esperadas ? (n / r.esperadas) * 100 : 0}%`;
+  return (
+    <div role="img" aria-label={`${r.concluidas} concluídas, ${r.emCalibragem} em calibragem, ${r.rascunhos} em preenchimento, ${r.semVisita} sem visita`} className={`flex h-2 overflow-hidden rounded-full bg-[var(--line)]`}>
+      <div className={VERDE} style={{ width: parte(r.concluidas) }} />
+      <div className={`${VERDE} opacity-50`} style={{ width: parte(r.emCalibragem) }} />
+      <div className={AMARELO} style={{ width: parte(r.rascunhos) }} />
+      <div className={`${VERMELHO} opacity-60`} style={{ width: parte(r.semVisita) }} />
+    </div>
+  );
+}
+
+function Legenda({ r }: { r: ResumoAcompanhamento }) {
+  const itens: [string, number, string][] = [
+    ["Concluídas", r.concluidas, VERDE],
+    ["Em calibragem", r.emCalibragem, `${VERDE} opacity-50`],
+    ["Em preenchimento", r.rascunhos, AMARELO],
+    ["Sem visita", r.semVisita, `${VERMELHO} opacity-60`],
+  ];
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink/60">
+      {itens.map(([rot, n, cor]) => (
+        <span key={rot} className="flex items-center gap-1.5">
+          <span className={`inline-block h-2 w-2 rounded-full ${cor}`} />
+          {rot} <b className="tabular-nums text-ink">{n}</b>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default async function AcompanhamentoCOPage({
   searchParams: sp,
 }: { searchParams: Promise<{ mes?: string; regional?: string; tipo?: string }> }) {
@@ -76,33 +113,29 @@ export default async function AcompanhamentoCOPage({
 
   return (
     <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Acompanhamento do Cliente Oculto</h1>
-        <p className="text-sm text-ink/50">
-          Quais pesquisas foram e quais não foram realizadas em {formatarCompetenciaLonga(mes)}. Conta como realizada a visita já enviada pelo
-          avaliador; visita em preenchimento ainda não conta.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">Acompanhamento do Cliente Oculto</h1>
+          <p className="text-sm text-ink/50">
+            Pesquisas de {formatarCompetenciaLonga(mes)}. Conta como realizada a visita já enviada pelo avaliador; visita em preenchimento ainda não conta.
+          </p>
+        </div>
+        <FiltrosAcompanhamento mes={mes} regional={regional} tipo={tipo} regionais={regionais} />
       </div>
 
-      <FiltrosAcompanhamento mes={mes} regional={regional} tipo={tipo} regionais={regionais} />
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          ["Esperadas", String(r.esperadas), "empreendimentos e concorrentes"],
-          ["Realizadas", String(r.realizadas), `${r.concluidas} concluídas · ${r.emCalibragem} em calibragem`],
-          ["Não realizadas", String(r.naoRealizadas), `${r.semVisita} sem visita · ${r.rascunhos} em preenchimento`],
-          ["Cumprimento", `${pct}%`, "realizadas sobre esperadas"],
-        ].map(([rotulo, valor, sub]) => (
-          <div key={rotulo} className="card">
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink/50">{rotulo}</p>
-            <p className="mt-1 text-3xl font-bold tabular-nums text-ink">{valor}</p>
-            <p className="mt-1 text-xs text-ink/50">{sub}</p>
+      <div className="card flex flex-wrap items-center gap-x-8 gap-y-3 py-4">
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-bold tabular-nums text-ink">{pct}%</span>
+          <span className="text-sm text-ink/60">de cumprimento</span>
+        </div>
+        <div className="grid min-w-[240px] flex-1 gap-2">
+          <div className="flex justify-between text-sm text-ink/60">
+            <span><b className="tabular-nums text-ink">{r.realizadas}</b> realizadas de <b className="tabular-nums text-ink">{r.esperadas}</b></span>
+            <span><b className="tabular-nums text-[var(--critical,#d03b3b)]">{r.naoRealizadas}</b> faltam</span>
           </div>
-        ))}
-      </div>
-
-      <div className="h-2 overflow-hidden rounded-full bg-[var(--line)]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Cumprimento das pesquisas do mês">
-        <div className="h-full rounded-full bg-[var(--good)]" style={{ width: `${pct}%` }} />
+          <BarraSegmentada r={r} />
+          <Legenda r={r} />
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">

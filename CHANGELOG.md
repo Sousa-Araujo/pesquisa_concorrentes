@@ -9,6 +9,11 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.6.1] - 2026-11-24
+
+### Alterado
+- Cliente Oculto › Acompanhamento das visitas: parte de cima mais compacta. Os filtros ficam numa linha ao lado do título, e os 4 cards deram lugar a um quadro só, com o cumprimento em destaque e uma barra por situação (concluídas, em calibragem, em preenchimento e sem visita).
+
 ## [1.6.0] - 2026-11-24
 
 ### Adicionado
@@ -142,7 +147,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.0...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.4...v1.6.0
 [1.5.4]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.2...v1.5.3
