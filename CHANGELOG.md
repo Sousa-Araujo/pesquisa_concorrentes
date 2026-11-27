@@ -9,6 +9,11 @@ Como versionar e publicar: [docs/versionamento.md](docs/versionamento.md).
 
 Mudanças já feitas que ainda não entraram em uma versão.
 
+## [1.6.2] - 2026-11-27
+
+### Alterado
+- Usuários: o administrador pode ter qualquer e-mail (antes era obrigatório ser @sousaaraujo.com.br), como os demais perfis.
+
 ## [1.6.1] - 2026-11-24
 
 ### Alterado
@@ -147,7 +152,8 @@ usuários.
 - Quando o mês escolhido não tem dado, o comparativo mostra o último mês disponível.
 - Dados dos empreendimentos Sousa sincronizados com o BI do CV a cada 30 minutos.
 
-[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.1...HEAD
+[Não publicado]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.4...v1.6.0
 [1.5.4]: https://github.com/Sousa-Araujo/pesquisa_concorrentes/compare/v1.5.3...v1.5.4

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Pencil } from "lucide-react";
 import Modal from "@/components/Modal";
 import type { LinhaUsuario } from "@/lib/data/gestor";
-import { DOMINIO_EMAIL_EMPRESA, PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
+import { PERFIS, ROTULO_PERFIL, ehPerfil, type Perfil } from "@/lib/auth/perfis";
 import { criarUsuario, definirStatusUsuario, editarUsuario, reenviarConvite, testarEnvioEmail } from "./actions";
 import CampoData from "@/components/CampoData";
 
@@ -200,7 +200,7 @@ function FormUsuario({
           <input id="u-email" className="campo !text-base !py-2" type="email" autoComplete="off" value={email}
             onChange={(e) => setEmail(e.target.value)} />
           <p className="mt-1 text-xs text-ink/40">
-            Qualquer e-mail; o administrador precisa ser @{DOMINIO_EMAIL_EMPRESA}.
+            Qualquer e-mail, em todos os perfis.
             {!usuario && " O convite de acesso será enviado para este endereço."}
           </p>
         </div>

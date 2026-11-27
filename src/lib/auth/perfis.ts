@@ -60,19 +60,6 @@ export function temPermissao(perfis: readonly string[], permissao: Permissao): b
   return PERMISSOES[permissao].some((p) => perfis.includes(p));
 }
 
-/** Domínio de e-mail obrigatório para o administrador. */
-export const DOMINIO_EMAIL_EMPRESA = "sousaaraujo.com.br";
-
-/**
- * Só o administrador precisa de e-mail @sousaaraujo.com.br. Os demais
- * perfis podem usar qualquer e-mail: são cadastrados no sistema, recebem o
- * convite por e-mail e entram com o código enviado para esse endereço.
- */
-export function emailPermitidoPara(email: string, perfis: readonly string[]): boolean {
-  if (!perfis.includes("admin")) return true;
-  return email.trim().toLowerCase().endsWith(`@${DOMINIO_EMAIL_EMPRESA}`);
-}
-
 /**
  * O Coordenador de Market Share (sem admin) só pode criar ou alterar
  * usuários cujo único perfil é `avaliador`. O admin gere qualquer um.

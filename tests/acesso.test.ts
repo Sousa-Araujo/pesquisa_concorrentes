@@ -109,12 +109,12 @@ describe("Cadastro de usuário", () => {
     expect(usuarioSchema.safeParse({ ...valido, perfis: ["gestor"] }).success).toBe(false);
   });
 
-  it("só o administrador precisa de e-mail da empresa", () => {
+  it("aceita qualquer e-mail em todos os perfis, inclusive o administrador", () => {
     const admin = { ...valido, perfis: ["admin"] };
-    expect(usuarioSchema.safeParse({ ...admin, email: "fulano@gmail.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...admin, email: "fulano@gmail.com" }).success).toBe(true);
     expect(usuarioSchema.safeParse({ ...admin, email: "Fulano@SousaAraujo.com.br" }).success).toBe(true);
-    expect(usuarioSchema.safeParse({ ...admin, email: "fulano@sousaaraujo.com.br.fake.com" }).success).toBe(false);
-    expect(usuarioSchema.safeParse({ ...valido, perfis: ["admin", "diretoria"], email: "x@gmail.com" }).success).toBe(false);
+    expect(usuarioSchema.safeParse({ ...valido, perfis: ["admin", "diretoria"], email: "x@gmail.com" }).success).toBe(true);
+    expect(usuarioSchema.safeParse({ ...admin, email: "sem-arroba" }).success).toBe(false);
     expect(usuarioSchema.safeParse({ ...valido, perfis: ["coordenador_produto"], email: "fulano@gmail.com" }).success).toBe(true);
     expect(usuarioSchema.safeParse({ ...valido, perfis: ["avaliador", "diretoria"], email: "x@gmail.com" }).success).toBe(true);
     expect(usuarioSchema.safeParse({ ...valido, email: "avaliador@gmail.com" }).success).toBe(true);
